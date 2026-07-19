@@ -76,7 +76,13 @@ tr:hover td{background:var(--panel2)}
 /* Timeline */
 .tl{display:flex;align-items:flex-end;gap:5px;overflow-x:auto;padding:14px 4px 6px}
 .tl .run{border-radius:4px 4px 2px 2px;min-width:13px;cursor:default;position:relative}
-.tl .run:hover::after{content:attr(data-tip);position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background:#0d0a12ee;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-family:var(--mono);font-size:10.5px;white-space:nowrap;z-index:6}
+.tl .run:hover{outline:1px solid var(--goldsoft)}
+#tip2{position:fixed;pointer-events:none;background:#0d0a12f2;border:1px solid var(--gold);border-radius:7px;padding:7px 10px;font-family:var(--mono);font-size:11px;white-space:nowrap;z-index:60;display:none;color:var(--txt)}
+th.tri{cursor:pointer;user-select:none}
+th.tri:hover{color:var(--goldsoft)}
+th.tri::after{content:' ↕';opacity:.45;font-size:10px}
+th.tri.asc::after{content:' ▲';opacity:1}
+th.tri.desc::after{content:' ▼';opacity:1}
 /* Modal */
 #modal{position:fixed;inset:0;background:rgba(5,3,9,.8);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:5vh 16px;overflow-y:auto}
 #modal .inner{background:var(--ink2);border:1px solid var(--gold);border-radius:16px;max-width:820px;width:100%;padding:26px}
@@ -198,12 +204,13 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
     <p style="margin-top:8px"><strong>Aucune gestion de fonds.</strong> Nous ne collectons ni ne gérons les fonds de tiers. Un éventuel abonnement donne accès à de l'information, jamais à une gestion de votre argent.</p>
     <p style="margin-top:8px"><strong>Propriété intellectuelle.</strong> Le concept OPUS 2050 / Le Collège des Archimages, l'architecture du système, les textes, visuels, données et rapports de ce site sont protégés. <strong>Toute reproduction, copie, extraction ou diffusion, totale ou partielle, est interdite sans autorisation écrite préalable</strong> ; toute utilisation commerciale du concept ou des contenus donne lieu à une licence payante. Contrevenants s'exposent à des poursuites (art. L.335-2 et s. du Code de la propriété intellectuelle).</p>
     <p style="margin-top:8px"><strong>Données personnelles.</strong> Les adresses email collectées servent uniquement à l'envoi du rapport et de nos actualités ; elles ne sont jamais cédées à des tiers. Désinscription à tout moment sur simple demande à l'adresse de contact ci-dessous (RGPD).</p>
-    <p class="majline">Données servies en direct depuis Supabase · dernière mise à jour de la page : <span id="majFoot"></span> · © 2026 OPUS 2050 / Zen Chez Toi — Tous droits réservés · Contact : chachou8106@gmail.com · <a href="dashboard.html" style="color:inherit">Accès opérateur</a></p>
+    <p class="majline">Données servies en direct depuis Supabase · dernière mise à jour de la page : <span id="majFoot"></span> · © 2026 OPUS 2050 / Zen Chez Toi — Tous droits réservés · Contact : chachou8106@gmail.com</p>
   </footer>
 </div>
 
 <!-- MODAL -->
 <div id="modal" onclick="if(event.target===this)this.style.display='none'"><div class="inner"><span class="close" onclick="document.getElementById('modal').style.display='none'">✕</span><div id="modalBody"></div></div></div>
+<div id="tip2"></div>
 
 <script>
 const EP='https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/oracle-tests';
@@ -258,10 +265,11 @@ async function ouvrirArchimage(a){
       for(const l of d.learnings)h+=`<p style="font-size:14px;color:var(--dim);margin:5px 0">• ${l.eval||l.bias||''}</p>`;}
     if((d.mistakes_history||[]).length){h+='<h4 style="font-family:var(--disp);color:var(--garnet);margin:16px 0 8px">🧯 Erreurs archivées (il apprend de ses pertes)</h4>';
       for(const e2 of d.mistakes_history)h+=`<p style="font-size:14px;color:var(--dim);margin:5px 0">• [${(e2.phase||'')}] ${e2.eval||''}</p>`;}
-    if((d.positions||[]).length){h+='<h4 style="font-family:var(--disp);color:var(--goldsoft);margin:16px 0 8px">📌 Positions ouvertes</h4><table><tr><th>Actif</th><th>Valeur $</th><th>P&L $</th><th>P&L %</th></tr>';
+    if((d.positions||[]).length){h+='<h4 style="font-family:var(--disp);color:var(--goldsoft);margin:16px 0 8px">📌 Positions ouvertes</h4><table id="archPos"><tr><th>Actif</th><th>Valeur $</th><th>P&L $</th><th>P&L %</th></tr>';
       for(const p of d.positions.slice(0,10))h+=`<tr><td>${p.ticker}</td><td>${fr(p.market_value)}</td><td class="${p.unrealized_pl>=0?'pos':'neg'}">${p.unrealized_pl>=0?'+':''}${fr(p.unrealized_pl)}</td><td class="${p.unrealized_pl_pct>=0?'pos':'neg'}">${fr2(p.unrealized_pl_pct)} %</td></tr>`;
       h+='</table>';}
     bdy.innerHTML=h;
+    rendreTriable(document.getElementById('archPos'));
   }catch(e){bdy.innerHTML='<p class="sub">Erreur de chargement : '+e.message+'</p>'}
 }
 
@@ -311,13 +319,40 @@ const tt=document.getElementById('tooltip');
 window.addEventListener('resize',()=>dessiner());
 
 /* ---- JAUGES SAGES ---- */
+/* ---- TRI GÉNÉRIQUE DES TABLEAUX (clic sur les en-têtes) ---- */
+function valTri(td){
+  const t=(td.textContent||'').trim().replace(/[\s  ]/g,'');
+  const n=parseFloat(t.replace(/[^\d,.+-]/g,'').replace(',','.'));
+  return isNaN(n)||!/\d/.test(t)?t.toLowerCase():n;
+}
+function rendreTriable(table){
+  if(!table)return;
+  const ths=table.querySelectorAll('tr:first-child th');
+  ths.forEach((th,i)=>{
+    if(th.classList.contains('tri'))return;
+    th.classList.add('tri');
+    th.addEventListener('click',()=>{
+      const asc=!th.classList.contains('asc');
+      ths.forEach(o=>o.classList.remove('asc','desc'));
+      th.classList.add(asc?'asc':'desc');
+      const rows=[...table.querySelectorAll('tr')].slice(1);
+      rows.sort((a,b)=>{
+        const x=valTri(a.cells[i]),y=valTri(b.cells[i]);
+        return (typeof x=='number'&&typeof y=='number'?x-y:String(x).localeCompare(String(y),'fr'))*(asc?1:-1);
+      });
+      for(const r of rows)table.appendChild(r);
+    });
+  });
+}
+const SAGE_ICONES={Macro:'🌍',Technique:'📐',Flash:'⚡',Risque:'🛡',Memoire:'📜'};
+const SAGE_NOMS={Macro:'Sage Macro',Technique:'Sage Technique',Flash:'Sage Flash',Risque:'Sage du Risque',Memoire:'Sage de la Mémoire'};
 async function sages(){try{
   const d=await api('sages'); const el=document.getElementById('gauges'); el.innerHTML='';
   for(const s of d){
     const pct=s.taux_reussite==null?null:Number(s.taux_reussite);
     const col=pct==null?'#8b8098':pct>=65?'#46b98d':pct>=50?'#cba24a':'#c05370';
     const ang=pct==null?0:pct/100*283;
-    el.insertAdjacentHTML('beforeend',`<div class="gauge">
+    el.insertAdjacentHTML('beforeend',`<div class="gauge" style="cursor:pointer" onclick="ouvrirSage('${s.sage}')">
       <svg width="92" height="92" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
         <circle cx="50" cy="50" r="45" fill="none" stroke="#332a44" stroke-width="8"/>
         <circle cx="50" cy="50" r="45" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${ang} 283"/>
@@ -325,9 +360,36 @@ async function sages(){try{
       <div style="font-family:var(--disp);font-size:19px;margin-top:-60px;color:${col}">${pct==null?'—':fr2(pct)+'%'}</div>
       <div style="height:34px"></div>
       <div class="nm">${s.sage}</div>
-      <div class="sig">${s.dernier_signal||''} · ${s.evalue} évals</div></div>`);
+      <div class="sig">${s.dernier_signal||''} · ${s.evalue} évals</div>
+      <div class="sig" style="color:var(--goldsoft);letter-spacing:.1em">OUVRIR LE DOSSIER →</div></div>`);
   }
 }catch(e){console.warn('sages',e)}}
+async function ouvrirSage(sg){
+  const m=document.getElementById('modal'); const bdy=document.getElementById('modalBody');
+  bdy.innerHTML='<p class="sub">Chargement du dossier…</p>'; m.style.display='flex';
+  try{
+    const d=await api('sage_detail',{sage:sg});
+    const pct=d.taux_reussite==null?null:Number(d.taux_reussite);
+    const col=pct==null?'#8b8098':pct>=65?'#46b98d':pct>=50?'#cba24a':'#c05370';
+    let h=`<h2 style="margin-top:0;border:none;color:${col}">${SAGE_ICONES[sg]||''} ${SAGE_NOMS[sg]||sg}</h2>
+      <div class="tiles" style="margin:14px 0">
+        <div class="tile"><div class="lbl">Taux de réussite mesuré</div><div class="val" style="color:${col}">${pct==null?'—':fr2(pct)+' %'}</div></div>
+        <div class="tile"><div class="lbl">Signaux évalués</div><div class="val">${d.evalue??'—'}</div></div>
+        <div class="tile"><div class="lbl">Corrects</div><div class="val">${d.corrects??'—'}</div></div>
+      </div>
+      <p class="sub">Chaque signal est confronté au mouvement réel du S&amp;P 500 dans les 24 h qui suivent${sg==='Memoire'?' (Mémoire : jugé sur les victoires des archimages au run suivant)':''}. « En attente » = trop récent pour être jugé.</p>`;
+    const hist=d.historique||[];
+    if(hist.length){h+='<h4 style="font-family:var(--disp);color:var(--goldsoft);margin:14px 0 8px">🗂 Historique des signaux</h4><div style="overflow-x:auto"><table id="sageHist"><tr><th>Quand</th><th>Signal</th><th>SPY ensuite</th><th>Verdict</th><th>Détail</th></tr>';
+      for(const r of hist){
+        const dt=new Date(r.created_at);
+        const verdict=r.correct==null?'<span style="color:#8b8098">en attente</span>':r.correct?'<span class="pos">✔ correct</span>':'<span class="neg">✘ faux</span>';
+        h+=`<tr><td>${dt.toLocaleDateString('fr-FR')} ${dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</td><td><b>${r.signal||'—'}</b></td><td class="${(r.spy_move_pct||0)>=0?'pos':'neg'}">${r.spy_move_pct==null?'—':(r.spy_move_pct>=0?'+':'')+fr2(r.spy_move_pct)+' %'}</td><td>${verdict}</td><td style="white-space:normal;min-width:220px;color:var(--dim)">${r.extrait||'—'}</td></tr>`;
+      }
+      h+='</table></div>';}
+    bdy.innerHTML=h;
+    rendreTriable(document.getElementById('sageHist'));
+  }catch(e){bdy.innerHTML='<p class="sub">Erreur de chargement : '+e.message+'</p>'}
+}
 
 /* ---- HEATMAP ---- */
 async function heatmap(){try{
@@ -358,8 +420,18 @@ async function timeline(){try{
     const col=/EXTREME|PANIC/.test(ph)?'#c05370':/FEAR|PEUR|DEFENS/.test(ph)?'#b0616f':/OPPORT|BULL|GREED/.test(ph)?'#46b98d':'#8b8098';
     const hgt=18+(r.orders_count||0)/mx*70;
     const d=new Date(r.run_at);
-    el.insertAdjacentHTML('beforeend',`<div class="run" style="height:${hgt}px;background:${col}" data-tip="${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · ${ph} · ${r.orders_count||0} ordres"></div>`);
+    el.insertAdjacentHTML('beforeend',`<div class="run" style="height:${hgt}px;background:${col}" data-tip="${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · ${ph} · ${r.orders_count||0} ordres (${r.orders_buy||0} achats / ${r.orders_sell||0} ventes)"></div>`);
   }
+  const t2=document.getElementById('tip2');
+  el.addEventListener('mousemove',ev=>{
+    const b=ev.target.closest('.run');
+    if(!b){t2.style.display='none';return}
+    t2.textContent=b.dataset.tip; t2.style.display='block';
+    const w=t2.offsetWidth;
+    t2.style.left=Math.min(Math.max(6,ev.clientX-w/2),innerWidth-w-6)+'px';
+    t2.style.top=(ev.clientY-t2.offsetHeight-14)+'px';
+  });
+  el.addEventListener('mouseleave',()=>{t2.style.display='none'});
 }catch(e){console.warn('timeline',e)}}
 
 /* ---- POSITIONS ---- */
@@ -367,6 +439,7 @@ async function positions(){try{
   const rows=await api('positions'); const t=document.getElementById('positions');
   for(const p of (rows||[]).slice(0,15)){
     t.insertAdjacentHTML('beforeend',`<tr><td style="color:${COL[p.archimage]||'#888'}">${p.archimage}</td><td><b>${p.ticker}</b></td><td>${fr(p.market_value)}</td><td class="${p.unrealized_pl>=0?'pos':'neg'}">${p.unrealized_pl>=0?'+':''}${fr(p.unrealized_pl)}</td><td class="${p.unrealized_pl_pct>=0?'pos':'neg'}">${fr2(p.unrealized_pl_pct)} %</td><td>${p.days_held??'—'}</td></tr>`);}
+  rendreTriable(t);
 }catch(e){console.warn('positions',e)}}
 
 /* ---- GARDE-FOUS ---- */
