@@ -1,889 +1,404 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0d0a12">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="OPUS 2050">
-<link rel="manifest" id="pwa-manifest">
-<link rel="apple-touch-icon" id="pwa-icon">
-<title>OPUS 2050 — Tableau de bord complet</title>
+<meta name="description" content="OPUS 2050 — Robot de trading multi-IA. Performances en direct, méthode transparente, garde-fous mesurés.">
+<title>OPUS 2050 — Le Conseil des Archimages · Trading IA en direct</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root{--ink:#0d0a12;--ink2:#15111d;--panel:#1b1626;--line:#332a44;--parch:#e9ddc4;--dim:#b6ab98;--muted:#8b8098;
-    --gold:#c9a349;--goldsoft:#d9be74;--emerald:#46b98d;--garnet:#c05370;--amber:#cba24a;
-    --disp:'Cinzel',Georgia,serif;--body:'EB Garamond',Georgia,serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
-  *{box-sizing:border-box}html,body{margin:0}
-  body{font-family:var(--body);color:var(--parch);background:radial-gradient(1100px 640px at 12% -10%,rgba(201,163,73,.09),transparent 60%),var(--ink);min-height:100vh;line-height:1.5}
-  .wrap{max-width:1180px;margin:0 auto;padding:40px 22px 70px}
-  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin:0 0 12px}
-  h1{font-family:var(--disp);font-weight:700;font-size:clamp(26px,4.6vw,42px);margin:0;letter-spacing:.02em}
-  h2{font-family:var(--disp);font-size:16px;letter-spacing:.08em;color:var(--goldsoft);margin:38px 0 16px;border-bottom:1px solid var(--line);padding-bottom:8px}
-  .bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:20px}
-  input{font-family:var(--mono);font-size:12px;background:var(--ink2);border:1px solid var(--line);color:var(--parch);padding:9px 12px;border-radius:4px;width:min(400px,58vw)}
-  button{font-family:var(--mono);font-size:12px;background:var(--gold);color:#1a1408;border:none;padding:9px 16px;border-radius:4px;cursor:pointer;font-weight:600}
-  button.ghost{background:transparent;color:var(--goldsoft);border:1px solid var(--line)}
-  button.mini{padding:5px 10px;font-size:10px}
-  .maj{font-family:var(--mono);font-size:11px;color:var(--muted)}
-  .hint{color:var(--muted);font-size:14px;margin-top:6px}
-  .badges{display:flex;gap:10px;flex-wrap:wrap}
-  .badge{font-family:var(--mono);font-size:11px;background:var(--ink2);border:1px solid var(--line);padding:7px 11px;border-radius:20px}
-  .badge b{color:var(--goldsoft)}.badge.ok b{color:var(--emerald)}.badge.stop b{color:var(--garnet)}
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-  @media(max-width:820px){.grid{grid-template-columns:1fr}}
-  .arch{position:relative;background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:6px;padding:20px;overflow:hidden}
-  .arch::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--accent);opacity:.85}
-  .arch[data-a="GIL"]{--accent:var(--emerald)}.arch[data-a="JU"]{--accent:var(--amber)}
-  .arch[data-a="SYL"]{--accent:var(--garnet)}.arch[data-a="CRYPTE_JU"]{--accent:var(--gold)}
-  .ahead{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-  .seal{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--accent);color:var(--accent);font-family:var(--disp);font-weight:700;font-size:15px}
-  .aname{font-family:var(--disp);font-size:17px}.awho{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
-  .learn{margin-left:auto;font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:12px;border:1px solid var(--line)}
-  .learn.on{color:var(--emerald);border-color:rgba(70,185,141,.4)}.learn.off{color:var(--amber);border-color:rgba(203,162,74,.4)}
-  .stats2{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:12px}
-  .st{background:var(--ink2);padding:9px 10px}.st .k{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-  .st .v{font-family:var(--mono);font-size:15px;margin-top:3px}
-  .pos{color:var(--emerald)}.neg{color:var(--garnet)}
-  .wbar{height:6px;background:#241d31;border-radius:3px;overflow:hidden;margin:2px 0 10px}.wbar>i{display:block;height:100%;background:var(--accent)}
-  .doct{font-style:italic;color:var(--dim);font-size:14px;border-top:1px dashed var(--line);padding-top:10px}
-  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}@media(max-width:720px){.cards{grid-template-columns:repeat(2,1fr)}}
-  .card{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:5px;padding:16px}
-  .card .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.card .v{font-family:var(--mono);font-size:22px;margin-top:6px;color:var(--goldsoft)}
-  table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line)}
-  th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:400}
-  td.num,th.num{text-align:right;font-family:var(--mono)}
-  .corr{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:6px;padding:18px}
-  .crow{display:flex;align-items:center;gap:12px;margin-bottom:9px}
-  .crow .nm{font-family:var(--mono);font-size:12px;width:110px}
-  .crow .track{flex:1;height:9px;background:#241d31;border-radius:4px;overflow:hidden}.crow .track>i{display:block;height:100%}
-  .crow .pc{font-family:var(--mono);font-size:12px;color:var(--goldsoft);width:52px;text-align:right}
-  .err{color:var(--garnet);font-family:var(--mono);font-size:13px;margin-top:14px}
-  .alerte{font-family:var(--mono);font-size:13px;border-radius:6px;padding:14px 18px;margin-top:18px;border:1px solid}
-  .alerte.rouge{background:rgba(192,83,112,.12);border-color:var(--garnet);color:#f0aabb}
-  .alerte.verte{background:rgba(70,185,141,.10);border-color:var(--emerald);color:#9fe3c9}
-  .badge.warn b{color:var(--amber)}
-  tbody tr{transition:background .12s ease}
-  tbody tr:hover td{background:rgba(233,221,196,.035)}
-  tbody tr:nth-child(even) td{background:rgba(233,221,196,.018)}
-  .card,.arch{transition:transform .15s ease,box-shadow .15s ease}
-  .card:hover,.arch:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.38)}
-  .dossier{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:8px;padding:22px;margin-bottom:18px;position:relative;overflow:hidden}
-  .dossier::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--accent);opacity:.9}
-  .dossier[data-a="GIL"]{--accent:var(--emerald)}.dossier[data-a="JU"]{--accent:var(--amber)}.dossier[data-a="SYL"]{--accent:var(--garnet)}
-  .dossier h3{font-family:var(--disp);font-size:15px;letter-spacing:.06em;color:var(--goldsoft);margin:18px 0 10px;display:flex;align-items:center;gap:8px}
-  .dossier h3::before{content:"—";color:var(--accent)}
-  .dossier table{font-size:13px}
-  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
-  .dot.vert{background:var(--emerald)}.dot.ambre{background:var(--amber)}.dot.gris{background:var(--muted)}
-  .cerv-liste{display:flex;flex-direction:column;gap:8px}
-  .cerv-ligne{display:flex;align-items:center;gap:12px;background:var(--ink2);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
-  .cerv-seal{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--accent);color:var(--accent);font-family:var(--disp);font-weight:700;font-size:12px;flex-shrink:0}
-  .cerv-nom{font-family:var(--disp);font-size:14px;width:140px;flex-shrink:0}
-  .cerv-wr{font-family:var(--mono);font-size:13px;color:var(--goldsoft)}
-  .cerv-runs{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto}
-
-  /* === APPLICATION : onglets === */
-  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin-top:26px;border-bottom:1px solid var(--line);padding-bottom:0}
-  .tab-btn{font-family:var(--mono);font-size:12px;letter-spacing:.05em;background:transparent;color:var(--muted);border:none;border-bottom:2px solid transparent;padding:12px 16px;cursor:pointer;font-weight:600}
-  .tab-btn:hover{color:var(--parch)}
-  .tab-btn.actif{color:var(--goldsoft);border-bottom-color:var(--gold)}
-  .tab-panel{display:none;animation:fadein .2s ease}
-  .tab-panel.actif{display:block}
-  @keyframes fadein{from{opacity:0}to{opacity:1}}
-
-  /* === KPI hero (Vue d'ensemble, page de garde "vendeuse") === */
-  .hero{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:22px}
-  @media(max-width:820px){.hero{grid-template-columns:repeat(2,1fr)}}
-  .hero-card{background:linear-gradient(160deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:8px;padding:20px;text-align:center;position:relative;overflow:hidden}
-  .hero-card::before{content:"";position:absolute;inset:0;background:radial-gradient(120px 80px at 50% 0%,rgba(201,163,73,.12),transparent 70%)}
-  .hero-card .hv{font-family:var(--disp);font-size:28px;color:var(--goldsoft);position:relative}
-  .hero-card .hk{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:6px;position:relative}
-  .resume{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:6px;padding:20px 22px;margin-top:20px;font-size:15px;line-height:1.8}
-  .audit{background:var(--ink2);border:1px solid var(--line);border-radius:6px;padding:18px 20px;margin-top:14px;font-size:13px;line-height:1.8}
-  .audit .ok{color:var(--emerald)}.audit .warn{color:var(--amber)}.audit .ko{color:var(--garnet)}
-
-  /* === tableaux triables === */
-  th.tri{cursor:pointer;user-select:none}
-  th.tri:hover{color:var(--goldsoft)}
-  th.tri .fleche{opacity:.4;margin-left:4px}
-  th.tri.actif .fleche{opacity:1;color:var(--gold)}
-
-  /* === graphique SVG === */
-  .chart-wrap{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:8px;padding:20px;margin-top:16px}
-  .chart-legende{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-family:var(--mono);font-size:11px}
-  .chart-legende span{display:flex;align-items:center;gap:6px}
-  .chart-legende i{width:10px;height:10px;border-radius:2px;display:inline-block}
-
-  details.glossaire summary{cursor:pointer;font-family:var(--disp);font-size:16px;letter-spacing:.08em;color:var(--goldsoft);padding:6px 0}
-  .chart-mini{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:6px;padding:16px;position:relative;overflow:hidden}
-  .chart-mini::before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--accent);opacity:.85}
-  .chart-mini h4{margin:0 0 10px;font-family:var(--disp);font-size:14px;color:var(--goldsoft);display:flex;align-items:center;gap:8px}
-  .chart-mini .chiffre{font-family:var(--mono);font-size:13px;color:var(--muted);margin-left:auto}
-
-  @media print{
-    body{background:#fff;color:#111}
-    .bar,.tabs,button,input,#err{display:none!important}
-    .tab-panel{display:block!important}
-    .hero-card,.card,.arch,.dossier,.corr,.chart-wrap,.audit,.resume{border:1px solid #999;box-shadow:none!important;background:#f7f5f0!important;color:#111!important}
-    h1,h2,.hero-card .hv,.aname{color:#111!important}
-    .eyebrow,.maj,.hint,.awho,.card .k,.st .k{color:#555!important}
-    a{color:#111}
-  }
+:root{
+  --ink:#0d0a12; --ink2:#15111d; --panel:#1b1626; --panel2:#241d33; --line:#332a44;
+  --parch:#e9ddc4; --dim:#b6ab98; --muted:#8b8098;
+  --gold:#c9a349; --goldsoft:#d9be74; --emerald:#46b98d; --garnet:#c05370; --amber:#cba24a;
+  --gil:#ab8836; --ju:#4a87d4; --syl:#2c9862; --spy:#767ac9;
+  --disp:'Cinzel',Georgia,serif; --body:'EB Garamond',Georgia,serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--body);color:var(--parch);background:radial-gradient(1100px 640px at 12% -10%,rgba(201,163,73,.09),transparent 60%),var(--ink);min-height:100vh;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:34px 22px 70px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);margin:0 0 12px}
+h1{font-family:var(--disp);font-weight:700;font-size:clamp(26px,4.6vw,42px);margin:0;letter-spacing:.02em}
+h2{font-family:var(--disp);font-size:17px;letter-spacing:.08em;color:var(--goldsoft);margin:46px 0 18px;border-bottom:1px solid var(--line);padding-bottom:8px}
+.sub{color:var(--muted);font-size:15px;margin-top:8px;max-width:760px}
+.live{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;color:var(--emerald);letter-spacing:.15em}
+.live .dot{width:8px;height:8px;border-radius:50%;background:var(--emerald);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* Hero tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:26px 0 8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 14px}
+.tile .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.tile .val{font-family:var(--disp);font-size:clamp(24px,3vw,32px);margin-top:6px;color:var(--parch)}
+.tile .val.up{color:var(--emerald)} .tile .val.gold{color:var(--goldsoft)}
+.tile .note{font-size:12.5px;color:var(--dim);margin-top:4px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0 4px}
+.btn{font-family:var(--disp);font-size:14px;letter-spacing:.06em;padding:12px 22px;border-radius:10px;cursor:pointer;border:1px solid var(--gold);transition:.15s}
+.btn.solid{background:linear-gradient(160deg,var(--goldsoft),var(--gold));color:#241a06;font-weight:700}
+.btn.solid:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--goldsoft)}
+.btn.ghost:hover{background:rgba(201,163,73,.1)}
+/* Cards / sections */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;padding:7px 10px;border-bottom:1px solid var(--line)}
+td{padding:7px 10px;border-bottom:1px solid rgba(51,42,68,.5);font-variant-numeric:tabular-nums}
+tr:hover td{background:var(--panel2)}
+.pos{color:var(--emerald)} .neg{color:var(--garnet)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;font-family:var(--mono);font-size:11px;border:1px solid var(--line)}
+.pill.ok{color:var(--emerald);border-color:rgba(70,185,141,.5)} .pill.down{color:var(--garnet);border-color:rgba(192,83,112,.5)}
+.pill.warn{color:var(--amber);border-color:rgba(203,162,74,.5)}
+/* Chart */
+#chartbox{position:relative}
+#tooltip{position:absolute;pointer-events:none;background:#0d0a12ee;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-family:var(--mono);font-size:11.5px;display:none;z-index:5;white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin:10px 2px 0;font-size:13.5px;color:var(--dim)}
+.legend .sw{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+/* Archimage cards */
+.arch{cursor:pointer;transition:.15s;border-top:3px solid var(--line)}
+.arch:hover{transform:translateY(-3px);border-color:var(--gold)}
+.arch h3{font-family:var(--disp);font-size:16px;letter-spacing:.06em}
+.arch .big{font-family:var(--disp);font-size:26px;margin:8px 0 2px}
+.arch .m{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-top:5px}
+.arch .hint{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.15em;margin-top:12px}
+/* Gauges */
+.gauges{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.gauge{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+.gauge .nm{font-family:var(--disp);font-size:13px;letter-spacing:.08em}
+.gauge .sig{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px}
+/* Heatmap */
+.hm{display:grid;gap:3px;font-family:var(--mono);font-size:11px}
+.hm .cell{border-radius:5px;padding:7px 2px;text-align:center;color:#0d0a12;font-weight:600;cursor:default}
+.hm .hdr{color:var(--muted);background:transparent;font-weight:400}
+.hm .opt{outline:2px solid var(--goldsoft);outline-offset:1px}
+/* Timeline */
+.tl{display:flex;align-items:flex-end;gap:5px;overflow-x:auto;padding:14px 4px 6px}
+.tl .run{border-radius:4px 4px 2px 2px;min-width:13px;cursor:default;position:relative}
+.tl .run:hover::after{content:attr(data-tip);position:absolute;bottom:105%;left:50%;transform:translateX(-50%);background:#0d0a12ee;border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-family:var(--mono);font-size:10.5px;white-space:nowrap;z-index:6}
+/* Modal */
+#modal{position:fixed;inset:0;background:rgba(5,3,9,.8);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:5vh 16px;overflow-y:auto}
+#modal .inner{background:var(--ink2);border:1px solid var(--gold);border-radius:16px;max-width:820px;width:100%;padding:26px}
+#modal .close{float:right;cursor:pointer;color:var(--muted);font-size:22px;line-height:1}
+/* Forms */
+.lead{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.lead input{flex:1;min-width:220px;background:var(--ink2);border:1px solid var(--line);color:var(--parch);padding:11px 14px;border-radius:9px;font-family:var(--body);font-size:15px}
+.msg{font-family:var(--mono);font-size:12px;margin-top:8px;min-height:1em}
+/* Pricing */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.plan{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;position:relative}
+.plan.star{border-color:var(--gold);box-shadow:0 0 30px rgba(201,163,73,.12)}
+.plan .badge{position:absolute;top:-11px;right:14px;background:var(--gold);color:#241a06;font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:12px;letter-spacing:.1em}
+.plan h3{font-family:var(--disp);font-size:16px}
+.plan .price{font-family:var(--disp);font-size:30px;margin:10px 0 2px;color:var(--goldsoft)}
+.plan .per{color:var(--muted);font-size:13px}
+.plan ul{margin:14px 0 18px;padding-left:18px;color:var(--dim);font-size:14px}
+.plan ul li{margin:6px 0}
+footer{margin-top:60px;border-top:1px solid var(--line);padding-top:24px;color:var(--muted);font-size:13px}
+footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing:.1em;margin-bottom:8px}
+.majline{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.12em;margin-top:10px}
+@media (max-width:640px){ .wrap{padding:22px 14px 50px} h2{margin-top:36px} }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <p class="eyebrow">OPUS 2050 · surveillance complète</p>
-  <h1>Le Conseil des Archimages — Tableau de bord</h1>
-  <div class="bar">
-    <input id="key" type="password" placeholder="Colle ta clé anon Supabase (une seule fois)">
-    <button onclick="save()">Enregistrer + charger</button>
-    <button class="ghost" onclick="load()">Rafraîchir</button>
-    <button class="ghost" onclick="window.print()">🖨 Rapport imprimable / PDF</button>
-    <span class="maj" id="maj"></span>
+
+  <!-- ═══════════ HÉROS ═══════════ -->
+  <p class="eyebrow">Le Conseil des Archimages · Trading autonome multi-IA</p>
+  <h1>OPUS 2050 — l'Oracle Financier</h1>
+  <p class="sub">Trois intelligences artificielles concurrentes, cinq analystes spécialisés et un méta-cerveau qui apprend de chaque erreur — en direct, chiffres vérifiables à la source, sans capture d'écran retouchée.</p>
+  <div class="live" style="margin-top:12px"><span class="dot"></span> DONNÉES EN DIRECT — SUPABASE <span id="maj" style="color:var(--muted)"></span></div>
+
+  <div class="tiles" id="heroTiles">
+    <div class="tile"><div class="lbl">Gains cumulés (simulation)</div><div class="val up" id="hGain">…</div><div class="note">3 comptes Alpaca paper de 1 M$ chacun</div></div>
+    <div class="tile"><div class="lbl">Alpha vs marché (S&amp;P 500)</div><div class="val gold" id="hAlpha">…</div><div class="note">Robots vs SPY sur la même période <a href="#equity" style="color:var(--gold)">voir la preuve ↓</a></div></div>
+    <div class="tile"><div class="lbl">Jours de fonctionnement autonome</div><div class="val" id="hJours">…</div><div class="note">runs toutes les 3 h, 24/7</div></div>
+    <div class="tile"><div class="lbl">Win rate collectif</div><div class="val" id="hWr">…</div><div class="note">sur l'ensemble des runs évalués</div></div>
   </div>
-  <p class="hint">Clé anon : Supabase → Project Settings → API → <b>anon public</b>. Elle reste sur ton ordinateur.</p>
-  <div id="err"></div>
+  <div class="cta">
+    <button class="btn solid" onclick="document.getElementById('pdf').scrollIntoView()">📄 Rapport de méthode GRATUIT (PDF)</button>
+    <button class="btn ghost" onclick="document.getElementById('abo').scrollIntoView()">Rejoindre la liste d'attente</button>
+  </div>
 
-  <nav class="tabs" id="tabs">
-    <button class="tab-btn actif" data-tab="apercu" onclick="ongletActif('apercu')">◈ Vue d'ensemble</button>
-    <button class="tab-btn" data-tab="cerveau" onclick="ongletActif('cerveau')">◈ Cerveau &amp; Sages</button>
-    <button class="tab-btn" data-tab="portefeuilles" onclick="ongletActif('portefeuilles')">◈ Portefeuilles &amp; Positions</button>
-    <button class="tab-btn" data-tab="performance" onclick="ongletActif('performance')">◈ Performance &amp; Historique</button>
-    <button class="tab-btn" data-tab="technique" onclick="ongletActif('technique')">◈ Journal technique</button>
-  </nav>
+  <!-- ═══════════ COURBE D'EQUITY ═══════════ -->
+  <h2 id="equity">◈ La preuve en une courbe — robots vs marché</h2>
+  <p class="sub">Performance en % du capital de départ. La ligne pointillée est le S&amp;P 500 (SPY) sur la même période — ce que vous auriez gagné en « achetant le marché ».</p>
+  <div class="card" id="chartbox" style="margin-top:14px">
+    <svg id="chart" width="100%" height="360" role="img" aria-label="Courbes de performance des trois robots comparées au S&P 500"></svg>
+    <div id="tooltip"></div>
+    <div class="legend" id="chartLegend"></div>
+  </div>
 
-  <div id="content" style="display:none">
+  <!-- ═══════════ ARCHIMAGES ═══════════ -->
+  <h2>◈ Les trois Archimages — cliquez pour ouvrir leur dossier</h2>
+  <div class="grid3" id="archCards"></div>
 
-  <!-- ONGLET 1 : VUE D'ENSEMBLE -->
-  <section class="tab-panel actif" id="panel-apercu">
-    <div class="hero" id="hero"></div>
+  <!-- ═══════════ SAGES ═══════════ -->
+  <h2>◈ Le Conseil des cinq Sages — fiabilité mesurée en continu</h2>
+  <p class="sub">Chaque Sage est noté contre le mouvement réellement observé du marché à 24 h. Les scores bougent avec les données — rien n'est figé.</p>
+  <div class="gauges" id="gauges" style="margin-top:14px"></div>
 
-    <h2 style="margin-top:26px">◈ Totaux consolidés — tous comptes confondus</h2>
-    <div class="hero" id="totaux"></div>
-    <p class="hint" style="margin-top:14px">⚠ Ce sont <b>3 comptes Alpaca séparés</b> (papier), pas un seul portefeuille — chacun est parti avec environ 1 000 000 $ fictifs. Le chiffre ci-dessus additionne leurs gains respectifs. Détail compte par compte, tiré directement de Supabase (table <code>oracle_brain_state</code>) :</p>
-    <button class="ghost mini" onclick="exportCSV('comptes-detail','comptes_par_archimage')">⇩ Exporter en CSV</button>
-    <table id="comptes-detail"><thead><tr>
-      <th class="tri" onclick="trier('comptes-detail',0,false)">Compte <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comptes-detail',1,true)">Départ (baseline_equity) <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comptes-detail',2,true)">Valeur actuelle <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comptes-detail',3,true)">Gain <span class="fleche">↕</span></th>
-      <th class="tri maj" onclick="trier('comptes-detail',4,false)">Dernière mise à jour <span class="fleche">↕</span></th>
-    </tr></thead><tbody id="comptes-detail-body"></tbody></table>
-    <div class="resume" id="resume"></div>
+  <!-- ═══════════ HEATMAP BACKTEST ═══════════ -->
+  <h2>◈ Les réglages ne sortent pas d'un chapeau — heatmap du backtest</h2>
+  <p class="sub">Rendement composé (%) de chaque combinaison Take-Profit × Stop-Loss, rejouée sur tout l'historique de propositions, frais déduits, recalculée toutes les 6 h. La case dorée est le réglage en production.</p>
+  <div class="card" style="margin-top:14px;overflow-x:auto"><div class="hm" id="heatmap"></div></div>
 
-    <details class="glossaire" style="margin-top:22px">
-      <summary>◈ Comment lire ce tableau (sans rien connaître à la bourse)</summary>
-      <p style="font-size:14px;line-height:1.7;margin:14px 0 0">
-        <b style="color:var(--goldsoft)">Archimage</b> = un agent qui décide seul quoi acheter/vendre (GIL, JU, SYL sur de l'argent fictif "Alpaca" ; l'Alchimiste sur ton compte crypto réel Revolut X).<br>
-        <b style="color:var(--goldsoft)">Le Cerveau</b> = la mémoire de chaque archimage : ce qu'il a gagné/perdu et ce qu'il a appris.<br>
-        <b style="color:var(--goldsoft)">Le Méta-Cerveau</b> = un juge au-dessus des 4 : il regarde qui performe le mieux et lui donne plus de "poids".<br>
-        <b style="color:var(--goldsoft)">Rendement moyen</b> = en moyenne, l'archimage gagne ou perd ce % à chaque coup.<br>
-        <b style="color:var(--goldsoft)">% gagnantes</b> = sur 100 décisions, combien se sont avérées bonnes.<br>
-        <b style="color:var(--goldsoft)">Ratio Gain/Perte</b> = quand il gagne, il gagne combien de fois plus que ce qu'il perd quand il perd (au-dessus de 1 = bon signe).<br>
-        <b style="color:var(--goldsoft)">Drawdown</b> = la plus grosse baisse subie depuis le sommet.<br>
-        <b style="color:var(--goldsoft)">Pouvoir d'achat</b> = combien il lui reste de disponible pour acheter.<br>
-        <b style="color:var(--goldsoft)">Kill-switch</b> = l'interrupteur d'urgence : ARRÊTÉ = rien ne peut être exécuté en réel.<br>
-        <b style="color:var(--goldsoft)">Les 5 Sages</b> = 5 conseillers spécialisés que les archimages consultent avant de décider.
-      </p>
-    </details>
+  <!-- ═══════════ TIMELINE ═══════════ -->
+  <h2>◈ Les 40 derniers runs — le rythme du robot</h2>
+  <p class="sub">Une barre par run. La hauteur = nombre d'ordres décidés ; la couleur = régime de marché détecté (rouge : peur, gris : neutre, vert : opportunité). Survolez.</p>
+  <div class="card" style="margin-top:14px"><div class="tl" id="timeline"></div></div>
 
-    <h2>◈ Audit du système — Make &amp; Supabase</h2>
-    <div class="audit" id="audit-box"></div>
+  <!-- ═══════════ POSITIONS ═══════════ -->
+  <h2>◈ Positions ouvertes en ce moment</h2>
+  <div class="card" style="margin-top:14px;overflow-x:auto"><table id="positions"><tr><th>Robot</th><th>Actif</th><th>Valeur $</th><th>P&amp;L latent $</th><th>P&amp;L %</th><th>Jours</th></tr></table></div>
 
-    <h2>◈ Fraîcheur &amp; santé du système</h2>
-    <div id="alerte-fraicheur"></div>
-    <div class="badges" id="sante" style="margin-top:14px"></div>
+  <!-- ═══════════ GARDE-FOUS ═══════════ -->
+  <h2>◈ Garde-fous & transparence — le système se surveille lui-même</h2>
+  <div class="grid3" style="margin-top:14px">
+    <div class="card"><h3 style="font-family:var(--disp);font-size:15px">🚨 Circuit breakers</h3><p class="sub" style="font-size:13px">Au-delà de 5 % de perte, un robot est automatiquement bridé. C'est une protection, pas une faiblesse.</p><div id="breakers" style="margin-top:10px"></div></div>
+    <div class="card"><h3 style="font-family:var(--disp);font-size:15px">🟢 Santé des 8 sources de données</h3><div id="sources" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:7px"></div></div>
+    <div class="card"><h3 style="font-family:var(--disp);font-size:15px">💸 Honnêteté sur les frais</h3><p class="sub" style="font-size:13px">Nous estimons même l'écart simulation → réel (spreads et frais) :</p><div id="friction" style="margin-top:10px"></div></div>
+  </div>
 
-    <h2>◈ Santé des données &amp; garde-fous (dernier run)</h2>
-    <div class="badges" id="flux"></div>
-    <div id="flux-note"></div>
-  </section>
-
-  <!-- ONGLET 2 : CERVEAU & SAGES -->
-  <section class="tab-panel" id="panel-cerveau">
-    <h2>◈ Cerveau (mémoire &amp; doctrine)</h2>
-    <div class="cerv-liste" id="cerv-liste"></div>
-
-    <h2>◈ Le Cerveau — état individuel de chaque archimage</h2>
-    <div class="grid" id="archi"></div>
-
-    <h2>◈ Le Méta-Cerveau (L'Esprit Éternel) — corrections &amp; répartition des poids</h2>
-    <div class="corr"><div class="doct" id="meta" style="border-top:none;padding-top:0;margin-bottom:14px;font-size:15px"></div><div id="poids"></div></div>
-
-    <h2>◈ Les 5 Sages — signaux &amp; taux de réussite</h2>
-    <div class="grid" id="sages"></div>
-    <div id="sages-note"></div>
-  </section>
-
-  <!-- ONGLET 3 : PORTEFEUILLES & POSITIONS -->
-  <section class="tab-panel" id="panel-portefeuilles">
-    <h2>◈ Portefeuilles — ce que possède réellement chaque archimage</h2>
-    <div class="cards" id="portefeuilles"></div>
-
-    <h2>◈ Positions vivantes (Alpaca) — par archimage</h2>
-    <div class="cards" id="posvivantes"></div>
-
-    <h2>◈ Dossier de chaque mage — positions &amp; derniers choix, séparément</h2>
-    <div id="dossiers"></div>
-
-    <h2>◈ Détail des cryptos de l'Alchimiste (Revolut X)</h2>
-    <button class="ghost mini" onclick="exportCSV('holdings','cryptos_alchimiste')">⇩ Exporter en CSV</button>
-    <table id="holdings"><thead><tr>
-      <th class="tri" onclick="trier('holdings',0,false)">Crypto <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('holdings',1,true)">Quantité <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('holdings',2,true)">Valeur <span class="fleche">↕</span></th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-
-  <!-- ONGLET 4 : PERFORMANCE & HISTORIQUE -->
-  <section class="tab-panel" id="panel-performance">
-    <h2>◈ Tableau comparatif — tous les archimages, côte à côte</h2>
-    <button class="ghost mini" onclick="exportCSV('comparatif','comparatif_archimages_opus2050')">⇩ Exporter en CSV</button>
-    <table id="comparatif"><thead><tr>
-      <th class="tri" onclick="trier('comparatif',0,false)">Archimage <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',1,true)">Valeur actuelle <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',2,true)">Gain $ <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',3,true)">Gain % <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',4,true)">Win rate <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',5,true)">Ratio G/P <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',6,true)">Rendement moyen <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',7,true)">Drawdown actuel <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',8,true)">Positions <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('comparatif',9,true)">Poids méta-cerveau <span class="fleche">↕</span></th>
-    </tr></thead><tbody></tbody></table>
-
-    <h2>◈ Courbe comparative — taux de réussite, un mois réel, jour par jour</h2>
-    <p class="hint">Le $ cumulé n'est volontairement pas tracé ici jour par jour : la table de calcul source (oracle_performance) s'est révélée jusqu'à 56x trop élevée par rapport à la vraie valeur du portefeuille — voir l'audit. Le taux de réussite, lui, est cohérent avec le reste du système.</p>
-    <div class="chart-wrap">
-      <div id="chart-perf"></div>
-      <div class="chart-legende" id="chart-legende"></div>
+  <!-- ═══════════ PDF GRATUIT ═══════════ -->
+  <h2 id="pdf">◈ Téléchargez le rapport de méthode — gratuit</h2>
+  <div class="card">
+    <p class="sub">« Anatomie d'un robot de trading multi-IA » — 6 pages : l'architecture des 3 archimages et des 5 Sages, la boucle d'apprentissage, les résultats détaillés et les garde-fous. Laissez votre email, le téléchargement démarre aussitôt.</p>
+    <div class="lead">
+      <input type="email" id="pdfEmail" placeholder="votre@email.com" autocomplete="email">
+      <button class="btn solid" onclick="lead('pdfEmail','pdf', () => { window.open('rapport-oracle.pdf','_blank') })">Recevoir le PDF</button>
     </div>
-
-    <h2>◈ Performance individuelle — un graphique par archimage</h2>
-    <div class="grid" id="charts-individuels"></div>
-
-    <h2>◈ Tableau de performance — exportable, triable</h2>
-    <button class="ghost mini" onclick="exportCSV('perftable','performance_reelle_opus2050')">⇩ Exporter en CSV</button>
-    <table id="perftable"><thead><tr>
-      <th class="tri" data-col="0" data-num="0" onclick="trier('perftable',0,false)">Archimage <span class="fleche">↕</span></th>
-      <th class="tri num" data-col="1" onclick="trier('perftable',1,true)">Évaluations <span class="fleche">↕</span></th>
-      <th class="tri num" data-col="2" onclick="trier('perftable',2,true)">Gain/perte cumulé (réconcilié) <span class="fleche">↕</span></th>
-      <th class="tri num" data-col="3" onclick="trier('perftable',3,true)">% gagnantes <span class="fleche">↕</span></th>
-      <th>Historique (▲ jour gagnant / ▼ perdant)</th>
-    </tr></thead><tbody></tbody></table>
-
-    <h2>◈ L'Alchimiste — ses dernières propositions</h2>
-    <button class="ghost mini" onclick="exportCSV('props','propositions_alchimiste')">⇩ Exporter en CSV</button>
-    <table id="props"><thead><tr>
-      <th class="tri" onclick="trier('props',0,false)">Quand <span class="fleche">↕</span></th>
-      <th class="tri" onclick="trier('props',1,false)">Paire <span class="fleche">↕</span></th>
-      <th class="tri" onclick="trier('props',2,false)">Sens <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('props',3,true)">Prix réf. <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('props',4,true)">Montant <span class="fleche">↕</span></th>
-      <th class="tri" onclick="trier('props',5,false)">Statut <span class="fleche">↕</span></th>
-    </tr></thead><tbody></tbody></table>
-
-    <h2>◈ Runs récents</h2>
-    <button class="ghost mini" onclick="exportCSV('runs','runs_recents_opus2050')">⇩ Exporter en CSV</button>
-    <table id="runs"><thead><tr>
-      <th class="tri" onclick="trier('runs',0,false)">Quand <span class="fleche">↕</span></th>
-      <th class="tri" onclick="trier('runs',1,false)">Phase de marché <span class="fleche">↕</span></th>
-      <th class="tri" onclick="trier('runs',2,false)">Statut <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('runs',3,true)">Ordres <span class="fleche">↕</span></th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-
-  <!-- ONGLET 5 : JOURNAL TECHNIQUE -->
-  <section class="tab-panel" id="panel-technique">
-    <h2>◈ Debug d'exécution — pourquoi un ordre est accepté, rejeté ou ignoré</h2>
-    <button class="ghost mini" onclick="exportCSV('debugexec','debug_execution_opus2050')">⇩ Exporter en CSV</button>
-    <table id="debugexec"><thead><tr>
-      <th class="tri" onclick="trier('debugexec',0,false)">Archimage <span class="fleche">↕</span></th>
-      <th class="tri" onclick="trier('debugexec',1,false)">Quand <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('debugexec',2,true)">Acceptés <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('debugexec',3,true)">Rejetés <span class="fleche">↕</span></th>
-      <th class="tri num" onclick="trier('debugexec',4,true)">Ignorés <span class="fleche">↕</span></th>
-      <th>Raisons</th>
-    </tr></thead><tbody></tbody></table>
-  </section>
-
+    <div class="msg" id="pdfEmailMsg"></div>
+    <p class="sub" style="font-size:11px;margin-top:8px">En laissant votre email, vous acceptez de recevoir le rapport et nos actualités (max. 1 email/semaine). Désinscription en un clic, à tout moment, en répondant « STOP » — vos données ne sont jamais revendues.</p>
   </div>
+
+  <!-- ═══════════ ABONNEMENT ═══════════ -->
+  <h2 id="abo">◈ Accès membre — ouverture prochaine</h2>
+  <p class="sub">Le passage du robot en conditions réelles (Alpaca, puis Binance et Revolut X) est en préparation. Les membres fondateurs de la liste d'attente seront servis en premier et garderont leur tarif à vie. Paiement par carte et cryptomonnaie à l'ouverture.</p>
+  <div class="plans" style="margin-top:16px">
+    <div class="plan"><h3>Observateur</h3><div class="price">0 €</div><div class="per">pour toujours</div>
+      <ul><li>Ce tableau de bord en direct</li><li>Le rapport de méthode PDF</li><li>Le récap hebdomadaire par email</li></ul>
+      <button class="btn ghost" style="width:100%" onclick="document.getElementById('pdf').scrollIntoView()">Commencer ici</button></div>
+    <div class="plan star"><div class="badge">LISTE D'ATTENTE</div><h3>Signaux Oracle</h3><div class="price">—</div><div class="per">tarif fondateur annoncé à l'ouverture</div>
+      <ul><li>Chaque décision du Conseil en temps réel</li><li>Analyses des 5 Sages & doctrines des IA</li><li>Alertes circuit-breaker</li></ul>
+      <div class="lead"><input type="email" id="aboEmail" placeholder="votre@email.com" autocomplete="email"><button class="btn solid" onclick="lead('aboEmail','abonnement')">Réserver ma place</button></div>
+      <div class="msg" id="aboEmailMsg"></div></div>
+    <div class="plan"><h3>Élite</h3><div class="price">—</div><div class="per">quand le réel aura fait ses preuves</div>
+      <ul><li>Tout Signaux Oracle</li><li>Backtests & console technique complète</li><li>Accès prioritaire aux nouvelles plateformes</li></ul>
+      <button class="btn ghost" style="width:100%" onclick="lead('aboEmail','elite')">Même liste d'attente</button></div>
+  </div>
+
+  <!-- ═══════════ FOOTER LÉGAL ═══════════ -->
+  <footer>
+    <h4>AVERTISSEMENTS IMPORTANTS — À LIRE</h4>
+    <p><strong>Résultats simulés.</strong> Les performances affichées sur ce site sont réalisées en <strong>paper trading</strong> (comptes de simulation Alpaca alimentés en argent fictif) et en évaluation virtuelle pour la partie crypto. Elles ne correspondent à aucun gain réel et les résultats simulés surestiment généralement les résultats réels (frais, écarts de cours, liquidité, fiscalité).</p>
+    <p style="margin-top:8px"><strong>Aucun conseil en investissement.</strong> Ce site et ses contenus (tableaux, signaux, rapports, PDF) sont fournis à titre strictement informatif et pédagogique. Ils ne constituent ni un conseil en investissement, ni une recommandation personnalisée, ni une sollicitation d'achat ou de vente d'instruments financiers ou de crypto-actifs. L'éditeur n'est pas un prestataire de services d'investissement agréé ni un conseiller en investissements financiers (CIF).</p>
+    <p style="margin-top:8px"><strong>Risque de perte.</strong> Le trading d'actions, d'ETF et de crypto-actifs comporte un risque de perte totale du capital investi. Les performances passées — réelles ou simulées — ne préjugent pas des performances futures. N'investissez jamais des sommes dont vous pourriez avoir besoin.</p>
+    <p style="margin-top:8px"><strong>Aucune gestion de fonds.</strong> Nous ne collectons ni ne gérons les fonds de tiers. Un éventuel abonnement donne accès à de l'information, jamais à une gestion de votre argent.</p>
+    <p style="margin-top:8px"><strong>Propriété intellectuelle.</strong> Le concept OPUS 2050 / Le Collège des Archimages, l'architecture du système, les textes, visuels, données et rapports de ce site sont protégés. <strong>Toute reproduction, copie, extraction ou diffusion, totale ou partielle, est interdite sans autorisation écrite préalable</strong> ; toute utilisation commerciale du concept ou des contenus donne lieu à une licence payante. Contrevenants s'exposent à des poursuites (art. L.335-2 et s. du Code de la propriété intellectuelle).</p>
+    <p style="margin-top:8px"><strong>Données personnelles.</strong> Les adresses email collectées servent uniquement à l'envoi du rapport et de nos actualités ; elles ne sont jamais cédées à des tiers. Désinscription à tout moment sur simple demande à l'adresse de contact ci-dessous (RGPD).</p>
+    <p class="majline">Données servies en direct depuis Supabase · dernière mise à jour de la page : <span id="majFoot"></span> · © 2026 OPUS 2050 / Zen Chez Toi — Tous droits réservés · Contact : chachou8106@gmail.com · <a href="dashboard.html" style="color:inherit">Accès opérateur</a></p>
+  </footer>
 </div>
+
+<!-- MODAL -->
+<div id="modal" onclick="if(event.target===this)this.style.display='none'"><div class="inner"><span class="close" onclick="document.getElementById('modal').style.display='none'">✕</span><div id="modalBody"></div></div></div>
+
 <script>
-// === PWA : génère le manifeste + une icône + un service worker à la volée (fichier unique, pas de dépendances externes) ===
-(function initPWA(){
-  try{
-    // Icône 192x192 dessinée en canvas : sceau doré "Ω" sur fond sombre, cohérent avec le thème
-    const cv=document.createElement('canvas'); cv.width=192; cv.height=192;
-    const ctx=cv.getContext('2d');
-    ctx.fillStyle='#0d0a12'; ctx.fillRect(0,0,192,192);
-    const grd=ctx.createRadialGradient(96,70,10,96,96,140); grd.addColorStop(0,'#2a2138'); grd.addColorStop(1,'#0d0a12');
-    ctx.fillStyle=grd; ctx.fillRect(0,0,192,192);
-    ctx.strokeStyle='#c9a349'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(96,96,80,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle='#d9be74'; ctx.font='bold 92px Georgia, serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('Ω',97,104);
-    const iconUrl=cv.toDataURL('image/png');
-    document.getElementById('pwa-icon').href=iconUrl;
+const EP='https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/oracle-tests';
+const COL={GIL:'#ab8836',JU:'#4a87d4',SYL:'#2c9862',SPY:'#767ac9'};
+const NOMS={GIL:'GIL · L\'Arbitre Doré',JU:'JU · Le Souverain',SYL:'SYL · Le Prophète d\'Argent'};
+const fr=n=>Number(n).toLocaleString('fr-FR',{maximumFractionDigits:0});
+const fr2=n=>Number(n).toLocaleString('fr-FR',{maximumFractionDigits:2});
+async function api(action,params){const r=await fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,params})});const j=await r.json();if(j.error)throw new Error(j.error);return j.data}
 
-    const manifest={
-      name:"OPUS 2050 — Tableau de bord",
-      short_name:"OPUS 2050",
-      description:"Surveillance du Conseil des Archimages et de l'Alchimiste — OPUS 2050",
-      start_url:".", scope:".", display:"standalone",
-      background_color:"#0d0a12", theme_color:"#0d0a12",
-      icons:[{src:iconUrl,sizes:"192x192",type:"image/png"},{src:iconUrl,sizes:"512x512",type:"image/png"}]
-    };
-    const manifestBlob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
-    document.getElementById('pwa-manifest').href=URL.createObjectURL(manifestBlob);
+/* ---- HÉROS ---- */
+async function hero(){try{
+  const d=await api('hero');
+  document.getElementById('hGain').textContent='+'+fr(d.gain_total)+' $';
+  const alpha=d.alpha_moyen_pct;
+  document.getElementById('hAlpha').textContent=(alpha>0?'+':'')+fr2(alpha)+' pts';
+  document.getElementById('hJours').textContent=d.jours;
+  document.getElementById('hWr').textContent=fr2(d.win_rate_moyen)+' %';
+  const t=new Date().toLocaleTimeString('fr-FR');
+  document.getElementById('maj').textContent=' · MAJ '+t;
+  document.getElementById('majFoot').textContent=new Date().toLocaleString('fr-FR');
+  archCards(d.brains);
+}catch(e){console.warn('hero',e)}}
 
-    // Service worker minimal (mise en cache légère) — ne s'enregistre que si servi en http(s), impossible en file://
-    if('serviceWorker' in navigator && (location.protocol==='https:'||location.protocol==='http:')){
-      const swCode=`
-        self.addEventListener('install',e=>self.skipWaiting());
-        self.addEventListener('activate',e=>self.clients.claim());
-        self.addEventListener('fetch',e=>{});
-      `;
-      const swBlob=new Blob([swCode],{type:'application/javascript'});
-      navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
-    }
-  }catch(e){console.error('pwa-init',e);}
-})();
-const SUPA="https://smddzybxebwhfnitxuyp.supabase.co";
-const $=s=>document.querySelector(s);
-function save(){const v=$("#key").value.trim();if(v)localStorage.setItem('opus_anon',v);load();}
-const money=v=>v==null?"—":Number(v).toLocaleString('fr-FR',{maximumFractionDigits:2})+" $";
-const pct=v=>v==null?"—":(v>0?"+":"")+Number(v).toFixed(2)+"%";
-const WHO={JU:"Toi (Laurent) · Alpaca",SYL:"Sylvia · Alpaca",GIL:"Gilles · Alpaca",CRYPTE_JU:"Alchimiste · Revolut X réel"};
-const COL={GIL:"var(--emerald)",JU:"var(--amber)",SYL:"var(--garnet)",CRYPTE_JU:"var(--gold)"};
-const COLHEX={GIL:"#46b98d",JU:"#cba24a",SYL:"#c05370"};
-
-const MOT_FR={FEAR:'PEUR',EXTREME:'EXTRÊME',GREED:'AVIDITÉ',NEUTRAL:'NEUTRE',OPPORTUNITY:'OPPORTUNITÉ',
-  STABILIZATION:'STABILISATION',COMPRESSION:'COMPRESSION',CONSOLIDATION:'CONSOLIDATION',DIVERGENCE:'DIVERGENCE',
-  BULL:'HAUSSIER',BEAR:'BAISSIER',BULLISH:'HAUSSIER',BEARISH:'BAISSIER',UP:'HAUSSE',DOWN:'BAISSE',FLAT:'STABLE',
-  MEDIUM:'MOYEN',LOW:'FAIBLE',HIGH:'ÉLEVÉ',RALLY:'RALLYE',CRASH:'EFFONDREMENT',VOLATILE:'VOLATIL',CALM:'CALME',
-  TREND:'TENDANCE',REVERSAL:'RETOURNEMENT',BREAKOUT:'CASSURE',RANGE:'FOURCHETTE',ACCUMULATION:'ACCUMULATION',
-  DISTRIBUTION:'DISTRIBUTION',SHOCK:'CHOC',NONE:'AUCUN',HOLD:'ATTENDRE',DONNEES:'DONNÉES',ATTENDRE:'ATTENDRE',
-  SHORT:'VENTE À DÉCOUVERT',NOT:'PAS DE',DOWNTREND:'TENDANCE BAISSIÈRE',UPTREND:'TENDANCE HAUSSIÈRE',
-  MARKET:'MARCHÉ',CLOSED:'FERMÉ',EQUITY:'ACTION',BUY:'ACHAT',SELL:'VENTE',MOMENTUM:'MOMENTUM',
-  INSUFFICIENT:'INSUFFISANT',BUYING:'ACHAT',POWER:'POUVOIR',MAX:'MAXIMUM',MAXIMUM:'MAXIMUM',POSITION:'POSITION',
-  REACHED:'ATTEINTE',RISK:'RISQUE',LIMIT:'LIMITE',EXCEEDED:'DÉPASSÉE'};
-function traduireCode(s){
-  if(!s)return '—';
-  return s.split(/[_\s]+/).map(w=>MOT_FR[w.toUpperCase()]||w).join(' ');
-}
-const RAISON_FR={
-  momentum_downtrend:"tendance baissière (momentum) — achat annulé", momentum_uptrend:"tendance haussière (momentum) — vente annulée",
-  short_market_closed:"marché fermé — vente à découvert impossible",
-  short_not_downtrend:"pas assez de tendance baissière pour justifier une vente à découvert",
-  us_market_closed_equity_buy:"marché US fermé — achat d'action impossible pour l'instant",
-  us_market_closed_equity_sell:"marché US fermé — vente d'action impossible pour l'instant",
-  insufficient_buying_power:"pouvoir d'achat insuffisant", max_position_reached:"position maximale déjà atteinte",
-  risk_limit_exceeded:"limite de risque dépassée"
-};
-function traduireRaison(s){return RAISON_FR[s]||traduireCode(s).toLowerCase();}
-const KILL_FR={stop:'ARRÊTÉ',run:'ACTIF'};
-function qty(v){if(v==null)return '—';return Number(v).toLocaleString('fr-FR',{maximumFractionDigits:8});}
-function sembleAnglais(t){
-  if(!t)return false;
-  const aAccents=/[éèêàùçôîâëïü]/i.test(t);
-  const motsAnglais=/\b(the|and|with|not|but|for|this|that|signals?|showing|strong|setup|panic|beneath|undercurrent|stable|risk-on|over-diversification|textbook)\b/i;
-  return !aAccents && motsAnglais.test(t);
-}
-function doctrineHTML(txt){
-  const base=txt||'Pas encore de doctrine.';
-  return sembleAnglais(txt)?`${base} <span class="hint" style="color:var(--amber)">⚠ ce texte est resté en anglais côté Make (prompt du méta-cerveau à corriger), je ne peux pas le traduire moi-même sans risquer de trahir le sens</span>`:base;
-}
-function fmtMin(m){
-  if(m==null)return '—';
-  const h=Math.floor(m/60),r=Math.round(m%60);
-  return h>0?`${h} h ${r} min`:`${r} min`;
-}
-
-// === APPLICATION : onglets ===
-function ongletActif(nom){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('actif',b.dataset.tab===nom));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('actif',p.id==='panel-'+nom));
-}
-
-// === Tableaux triables : "classer comme on veut" ===
-function trier(tableId,col,estNum){
-  const table=document.getElementById(tableId);
-  const tbody=table.tBodies[0];
-  const th=table.querySelectorAll('th')[col];
-  const asc = !th.classList.contains('actif') || th.dataset.dir!=='asc';
-  table.querySelectorAll('th').forEach(t=>{t.classList.remove('actif');const f=t.querySelector('.fleche');if(f)f.textContent='↕';});
-  th.classList.add('actif'); th.dataset.dir=asc?'asc':'desc';
-  const f=th.querySelector('.fleche'); if(f)f.textContent=asc?'▲':'▼';
-  const lignes=Array.from(tbody.querySelectorAll('tr'));
-  lignes.sort((a,b)=>{
-    let va=a.children[col]?.textContent.trim()||'', vb=b.children[col]?.textContent.trim()||'';
-    if(estNum){va=parseFloat(va.replace(/[^\d.-]/g,''))||0; vb=parseFloat(vb.replace(/[^\d.-]/g,''))||0; return asc?va-vb:vb-va;}
-    return asc?va.localeCompare(vb):vb.localeCompare(va);
-  });
-  lignes.forEach(l=>tbody.appendChild(l));
-}
-
-// === Export CSV ===
-function exportCSV(tableId,nomFichier){
-  const table=document.getElementById(tableId);
-  const lignes=[...table.querySelectorAll('tr')].map((tr,i)=>
-    [...tr.children].map(c=>{
-      let t=c.textContent.trim();
-      if(i===0) t=t.replace(/[\s↕▲▼]+$/,''); // en-tête : on retire la flèche de tri, pas les données
-      return '"'+t.replace(/"/g,'""')+'"';
-    }).join(';')
-  );
-  const blob=new Blob(["\uFEFF"+lignes.join('\n')],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=nomFichier+'.csv';a.click();
-  URL.revokeObjectURL(url);
-}
-
-// === Graphique SVG maison (aucune dépendance externe) ===
-function ligneChart(containerId,series,W,H,yFmt){
-  yFmt = yFmt || (v=>Math.round(v/1000)+'k');
-  const el=document.getElementById(containerId);
-  const pad={l:46,r:14,t:14,b:26};
-  const allPts=series.flatMap(s=>s.points);
-  if(!allPts.length){el.innerHTML='<p class="hint">Pas encore assez d\'historique pour un graphique.</p>';return;}
-  const xs=allPts.map(p=>p.x), ys=allPts.map(p=>p.y);
-  const xmin=Math.min(...xs), xmax=Math.max(...xs), ymin=Math.min(0,...ys), ymax=Math.max(...ys);
-  const sx=x=>pad.l+(x-xmin)/(xmax-xmin||1)*(W-pad.l-pad.r);
-  const sy=y=>H-pad.b-(y-ymin)/(ymax-ymin||1)*(H-pad.t-pad.b);
-  let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;font-family:var(--mono)">`;
-  for(let i=0;i<=4;i++){
-    const yv=ymin+(ymax-ymin)*i/4, yy=sy(yv);
-    svg+=`<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="#332a44" stroke-width="1"/>`;
-    svg+=`<text x="${pad.l-6}" y="${yy+3}" text-anchor="end" font-size="9" fill="#8b8098">${yFmt(yv)}</text>`;
+/* ---- CARTES ARCHIMAGES ---- */
+function archCards(brains){
+  const el=document.getElementById('archCards'); el.innerHTML='';
+  for(const b of (brains||[])){
+    const c=COL[b.archimage]||'#888';
+    el.insertAdjacentHTML('beforeend',`<div class="card arch" style="border-top-color:${c}" onclick="ouvrirArchimage('${b.archimage}')">
+      <h3 style="color:${c}">${NOMS[b.archimage]||b.archimage}</h3>
+      <div class="big ${b.cumulative_pnl>=0?'pos':'neg'}">${b.cumulative_pnl>=0?'+':''}${fr(b.cumulative_pnl)} $</div>
+      <div class="m"><span>Win rate</span><b>${fr2(b.win_rate*100)} %</b></div>
+      <div class="m"><span>Valeur du compte</span><b>${fr(b.alpaca_portfolio_value)} $</b></div>
+      <div class="m"><span>Drawdown courant</span><b>${fr2(b.current_drawdown*100)} %</b></div>
+      <div class="hint">CLIQUER POUR OUVRIR LE DOSSIER →</div></div>`);
   }
-  const y0=sy(0);
-  svg+=`<line x1="${pad.l}" y1="${y0}" x2="${W-pad.r}" y2="${y0}" stroke="#8b8098" stroke-width="1" stroke-dasharray="3,3"/>`;
-  series.forEach(s=>{
-    if(s.points.length<2)return;
-    const d=s.points.map((p,i)=>(i===0?'M':'L')+sx(p.x).toFixed(1)+','+sy(p.y).toFixed(1)).join(' ');
-    svg+=`<path d="${d}" fill="none" stroke="${s.couleur}" stroke-width="2.2"/>`;
-    const last=s.points[s.points.length-1];
-    svg+=`<circle cx="${sx(last.x).toFixed(1)}" cy="${sy(last.y).toFixed(1)}" r="3.5" fill="${s.couleur}"/>`;
-  });
-  svg+=`</svg>`;
-  el.innerHTML=svg;
+}
+async function ouvrirArchimage(a){
+  const m=document.getElementById('modal'); const bdy=document.getElementById('modalBody');
+  bdy.innerHTML='<p class="sub">Chargement du dossier…</p>'; m.style.display='flex';
+  try{
+    const d=await api('archimage_detail',{archimage:a}); const c=COL[a];
+    let h=`<h2 style="margin-top:0;border:none;color:${c}">${NOMS[a]||a}</h2>
+      <p class="sub" style="font-style:italic">« ${d.current_bias||'—'} »</p>
+      <div class="tiles" style="margin:14px 0">
+        <div class="tile"><div class="lbl">Gain cumulé</div><div class="val ${d.cumulative_pnl>=0?'up':''}">${d.cumulative_pnl>=0?'+':''}${fr(d.cumulative_pnl)} $</div></div>
+        <div class="tile"><div class="lbl">Précision directionnelle</div><div class="val">${fr2(d.directional_accuracy*100)} %</div></div>
+        <div class="tile"><div class="lbl">Kelly (taille de position)</div><div class="val">${fr2(d.kelly_fraction*100)} %</div></div>
+        <div class="tile"><div class="lbl">Drawdown max</div><div class="val">${fr2(d.max_drawdown*100)} %</div></div>
+      </div>`;
+    if((d.learnings||[]).length){h+='<h4 style="font-family:var(--disp);color:var(--goldsoft);margin:16px 0 8px">📖 Dernières leçons apprises</h4>';
+      for(const l of d.learnings)h+=`<p style="font-size:14px;color:var(--dim);margin:5px 0">• ${l.eval||l.bias||''}</p>`;}
+    if((d.mistakes_history||[]).length){h+='<h4 style="font-family:var(--disp);color:var(--garnet);margin:16px 0 8px">🧯 Erreurs archivées (il apprend de ses pertes)</h4>';
+      for(const e2 of d.mistakes_history)h+=`<p style="font-size:14px;color:var(--dim);margin:5px 0">• [${(e2.phase||'')}] ${e2.eval||''}</p>`;}
+    if((d.positions||[]).length){h+='<h4 style="font-family:var(--disp);color:var(--goldsoft);margin:16px 0 8px">📌 Positions ouvertes</h4><table><tr><th>Actif</th><th>Valeur $</th><th>P&L $</th><th>P&L %</th></tr>';
+      for(const p of d.positions.slice(0,10))h+=`<tr><td>${p.ticker}</td><td>${fr(p.market_value)}</td><td class="${p.unrealized_pl>=0?'pos':'neg'}">${p.unrealized_pl>=0?'+':''}${fr(p.unrealized_pl)}</td><td class="${p.unrealized_pl_pct>=0?'pos':'neg'}">${fr2(p.unrealized_pl_pct)} %</td></tr>`;
+      h+='</table>';}
+    bdy.innerHTML=h;
+  }catch(e){bdy.innerHTML='<p class="sub">Erreur de chargement : '+e.message+'</p>'}
 }
 
-async function load(){
-  const key=localStorage.getItem('opus_anon');$("#err").innerHTML="";
-  if(!key){$("#err").innerHTML='<p class="err">Colle d\'abord ta clé anon.</p>';return;}
-  try{
-    const r=await fetch(SUPA+"/rest/v1/rpc/dashboard_snapshot",{method:"POST",headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"},body:"{}"});
-    if(!r.ok)throw new Error("HTTP "+r.status+" — clé anon invalide ?");
-    render(await r.json());$("#content").style.display="block";
-    $("#maj").textContent="Mis à jour : "+new Date().toLocaleString('fr-FR');
-  }catch(e){$("#err").innerHTML='<p class="err">Erreur : '+e.message+'</p>';}
+/* ---- COURBE D'EQUITY (SVG maison, 1 axe %, crosshair) ---- */
+let CHART={series:[],days:[]};
+async function equity(){try{
+  const d=await api('equity');
+  const map={}; const days=new Set();
+  for(const [a,serie] of Object.entries(d.archimages||{})){map[a]={}; for(const pt of serie){map[a][pt.d]=pt.pct; days.add(pt.d)}}
+  map.SPY={}; for(const pt of (d.spy||[])){map.SPY[pt.d]=pt.pct; days.add(pt.d)}
+  const jours=[...days].sort();
+  const series=['GIL','JU','SYL','SPY'].map(a=>({nom:a,couleur:COL[a],dash:a==='SPY',pts:jours.map(j=>map[a][j]??null)}));
+  CHART={series,days:jours}; dessiner();
+  const lg=document.getElementById('chartLegend'); lg.innerHTML='';
+  for(const s of series)lg.insertAdjacentHTML('beforeend',`<span><span class="sw" style="background:${s.couleur};${s.dash?'background:repeating-linear-gradient(90deg,'+s.couleur+' 0 4px,transparent 4px 7px)':''}"></span>${s.nom==='SPY'?'S&P 500 (marché)':NOMS[s.nom]||s.nom}</span>`);
+}catch(e){console.warn('equity',e)}}
+function dessiner(){
+  const svg=document.getElementById('chart'); const W=svg.clientWidth||1100,H=360,P={t:18,r:56,b:26,l:46};
+  const {series,days}=CHART; if(!days.length)return;
+  let mn=0,mx=0; for(const s of series)for(const v of s.pts){if(v!=null){mn=Math.min(mn,v);mx=Math.max(mx,v)}}
+  mn=Math.floor(mn-0.5);mx=Math.ceil(mx+0.5);
+  const X=i=>P.l+(W-P.l-P.r)*(i/(days.length-1||1));
+  const Y=v=>P.t+(H-P.t-P.b)*(1-(v-mn)/(mx-mn||1));
+  let g='';
+  for(let v=mn;v<=mx;v++){if((mx-mn)>8&&v%2!==0)continue;const y=Y(v);
+    g+=`<line x1="${P.l}" x2="${W-P.r}" y1="${y}" y2="${y}" stroke="#332a44" stroke-width="${v===0?1.6:0.6}"/>`+
+       `<text x="${P.l-8}" y="${y+4}" fill="#8b8098" font-size="11" font-family="JetBrains Mono" text-anchor="end">${v>0?'+':''}${v}%</text>`;}
+  for(const s of series){
+    let path=''; let last=null,lastI=0;
+    s.pts.forEach((v,i)=>{if(v==null)return; path+=(path?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' '; last=v;lastI=i});
+    if(!path)continue;
+    g+=`<path d="${path}" fill="none" stroke="${s.couleur}" stroke-width="2" ${s.dash?'stroke-dasharray="5 5"':''} stroke-linejoin="round"/>`;
+    if(last!=null)g+=`<text x="${X(lastI)+6}" y="${Y(last)+4}" fill="${s.couleur}" font-size="12" font-weight="600" font-family="JetBrains Mono">${s.nom}</text>`;
+  }
+  g+=`<line id="xh" x1="0" x2="0" y1="${P.t}" y2="${H-P.b}" stroke="#8b8098" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>`;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.innerHTML=g;
+  svg.onmousemove=ev=>{const r=svg.getBoundingClientRect();const x=(ev.clientX-r.left)*(W/r.width);
+    const i=Math.round((x-P.l)/((W-P.l-P.r)/(days.length-1||1))); if(i<0||i>=days.length){tt.style.display='none';return}
+    document.getElementById('xh').setAttribute('x1',X(i));document.getElementById('xh').setAttribute('x2',X(i));document.getElementById('xh').setAttribute('opacity','.7');
+    let h=`<b>${new Date(days[i]).toLocaleDateString('fr-FR')}</b>`;
+    for(const s of CHART.series){const v=s.pts[i]; if(v!=null)h+=`<br><span style="color:${s.couleur}">●</span> ${s.nom} : ${v>0?'+':''}${fr2(v)} %`;}
+    const tt=document.getElementById('tooltip'); tt.innerHTML=h; tt.style.display='block';
+    tt.style.left=Math.min(ev.clientX-r.left+14,r.width-170)+'px'; tt.style.top=(ev.clientY-r.top-10)+'px';};
+  svg.onmouseleave=()=>{document.getElementById('tooltip').style.display='none';const xh=document.getElementById('xh');if(xh)xh.setAttribute('opacity','0')};
+}
+const tt=document.getElementById('tooltip');
+window.addEventListener('resize',()=>dessiner());
+
+/* ---- JAUGES SAGES ---- */
+async function sages(){try{
+  const d=await api('sages'); const el=document.getElementById('gauges'); el.innerHTML='';
+  for(const s of d){
+    const pct=s.taux_reussite==null?null:Number(s.taux_reussite);
+    const col=pct==null?'#8b8098':pct>=65?'#46b98d':pct>=50?'#cba24a':'#c05370';
+    const ang=pct==null?0:pct/100*283;
+    el.insertAdjacentHTML('beforeend',`<div class="gauge">
+      <svg width="92" height="92" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#332a44" stroke-width="8"/>
+        <circle cx="50" cy="50" r="45" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${ang} 283"/>
+      </svg>
+      <div style="font-family:var(--disp);font-size:19px;margin-top:-60px;color:${col}">${pct==null?'—':fr2(pct)+'%'}</div>
+      <div style="height:34px"></div>
+      <div class="nm">${s.sage}</div>
+      <div class="sig">${s.dernier_signal||''} · ${s.evalue} évals</div></div>`);
+  }
+}catch(e){console.warn('sages',e)}}
+
+/* ---- HEATMAP ---- */
+async function heatmap(){try{
+  const rows=await api('bt_alchimiste'); if(!Array.isArray(rows))return;
+  const tps=[...new Set(rows.map(r=>+r.tp_pct))].sort((a,b)=>a-b);
+  const sls=[...new Set(rows.map(r=>+r.sl_pct))].sort((a,b)=>a-b);
+  const get=(t,s)=>rows.find(r=>+r.tp_pct===t&&+r.sl_pct===s);
+  let mx=0; rows.forEach(r=>mx=Math.max(mx,Math.abs(+r.total_ret_pct)));
+  const el=document.getElementById('heatmap');
+  el.style.gridTemplateColumns=`70px repeat(${sls.length},minmax(64px,1fr))`;
+  let h=`<div class="cell hdr">TP \\ SL</div>`+sls.map(s=>`<div class="cell hdr">SL ${s}%</div>`).join('');
+  for(const t of tps){h+=`<div class="cell hdr">TP ${t}%</div>`;
+    for(const s of sls){const r=get(t,s); if(!r){h+='<div class="cell hdr">—</div>';continue}
+      const v=+r.total_ret_pct; const a=Math.min(1,Math.abs(v)/(mx||1))*0.85+0.15;
+      const bg=v>=0?`rgba(70,185,141,${a})`:`rgba(192,83,112,${a})`;
+      const opt=(t===5&&s===4)?' opt':'';
+      h+=`<div class="cell${opt}" style="background:${bg}" title="TP ${t}% / SL ${s}% · ${r.trades} trades · WR ${r.win_rate}% · ${v>0?'+':''}${v}% composé">${v>0?'+':''}${Math.round(v)}%</div>`;}}
+  el.innerHTML=h;
+}catch(e){console.warn('heatmap',e)}}
+
+/* ---- TIMELINE ---- */
+async function timeline(){try{
+  const rows=await api('runs'); if(!Array.isArray(rows))return;
+  const el=document.getElementById('timeline'); el.innerHTML='';
+  const mx=Math.max(...rows.map(r=>r.orders_count||0),1);
+  for(const r of rows.slice().reverse()){
+    const ph=(r.market_phase||'').toUpperCase();
+    const col=/EXTREME|PANIC/.test(ph)?'#c05370':/FEAR|PEUR|DEFENS/.test(ph)?'#b0616f':/OPPORT|BULL|GREED/.test(ph)?'#46b98d':'#8b8098';
+    const hgt=18+(r.orders_count||0)/mx*70;
+    const d=new Date(r.run_at);
+    el.insertAdjacentHTML('beforeend',`<div class="run" style="height:${hgt}px;background:${col}" data-tip="${d.toLocaleDateString('fr-FR')} ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} · ${ph} · ${r.orders_count||0} ordres"></div>`);
+  }
+}catch(e){console.warn('timeline',e)}}
+
+/* ---- POSITIONS ---- */
+async function positions(){try{
+  const rows=await api('positions'); const t=document.getElementById('positions');
+  for(const p of (rows||[]).slice(0,15)){
+    t.insertAdjacentHTML('beforeend',`<tr><td style="color:${COL[p.archimage]||'#888'}">${p.archimage}</td><td><b>${p.ticker}</b></td><td>${fr(p.market_value)}</td><td class="${p.unrealized_pl>=0?'pos':'neg'}">${p.unrealized_pl>=0?'+':''}${fr(p.unrealized_pl)}</td><td class="${p.unrealized_pl_pct>=0?'pos':'neg'}">${fr2(p.unrealized_pl_pct)} %</td><td>${p.days_held??'—'}</td></tr>`);}
+}catch(e){console.warn('positions',e)}}
+
+/* ---- GARDE-FOUS ---- */
+async function gardefous(){
+  try{const b=await api('breakers'); const el=document.getElementById('breakers');
+    el.innerHTML=(b||[]).length? b.map(x=>`<div class="pill warn" style="margin:3px 4px 3px 0">⚠ ${x.archimage} · ${x.breaker_type} · ${x.action_taken}</div>`).join('') : '<span class="pill ok">✔ Aucun breaker actif — tous les robots dans leurs limites</span>';
+  }catch(e){}
+  try{const s=await api('sante_sources'); const el=document.getElementById('sources'); el.innerHTML='';
+    const seen=new Set();
+    for(const r of (s||[])){if(seen.has(r.source_name))continue; seen.add(r.source_name);
+      el.insertAdjacentHTML('beforeend',`<span class="pill ${r.status==='ok'?'ok':'down'}">${r.status==='ok'?'●':'✕'} ${r.source_name}</span>`);}
+  }catch(e){}
+  try{const f=await api('friction'); const el=document.getElementById('friction');
+    el.innerHTML=(f||[]).map(x=>`<div class="m" style="display:flex;justify-content:space-between;font-size:13.5px;color:var(--dim);margin:4px 0"><span style="color:${COL[x.archimage]||'#888'}">${x.archimage}</span><span>≈ ${fr(x.cout_estime_usd)} $ (${fr2(x.friction_moyenne_pct)} % du volume)</span></div>`).join('');
+  }catch(e){}
 }
 
-function render(d){
-  const s=d.stats||{};
-  const crons=(s.crons||[]).map(c=>`${c.nom}${c.actif?'✓':'✗'}`).join(' · ');
-  $("#sante").innerHTML=
-    `<span class="badge ${s.kill_switch==='run'?'ok':'stop'}">Kill-switch <b>${KILL_FR[s.kill_switch]||(s.kill_switch||'?').toUpperCase()}</b></span>`+
-    `<span class="badge">Ordres <b>${s.ordres_total??'—'}</b></span>`+
-    `<span class="badge">Runs <b>${s.runs_total??'—'}</b></span>`+
-    `<span class="badge">Propositions <b>${s.propositions_total??'—'}</b></span>`+
-    `<span class="badge">Bougies histo <b>${s.bougies??'—'}</b></span>`+
-    `<span class="badge ok">Crons <b>${crons||'—'}</b></span>`;
-
-  try{
-    const mrun=s.minutes_depuis_dernier_run, mprop=s.minutes_depuis_derniere_proposition;
-    const SEUIL=150;
-    const stale = (mrun!=null && mrun>SEUIL);
-    if(stale){
-      $("#alerte-fraicheur").innerHTML=`<div class="alerte rouge">⚠ AUCUNE EXÉCUTION DEPUIS ${fmtMin(mrun)} — le scénario Make "ZCT — Oracle L'Alchimiste Financier v5" (6183820) semble arrêté ou désactivé. Va vérifier son statut sur eu1.make.com.</div>`;
-    }else{
-      $("#alerte-fraicheur").innerHTML=`<div class="alerte verte">✓ Dernier run il y a ${fmtMin(mrun)} · Dernière proposition Alchimiste il y a ${fmtMin(mprop)} — le système tourne normalement.</div>`;
-    }
-  }catch(e){console.error('alerte-fraicheur',e);}
-
-  try{
-    const f=d.sante_flux||{};
-    const dc=f.data_completeness;
-    const dcClass=dc>=70?'ok':(dc>=40?'warn':'stop');
-    $("#flux").innerHTML=
-      `<span class="badge ${dcClass}">Complétude des données <b>${dc??'—'}/100</b></span>`+
-      `<span class="badge ${f.circuit_breaker_fired?'stop':'ok'}">Circuit breaker <b>${f.circuit_breaker_fired?'DÉCLENCHÉ':'silencieux'}</b></span>`+
-      `<span class="badge ${f.risk_override?'warn':'ok'}">Override risque <b>${f.risk_override?'ACTIF':'non'}</b></span>`+
-      (f.quand?`<span class="maj">(run du ${f.quand})</span>`:'');
-    $("#flux-note").innerHTML=`<p class="hint" style="margin-top:10px">Les anciens badges par source (NewsAPI/Polygon/DarkPool/FRED/Options) ont été retirés — ils ne correspondaient à aucun fournisseur réellement utilisé (vérifié dans le code de la fonction de collecte). "Complétude des données" est le vrai score, calculé sur 10 vérifications réelles (FRED, Finnhub, CoinGecko, Fear&amp;Greed, Alpaca, Perplexity). Dès que Maia aura branché les nouveaux flags par source dans Make, je les réintègre ici avec les bons noms.</p>`;
-  }catch(e){console.error('flux',e);$("#flux").innerHTML='<span class="err">Erreur d\'affichage — voir console.</span>';}
-
-  // === AUDIT VIVANT — recalculé à CHAQUE chargement depuis les vraies données. Rien n'est écrit à la main ici. ===
-  try{
-    const a=d.audit||{};
-    const lignes=[];
-    // Ce qui EST vérifiable en direct depuis Supabase à chaque rafraîchissement :
-    lignes.push([a.runs_avec_flux_ok>0?'ok':'warn', a.runs_avec_flux_ok>0
-      ? `Complétude des données : ${a.runs_avec_flux_ok}/${a.runs_total} runs ont un score ≥60/100.`
-      : `Complétude des données : aucun run n'atteint 60/100 sur ${a.runs_total} runs — à surveiller.`]);
-    lignes.push([a.propositions_validees>0?'ok':'warn', a.propositions_validees>0
-      ? `Propositions Discord : ${a.propositions_validees}/${a.propositions_total} portent maintenant un statut validé/exécuté.`
-      : `Propositions Discord : toujours 0/${a.propositions_total} avec un statut validé — le retour Discord→Supabase ne semble jamais écrire, ou aucun trade n'a encore été validé.`]);
-    lignes.push([a.cryptos_qty_perdue>0?'warn':'ok', a.cryptos_qty_perdue>0
-      ? `${a.cryptos_qty_perdue} crypto(s) du Revolut ont leur quantité arrondie à 0 dans le dernier snapshot.`
-      : `Quantités crypto du Revolut : toutes présentes avec précision dans le dernier snapshot (0 arrondie à 0 malgré une valeur > 0).`]);
-    const juOk = !sembleAnglais(a.ju_doctrine_actuelle);
-    lignes.push([juOk?'ok':'warn', juOk
-      ? `Doctrine de JU : la dernière est en français.`
-      : `Doctrine de JU : la dernière semble toujours contenir de l'anglais ("${(a.ju_doctrine_actuelle||'').slice(0,70)}...").`]);
-    lignes.push([s.kill_switch==='stop'?'warn':'ok', `Kill-switch : ${KILL_FR[s.kill_switch]||s.kill_switch} ${s.kill_switch==='stop'?'(normal si voulu — verrou de sécurité sur les ordres réels)':''}`]);
-
-    const html1 = `<p class="maj" style="margin:0 0 12px">Audit recalculé à cet instant (${d.genere_a}) à partir des données live de Supabase — pas un texte figé. Rafraîchis la page pour le relancer.</p>` +
-      lignes.map(([cls,txt])=>`<p><span class="${cls}">${cls==='ok'?'✓':(cls==='ko'?'✗':'⚠')}</span> ${txt}</p>`).join('');
-    const html2 = `<p class="hint" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">Non vérifiable automatiquement depuis ce tableau (nécessite un accès direct à Make, que ce fichier n'a pas et ne doit pas avoir pour rester sûr) : le contenu exact des prompts des modules 301/303/305, la présence d'une clé API en clair dans un module, et l'historique des exécutions/erreurs Make. Demande-moi un audit Make séparé si tu veux un état frais sur ces points-là.</p>`;
-    $("#audit-box").innerHTML = html1 + html2;
-  }catch(e){console.error('audit',e);$("#audit-box").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  // === HERO KPI + RÉSUMÉ EXÉCUTIF (vue d'ensemble "vendeuse") ===
-  try{
-    const synth=d.performance_synthese||[];
-    const pnlTotal=synth.reduce((a,x)=>a+Number(x.pnl_cumule_fiable||0),0);
-    const wrMoyen=synth.length?synth.reduce((a,x)=>a+Number(x.wr_global||0),0)/synth.length:null;
-    const jours=s.premier_run_historique?Math.max(1,Math.round((Date.now()-new Date(s.premier_run_historique))/86400000)):null;
-    $("#hero").innerHTML=`
-      <div class="hero-card"><div class="hv ${pnlTotal>0?'pos':(pnlTotal<0?'neg':'')}">${money(pnlTotal)}</div><div class="hk">Gain cumulé (papier) — GIL+JU+SYL</div></div>
-      <div class="hero-card"><div class="hv">${wrMoyen!=null?wrMoyen.toFixed(1)+'%':'—'}</div><div class="hk">Taux de réussite moyen</div></div>
-      <div class="hero-card"><div class="hv">${jours??'—'}</div><div class="hk">Jours de suivi continu</div></div>
-      <div class="hero-card"><div class="hv">${s.runs_total??'—'}</div><div class="hk">Runs automatiques exécutés</div></div>`;
-
-    const best=synth.slice().sort((a,b)=>b.pnl_cumule_fiable-a.pnl_cumule_fiable)[0];
-    const worst=synth.slice().sort((a,b)=>a.pnl_cumule_fiable-b.pnl_cumule_fiable)[0];
-    const alch=(d.cerveau||[]).find(c=>c.archimage==='CRYPTE_JU');
-
-    // Détail compte par compte — pour qu'on voie exactement d'où sort chaque chiffre du résumé
-    try{
-      const brainsAll={};(d.cerveau||[]).forEach(c=>brainsAll[c.archimage]=c);
-      const cdb=$("#comptes-detail-body");cdb.innerHTML="";
-      ["GIL","JU","SYL"].forEach(name=>{
-        const b=brainsAll[name];if(!b)return;
-        const gain=Number(b.cumulative_pnl)||0;
-        cdb.insertAdjacentHTML('beforeend',`<tr><td><b>${name}</b> · Alpaca (${WHO[name]||''})</td><td class="num">${money(b.baseline_equity)}</td><td class="num">${money(b.alpaca_portfolio_value)}</td><td class="num ${gain>0?'pos':(gain<0?'neg':'')}">${gain>0?'+':''}${money(gain)}</td><td class="maj">${b.maj}</td></tr>`);
-      });
-      const pf2=d.portefeuille||{};
-      cdb.insertAdjacentHTML('beforeend',`<tr><td><b>ALCHIMISTE</b> · Revolut X (compte réel, pas Alpaca)</td><td class="num">—</td><td class="num">${money(pf2.total_usd)}</td><td class="num">—</td><td class="maj">${pf2.snapshot_at?pf2.snapshot_at.slice(0,16).replace('T',' '):'—'}</td></tr>`);
-    }catch(e){console.error('comptes-detail',e);$("#comptes-detail-body").innerHTML='<tr><td colspan="5" class="err">Erreur d\'affichage — voir console.</td></tr>';}
-
-    $("#resume").innerHTML = synth.length ? `Depuis le ${s.premier_run_historique||'?'}, le Conseil des Archimages a exécuté <b>${s.runs_total} runs</b> automatiques. Sur le mois écoulé, GIL, JU et SYL (3 comptes Alpaca séparés, voir détail ci-dessus) cumulent ensemble <b class="${pnlTotal>0?'pos':'neg'}">${money(pnlTotal)}</b> de gains (valeur réelle des comptes — pas une exposition notionnelle) pour un taux de réussite moyen de <b>${wrMoyen.toFixed(1)}%</b> sur ${synth.reduce((a,x)=>a+x.evals_total,0)} décisions évaluées. <b>${best.archimage}</b> mène le classement avec ${money(best.pnl_cumule_fiable)} (${best.wr_global}% de réussite), tandis que <b>${worst.archimage}</b> est le plus en retrait (${money(worst.pnl_cumule_fiable)}, ${worst.wr_global}%). ${alch?`Sur le compte réel Revolut X (séparé des 3 comptes Alpaca), l'Alchimiste a déjà appris de ${alch.total_runs} runs avec ${(alch.win_rate*100).toFixed(1)}% de trades gagnants.`:''}` : 'Pas encore assez de données pour un résumé.';
-  }catch(e){console.error('hero',e);$("#hero").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  // === TOTAUX CONSOLIDÉS — tous comptes confondus (Alpaca x3 + Revolut réel) ===
-  try{
-    const brainsT={};(d.cerveau||[]).forEach(c=>brainsT[c.archimage]=c);
-    const pv=d.positions_vivantes||[];
-    const pf3=d.portefeuille||{};
-    let valeurTotale=0, gainTotal=0;
-    ["GIL","JU","SYL"].forEach(name=>{
-      const b=brainsT[name];if(!b)return;
-      valeurTotale+=Number(b.alpaca_portfolio_value)||0;
-      gainTotal+=Number(b.cumulative_pnl)||0;
-    });
-    valeurTotale+=Number(pf3.total_usd)||0;
-    const positionsTotales=pv.reduce((a,x)=>a+Number(x.nb||0),0);
-    $("#totaux").innerHTML=`
-      <div class="hero-card"><div class="hv">${money(valeurTotale)}</div><div class="hk">Valeur totale — 3 comptes Alpaca + Revolut X</div></div>
-      <div class="hero-card"><div class="hv ${gainTotal>0?'pos':(gainTotal<0?'neg':'')}">${gainTotal>0?'+':''}${money(gainTotal)}</div><div class="hk">Gain total réconcilié (hors Alchimiste, pas de baseline)</div></div>
-      <div class="hero-card"><div class="hv">${positionsTotales}</div><div class="hk">Positions ouvertes — GIL+JU+SYL</div></div>
-      <div class="hero-card"><div class="hv">${s.ordres_total??'—'}</div><div class="hk">Ordres exécutés au total (tous comptes)</div></div>`;
-  }catch(e){console.error('totaux',e);$("#totaux").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  const props=d.propositions||[];
-  try{
-    const cl=$("#cerv-liste");cl.innerHTML="";
-    (d.cerveau||[]).forEach(c=>{
-      const nom=c.archimage==='cerveau'?'cerveau':(c.archimage==='CRYPTE_JU'?'CRYPTE_JU':c.archimage);
-      const lettre=c.archimage==='cerveau'?'c':c.archimage[0];
-      const accent=c.archimage==='cerveau'?'var(--gold)':(COL[c.archimage]||'var(--gold)');
-      const wr=c.win_rate!=null?Math.round(Number(c.win_rate)*100):0;
-      cl.insertAdjacentHTML('beforeend',
-        `<div class="cerv-ligne"><div class="cerv-seal" style="--accent:${accent}">${lettre}</div>
-         <div class="cerv-nom">${nom}</div>
-         <div class="cerv-wr">winrate ${wr}%</div>
-         <div class="cerv-runs">${c.total_runs} runs</div></div>`);
-    });
-  }catch(e){console.error('cerv-liste',e);$("#cerv-liste").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  try{
-  const vue={};(d.archimages||[]).forEach(a=>vue[a.archimage]=a);
-  const brains={};(d.cerveau||[]).forEach(c=>brains[c.archimage]=c);
-  const order=["GIL","JU","SYL","CRYPTE_JU"];
-  const ah=$("#archi");ah.innerHTML="";
-  order.forEach(name=>{
-    const b=brains[name];if(!b)return;
-    const learns=b.total_runs>0;
-    const w=Math.round((Number(b.poids)||0)*100);
-    const v=vue[name];
-    let rendement, pctGagn, ratioGP;
-    if(v){
-      rendement=v.rendement_moyen_pct; pctGagn=v.pct_gagnantes; ratioGP=v.ratio_gain_perte;
-    }else{
-      const wr=Number(b.win_rate)||0, gw=Number(b.avg_win_pct)||0, gl=Number(b.avg_loss_pct)||0;
-      rendement=Math.round((wr*gw-(1-wr)*gl)*100)/100;
-      pctGagn=Math.round(wr*1000)/10;
-      ratioGP=gl>0?Math.round((gw/gl)*100)/100:null;
-    }
-    const body=`<div class="stats2">
-        <div class="st"><div class="k">Rendement moyen</div><div class="v ${rendement>0?'pos':(rendement<0?'neg':'')}">${pct(rendement)}</div></div>
-        <div class="st"><div class="k">% gagnantes</div><div class="v">${pctGagn!=null?pctGagn+'%':'—'}</div></div>
-        <div class="st"><div class="k">Ratio G/P</div><div class="v">${ratioGP??'—'}</div></div>
-        <div class="st"><div class="k">Runs</div><div class="v">${b.total_runs}</div></div></div>`;
-    const streak = b.consecutive_wins>0?`${b.consecutive_wins} gain(s) d'affilée`:(b.consecutive_losses>0?`${b.consecutive_losses} perte(s) d'affilée`:'aucune série en cours');
-    const dd = b.current_drawdown!=null?`${(Number(b.current_drawdown)*100).toFixed(1)}%`:'—';
-    const ddmax = b.max_drawdown!=null?`${(Number(b.max_drawdown)*100).toFixed(1)}%`:'—';
-    ah.insertAdjacentHTML('beforeend',
-     `<div class="arch" data-a="${name}">
-        <div class="ahead"><div class="seal">${name[0]}</div>
-          <div><div class="aname">${name==='CRYPTE_JU'?'ALCHIMISTE':name}</div><div class="awho">${WHO[name]||''}</div></div>
-          <div class="learn ${learns?'on':'off'}">${learns?'apprend ✓':'en apprentissage'}</div></div>
-        ${body}
-        <div class="hint" style="font-size:11px;margin:2px 0 10px">Drawdown actuel <b>${dd}</b> (max ${ddmax}) · ${streak}</div>
-        <div class="k" style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.1em">POIDS DU MÉTA-CERVEAU : ${w}%</div>
-        <div class="wbar"><i style="width:${w}%"></i></div>
-        <div class="doct">${doctrineHTML(b.doctrine)}</div>
-      </div>`);
-  });
-  }catch(e){console.error('archimages',e);$("#archi").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  try{
-    const brains2={};(d.cerveau||[]).forEach(c=>brains2[c.archimage]=c);
-    const pf=d.portefeuille||{};
-    const pc=$("#portefeuilles");pc.innerHTML="";
-    ["GIL","JU","SYL"].forEach(name=>{
-      const b=brains2[name];if(!b)return;
-      const val=Number(b.alpaca_portfolio_value)||0, base=Number(b.baseline_equity)||0;
-      const gain=base>0?val-base:null, gainPct=base>0?(gain/base*100):null;
-      pc.insertAdjacentHTML('beforeend',
-        `<div class="card"><div class="k">${name} · Alpaca (paper)</div>
-         <div class="v" style="font-size:17px">${money(val)}</div>
-         <div class="hint" style="margin-top:4px;font-size:11px">Pouvoir d'achat ${money(b.alpaca_buying_power)}${gain!=null?` · <span class="${gain>0?'pos':(gain<0?'neg':'')}">${gain>0?'+':''}${money(gain)} (${pct(gainPct)})</span> vs départ`:''}</div></div>`);
-    });
-    pc.insertAdjacentHTML('beforeend',
-      `<div class="card"><div class="k">ALCHIMISTE · Revolut X (réel)</div>
-       <div class="v" style="font-size:17px">${money(pf.total_usd)}</div>
-       <div class="hint" style="margin-top:4px;font-size:11px">Cash ${money(pf.cash_usd)} · Liquide ${money(pf.liquide_usd)} · En stake ${money(pf.stake_usd)}</div></div>`);
-  }catch(e){console.error('portefeuilles',e);$("#portefeuilles").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  try{
-    const pv=d.positions_vivantes||[];
-    const pcx=$("#posvivantes");pcx.innerHTML="";
-    if(!pv.length) pcx.insertAdjacentHTML('beforeend','<div class="card"><div class="k">Positions</div><div class="v" style="font-size:13px">Aucune donnée</div></div>');
-    ["GIL","JU","SYL"].forEach(name=>{
-      const x=pv.find(p=>p.archimage===name);if(!x)return;
-      const plClass=x.pl_latent_total>0?'pos':(x.pl_latent_total<0?'neg':'');
-      pcx.insertAdjacentHTML('beforeend',
-        `<div class="card"><div class="k">${name} · ${x.nb} positions</div>
-         <div class="v ${plClass}" style="font-size:17px">${money(x.pl_latent_total)}</div>
-         <div class="hint" style="margin-top:4px;font-size:11px">Valeur marché ${money(x.valeur_marche_totale)}${x.nb_perimees>0?` · <span style="color:var(--garnet)">${x.nb_perimees} périmée(s)</span>`:''} · détenue max ${x.max_runs_detenu} runs</div></div>`);
-    });
-    pcx.insertAdjacentHTML('beforeend','<div class="card"><div class="k">ALCHIMISTE</div><div class="v" style="font-size:13px;color:var(--muted)">Non applicable</div><div class="hint" style="margin-top:4px;font-size:11px">Il trade sur Revolut X, pas sur Alpaca.</div></div>');
-  }catch(e){console.error('positions_vivantes',e);$("#posvivantes").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  try{
-    const pd=d.positions_detail||[];
-    const or_=d.ordres_recents||[];
-    const dz=$("#dossiers");dz.innerHTML="";
-    const SEAL={GIL:'G',JU:'J',SYL:'S'};
-    ["GIL","JU","SYL"].forEach(name=>{
-      const positions=pd.filter(x=>x.archimage===name);
-      const ordres=or_.filter(x=>x.archimage===name);
-      const lignesPos=positions.length?positions.map(x=>{
-        const plClass=x.unrealized_pl>0?'pos':(x.unrealized_pl<0?'neg':'');
-        return `<tr><td>${x.ticker}${x.is_stale?' <span class="hint" style="color:var(--amber)">⚠ périmée</span>':''}</td><td>${x.side==='long'?'ACHETEUR':(x.side==='short'?'VENDEUR (short)':x.side)}</td><td class="num">${qty(x.qty)}</td><td class="num">${money(x.avg_entry_price)}</td><td class="num">${money(x.current_price)}</td><td class="num ${plClass}">${money(x.unrealized_pl)} (${pct(x.unrealized_pl_pct)})</td></tr>`;
-      }).join(''):'<tr><td colspan="6" class="maj">Aucune position ouverte.</td></tr>';
-      const lignesOrd=ordres.length?ordres.map(x=>{
-        const sensTxt=x.side==='buy'?'ACHAT':(x.side==='sell'?'VENTE':(x.side||'').toUpperCase());
-        const dotClass=x.broker_status==='filled'?'vert':(x.broker_status==='accepted'?'ambre':'gris');
-        const statutTxt=x.broker_status==='filled'?'Exécuté':(x.broker_status==='accepted'?'Accepté':(x.broker_status==='pending_new'?'En attente':(x.broker_status||'—')));
-        return `<tr><td class="maj">${x.quand}</td><td>${x.symbol}</td><td>${sensTxt}</td><td class="num">${money(x.montant)}</td><td class="maj"><span class="dot ${dotClass}"></span>${statutTxt}${x.rejected_reason?' — '+traduireRaison(x.rejected_reason):''}</td></tr>`;
-      }).join(''):'<tr><td colspan="5" class="maj">Aucun ordre récent.</td></tr>';
-      dz.insertAdjacentHTML('beforeend',`
-        <div class="dossier" data-a="${name}">
-          <div class="ahead" style="margin-bottom:4px">
-            <div class="seal">${SEAL[name]}</div>
-            <div><div class="aname">${name}</div><div class="awho">${WHO[name]||''}</div></div>
-          </div>
-          <h3>Positions ouvertes (${positions.length})</h3>
-          <table id="pos-${name}"><thead><tr>
-            <th class="tri" onclick="trier('pos-${name}',0,false)">Actif <span class="fleche">↕</span></th>
-            <th class="tri" onclick="trier('pos-${name}',1,false)">Sens <span class="fleche">↕</span></th>
-            <th class="tri num" onclick="trier('pos-${name}',2,true)">Quantité <span class="fleche">↕</span></th>
-            <th class="tri num" onclick="trier('pos-${name}',3,true)">Prix d'entrée <span class="fleche">↕</span></th>
-            <th class="tri num" onclick="trier('pos-${name}',4,true)">Prix actuel <span class="fleche">↕</span></th>
-            <th class="tri num" onclick="trier('pos-${name}',5,true)">Gain/Perte <span class="fleche">↕</span></th>
-          </tr></thead><tbody>${lignesPos}</tbody></table>
-          <h3>Derniers choix</h3>
-          <table id="ord-${name}"><thead><tr>
-            <th class="tri" onclick="trier('ord-${name}',0,false)">Quand <span class="fleche">↕</span></th>
-            <th class="tri" onclick="trier('ord-${name}',1,false)">Actif <span class="fleche">↕</span></th>
-            <th class="tri" onclick="trier('ord-${name}',2,false)">Sens <span class="fleche">↕</span></th>
-            <th class="tri num" onclick="trier('ord-${name}',3,true)">Montant <span class="fleche">↕</span></th>
-            <th>Statut</th>
-          </tr></thead><tbody>${lignesOrd}</tbody></table>
-        </div>`);
-    });
-    dz.insertAdjacentHTML('beforeend','<p class="hint">L\'Alchimiste n\'a pas de dossier ici : ses positions et ses choix sont détaillés dans "Portefeuilles" et "Détail des cryptos".</p>');
-  }catch(e){console.error('dossiers',e);$("#dossiers").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  try{
-    const de=d.debug_execution||[];
-    const dt=$("#debugexec tbody");dt.innerHTML="";
-    if(!de.length) dt.insertAdjacentHTML('beforeend','<tr><td colspan="6" class="maj">Aucune donnée de debug.</td></tr>');
-    de.forEach(x=>{
-      const raisons=(x.raisons_skip||[]).filter(Boolean).map(traduireRaison);
-      const uniq=[...new Set(raisons)];
-      dt.insertAdjacentHTML('beforeend',`<tr><td>${x.archimage}</td><td class="maj">${x.quand}</td><td class="num pos">${x.accepted??0}</td><td class="num neg">${x.rejected??0}</td><td class="num">${x.skipped??0}</td><td style="font-size:12px;color:var(--muted)">${uniq.join(', ')||'—'}</td></tr>`);
-    });
-    dt.insertAdjacentHTML('beforeend','<tr><td>ALCHIMISTE</td><td colspan="5" class="maj">Non applicable — validation manuelle via Discord.</td></tr>');
-  }catch(e){console.error('debug_execution',e);$("#debugexec tbody").innerHTML='<tr><td colspan="6" class="err">Erreur d\'affichage — voir console.</td></tr>';}
-
-  try{
-  const arcs=(d.cerveau||[]).filter(c=>c.archimage!=='cerveau').sort((a,b)=>Number(b.poids)-Number(a.poids));
-  const maxw=Math.max(...arcs.map(c=>Number(c.poids)||0),0.01);
-  $("#poids").innerHTML=arcs.map(c=>{
-    const w=Number(c.poids)||0;const pcw=Math.round(w/maxw*100);
-    return `<div class="crow"><div class="nm">${c.archimage==='CRYPTE_JU'?'ALCHIMISTE':c.archimage}</div>
-      <div class="track"><i style="width:${pcw}%;background:${COL[c.archimage]||'var(--gold)'}"></i></div>
-      <div class="pc">${(w*100).toFixed(0)}%</div></div>`;}).join('');
-  const meta=(d.cerveau||[]).find(c=>c.archimage==='cerveau');
-  $("#meta").innerHTML=meta?`<b style="font-family:var(--mono);color:var(--goldsoft);font-style:normal">Dernière correction ${meta.maj} :</b> ${doctrineHTML(meta.doctrine)}`:'';
-  }catch(e){console.error('correcteur',e);$("#poids").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  try{
-  const pf=d.portefeuille||{};
-  const ht=$("#holdings tbody");ht.innerHTML="";
-  const det=(pf.detail||[]).filter(x=>Number(x.valeur_usd)>=1).sort((a,b)=>b.valeur_usd-a.valeur_usd);
-  if(det.length) det.forEach(x=>{
-    const perteFlag = (Number(x.qty)===0 && Number(x.valeur_usd)>0);
-    ht.insertAdjacentHTML('beforeend',`<tr><td>${x.devise}${perteFlag?' <span class="hint" style="color:var(--amber)">⚠ quantité perdue à la source</span>':''}</td><td class="num">${qty(x.qty)}</td><td class="num">${money(x.valeur_usd)}</td></tr>`);
-  });
-  else ht.insertAdjacentHTML('beforeend',`<tr><td colspan="3" class="maj">Détail indisponible (le prochain point quotidien le remplira).</td></tr>`);
-  }catch(e){console.error('revolut',e);$("#holdings tbody").innerHTML='<tr><td colspan="3" class="err">Erreur d\'affichage — voir console.</td></tr>';}
-
-  try{
-  const pt=$("#props tbody");pt.innerHTML="";
-  if(!props.length) pt.insertAdjacentHTML('beforeend','<tr><td colspan="6" class="maj">Aucune proposition — voir la bannière de fraîcheur.</td></tr>');
-  props.forEach(x=>pt.insertAdjacentHTML('beforeend',`<tr><td class="maj">${x.quand}</td><td>${x.paire||'—'}</td><td>${x.side==='buy'?'ACHAT':(x.side==='sell'?'VENTE':(x.side||'').toUpperCase())}</td><td class="num">${x.prix_ref??'—'}</td><td class="num">${x.montant??'—'}</td><td class="maj">${x.statut||''}</td></tr>`));
-  }catch(e){console.error('propositions',e);$("#props tbody").innerHTML='<tr><td colspan="6" class="err">Erreur d\'affichage — voir console.</td></tr>';}
-
-  try{
-  const rt=$("#runs tbody");rt.innerHTML="";
-  (d.runs||[]).forEach(x=>rt.insertAdjacentHTML('beforeend',`<tr><td class="maj">${x.quand}</td><td>${traduireCode(x.market_phase)}</td><td class="maj">${x.status||''}</td><td class="num">${x.orders_count??'—'}</td></tr>`));
-  }catch(e){console.error('runs',e);$("#runs tbody").innerHTML='<tr><td colspan="4" class="err">Erreur d\'affichage — voir console.</td></tr>';}
-
-  try{
-  const SG={Macro:['🌌','Aurora Borealis','Macro'],Technique:['⭐','Stellar Navigator','Technique'],Risque:['⚔️','Iron Sentinel','Risque / Kelly'],Memoire:['📚','Deep Memory','Mémoire'],Flash:['⚡','Quantum Pulse','Flash']};
-  const sigCol=sig=>['BULLISH','UP','ACCUMULATION'].includes(sig)?'var(--emerald)':(['BEARISH','DOWN','DISTRIBUTION'].includes(sig)?'var(--garnet)':'var(--goldsoft)');
-  const sgc=$("#sages");sgc.innerHTML="";
-  (d.sages||[]).sort((a,b)=>(b.directionnel?1:0)-(a.directionnel?1:0)).forEach(sg=>{
-    const m=SG[sg.sage]||['🔮',sg.sage,''];
-    const tx=sg.taux_reussite!=null?`${sg.taux_reussite}% de réussite · ${sg.evalue} signaux évalués`:(sg.directionnel?'en apprentissage — signaux à mûrir (24 h)':'non directionnel (conseil, pas un pari)');
-    sgc.insertAdjacentHTML('beforeend',
-      `<div class="arch" style="--accent:var(--gold)">
-         <div class="ahead"><div class="seal">${m[0]}</div>
-           <div><div class="aname" style="font-size:15px">${m[1]}</div><div class="awho">${m[2]}</div></div>
-           <div class="learn ${sg.taux_reussite!=null?'on':'off'}">${sg.taux_reussite!=null?sg.taux_reussite+'%':(sg.directionnel?'…':'conseil')}</div></div>
-         <div style="font-family:var(--mono);font-size:13px;margin-bottom:8px">Dernier signal : <b style="color:${sigCol(sg.dernier_signal)}">${traduireCode(sg.dernier_signal)}</b></div>
-         <div class="doct" style="border-top:none;padding-top:4px">${tx}</div>
-      </div>`);
-  });
-  const attente=s.minutes_avant_1er_score_sages;
-  $("#sages-note").innerHTML=(attente>0)?`<p class="hint" style="margin-top:10px">ⓘ Le "taux de réussite" des Sages a besoin de 24h d'historique. Suivi trop récent : encore environ ${fmtMin(attente)} avant le premier score.</p>`:'';
-  }catch(e){console.error('sages',e);$("#sages").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  // === TABLEAU COMPARATIF — tous les archimages, côte à côte, comme un vrai desk institutionnel ===
-  try{
-    const brainsC={};(d.cerveau||[]).forEach(c=>brainsC[c.archimage]=c);
-    const vueC={};(d.archimages||[]).forEach(a=>vueC[a.archimage]=a);
-    const ct=$("#comparatif tbody");ct.innerHTML="";
-    ["GIL","JU","SYL","CRYPTE_JU"].forEach(name=>{
-      const b=brainsC[name];if(!b)return;
-      const v=vueC[name];
-      const valeur=name==='CRYPTE_JU'?Number((d.portefeuille||{}).total_usd)||0:Number(b.alpaca_portfolio_value)||0;
-      const gain=name==='CRYPTE_JU'?null:Number(b.cumulative_pnl)||0;
-      const gainPct=(gain!=null && b.baseline_equity>0)?(gain/Number(b.baseline_equity)*100):null;
-      let ratioGP, rendement, wr;
-      if(v){ratioGP=v.ratio_gain_perte; rendement=v.rendement_moyen_pct; wr=v.pct_gagnantes;}
-      else{const w=Number(b.win_rate)||0,gw=Number(b.avg_win_pct)||0,gl=Number(b.avg_loss_pct)||0;
-        ratioGP=gl>0?Math.round((gw/gl)*100)/100:null; rendement=Math.round((w*gw-(1-w)*gl)*100)/100; wr=Math.round(w*1000)/10;}
-      const nbPos=v?v.positions:(name==='CRYPTE_JU'?0:'—');
-      const nom=name==='CRYPTE_JU'?'ALCHIMISTE':name;
-      ct.insertAdjacentHTML('beforeend',`<tr>
-        <td><b>${nom}</b></td>
-        <td class="num">${money(valeur)}</td>
-        <td class="num ${gain>0?'pos':(gain<0?'neg':'')}">${gain!=null?(gain>0?'+':'')+money(gain):'—'}</td>
-        <td class="num ${gainPct>0?'pos':(gainPct<0?'neg':'')}">${gainPct!=null?pct(gainPct):'—'}</td>
-        <td class="num">${wr!=null?wr+'%':'—'}</td>
-        <td class="num">${ratioGP??'—'}</td>
-        <td class="num ${rendement>0?'pos':(rendement<0?'neg':'')}">${pct(rendement)}</td>
-        <td class="num">${b.current_drawdown!=null?(Number(b.current_drawdown)*100).toFixed(1)+'%':'—'}</td>
-        <td class="num">${nbPos}</td>
-        <td class="num">${Math.round((Number(b.poids)||0)*100)}%</td>
-      </tr>`);
-    });
-  }catch(e){console.error('comparatif',e);$("#comparatif tbody").innerHTML='<tr><td colspan="10" class="err">Erreur d\'affichage — voir console.</td></tr>';}
-
-  // === GRAPHIQUES INDIVIDUELS — un vrai graphique de performance par archimage, pas juste une courbe partagée ===
-  try{
-    const histI=d.performance_historique||[];
-    const parJourI={};
-    histI.forEach(x=>{(parJourI[x.archimage]=parJourI[x.archimage]||[]).push(x);});
-    const synthI=d.performance_synthese||[];
-    const ci=$("#charts-individuels");ci.innerHTML="";
-    ["GIL","JU","SYL"].forEach(name=>{
-      const pts=(parJourI[name]||[]).sort((a,b)=>a.jour.localeCompare(b.jour)).map(x=>({x:new Date(x.jour).getTime(),y:Number(x.wr_jour)}));
-      const sy=synthI.find(x=>x.archimage===name);
-      const divId='chart-solo-'+name;
-      ci.insertAdjacentHTML('beforeend',`<div class="chart-mini" data-a="${name}" style="--accent:${COL[name]}">
-        <h4>${name} — ${WHO[name]||''} <span class="chiffre">${sy?sy.wr_global+'% réussite · '+money(sy.pnl_cumule_fiable):''}</span></h4>
-        <div id="${divId}"></div>
-      </div>`);
-      ligneChart(divId,[{nom:name,couleur:COLHEX[name],points:pts}],420,180,v=>Math.round(v)+'%');
-    });
-  }catch(e){console.error('charts-individuels',e);$("#charts-individuels").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
-
-  // === PERFORMANCE & HISTORIQUE : graphique combiné + tableau exportable ===
-  try{
-    const hist=d.performance_historique||[];
-    const parJour={};
-    hist.forEach(x=>{(parJour[x.archimage]=parJour[x.archimage]||[]).push(x);});
-    const series=Object.keys(parJour).map(name=>{
-      const points=parJour[name].sort((a,b)=>a.jour.localeCompare(b.jour)).map(x=>({x:new Date(x.jour).getTime(),y:Number(x.wr_jour)}));
-      return {nom:name,couleur:COLHEX[name]||'#c9a349',points};
-    });
-    ligneChart('chart-perf',series,900,320,v=>Math.round(v)+'%');
-    $("#chart-legende").innerHTML=series.map(s=>`<span><i style="background:${s.couleur}"></i>${s.nom}</span>`).join('');
-
-    const synth=d.performance_synthese||[];
-    const pft=$("#perftable tbody");pft.innerHTML="";
-    synth.forEach(x=>{
-      const spark=(parJour[x.archimage]||[]).map(p=>Number(p.wr_jour)>=50?'▲':'▼').slice(-14).join('');
-      pft.insertAdjacentHTML('beforeend',`<tr><td>${x.archimage}</td><td class="num">${x.evals_total}</td><td class="num ${x.pnl_cumule_fiable>0?'pos':(x.pnl_cumule_fiable<0?'neg':'')}">${money(x.pnl_cumule_fiable)}</td><td class="num">${x.wr_global}%</td><td style="font-size:11px;letter-spacing:1px">${spark||'—'}</td></tr>`);
-    });
-  }catch(e){console.error('performance',e);$("#chart-perf").innerHTML='<div class="err">Erreur d\'affichage — voir console.</div>';}
+/* ---- CAPTURE EMAIL ---- */
+async function lead(inputId, source, apres){
+  const inp=document.getElementById(inputId); const msg=document.getElementById(inputId+'Msg');
+  const email=(inp.value||'').trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)){msg.textContent='✘ Email invalide'; msg.style.color='#c05370'; return}
+  msg.textContent='⏳ …'; msg.style.color='#cba24a';
+  try{const r=await api('lead',{email,source});
+    if(r.ok){msg.textContent='✔ C\'est noté — merci !'; msg.style.color='#46b98d'; inp.value=''; if(apres)apres();}
+    else{msg.textContent='✘ '+(r.raison||'erreur'); msg.style.color='#c05370'}
+  }catch(e){msg.textContent='✘ Erreur réseau'; msg.style.color='#c05370'}
 }
-if(localStorage.getItem('opus_anon')){load();}
+
+/* ---- LANCEMENT + AUTO-REFRESH ---- */
+hero(); equity(); sages(); heatmap(); timeline(); positions(); gardefous();
+setInterval(hero, 60000);
 </script>
-<style id="oc-css">#oc-console{margin:34px auto 20px;max-width:1180px;background:#131826;border:1px solid #2a3550;border-radius:14px;padding:20px}#oc-console h2{color:#d4af37;font-size:1.05rem;letter-spacing:1px;margin:0 0 4px}#oc-console .oc-sub{color:#7a88a8;font-size:.8rem;margin-bottom:14px}#oc-console .oc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:8px;margin-bottom:14px}#oc-console button.oc-b{background:#1a2135;border:1px solid #2a3550;color:#d8e0f0;padding:10px 12px;border-radius:9px;cursor:pointer;text-align:left;font-size:.82rem;font-family:inherit}#oc-console button.oc-b:hover{border-color:#d4af37}#oc-console button.oc-b b{display:block;font-weight:600}#oc-console button.oc-b i{display:block;font-style:normal;color:#7a88a8;font-size:.7rem;margin-top:2px}#oc-status{color:#7a88a8;font-size:.85rem;min-height:1.2em;margin-bottom:10px}#oc-out .oc-res{background:#0f1420;border:1px solid #2a3550;border-radius:10px;padding:14px;margin-bottom:10px;overflow-x:auto}#oc-out .oc-res h3{color:#d4af37;font-size:.9rem;margin:0 0 8px}#oc-out .oc-when{float:right;color:#7a88a8;font-size:.7rem}#oc-out table{border-collapse:collapse;width:100%;font-size:.8rem}#oc-out th{text-align:left;color:#7a88a8;padding:5px 9px;border-bottom:1px solid #2a3550;white-space:nowrap}#oc-out td{padding:5px 9px;border-bottom:1px solid #1a2135;white-space:nowrap;color:#d8e0f0}#oc-out .oc-pos{color:#3ddc84}#oc-out .oc-neg{color:#ff5c72}#oc-out pre{white-space:pre-wrap;word-break:break-word;font-size:.75rem;color:#d8e0f0}</style><section id="oc-console"><h2>◈ Console de tests — en direct sur Supabase</h2><div class="oc-sub">Chaque bouton recalcule sur les vraies données (rien de figé). Les backtests balaient toute la grille TP×SL.</div><div class="oc-grid"><button class="oc-b" data-a="sages"><b>📊 Scores des 5 Sages</b><i>Fiabilité vs SPY réalisé 24h</i></button><button class="oc-b" data-a="coaching"><b>🎓 Coaching injecté aux IA</b><i>Texte exact reçu par les archimages</i></button><button class="oc-b" data-a="bt_alchimiste"><b>⚗ Backtest Alchimiste</b><i>Grille TP×SL · ~30-60s</i></button><button class="oc-b" data-a="bt_exits"><b>📈 Backtest sorties crypto</b><i>Achats réels BTC/ETH/SOL · ~30-60s</i></button><button class="oc-b" data-a="bt_archimages"><b>🏆 Rejeu des archimages</b><i>Entrées crypto, sorties disciplinées</i></button><button class="oc-b" data-a="kelly"><b>⚖ Kelly réel</b><i>Edge mesuré + taille recommandée</i></button><button class="oc-b" data-a="directional"><b>🧭 Précision directionnelle</b><i>Tilt des runs vs marché réalisé</i></button><button class="oc-b" data-a="breakers"><b>🚨 Circuit breakers</b><i>Vérifie les seuils + liste les actifs</i></button><button class="oc-b" data-a="friction"><b>💸 Coûts de friction</b><i>Écart estimé paper → réel</i></button><button class="oc-b" data-a="sante_sources"><b>🟢 Santé des sources</b><i>FRED, Finnhub, CoinGecko, F&G…</i></button><button class="oc-b" data-a="learning"><b>🧠 État de l apprentissage</b><i>Cerveaux + dernières évaluations</i></button><button class="oc-b" data-a="snapshot"><b>📸 Snapshot complet</b><i>Photo complète du système</i></button></div><div id="oc-status"></div><div id="oc-out"></div></section><script>(function(){var EP='https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/oracle-tests';var T={"sages":"📊 Scores des 5 Sages","coaching":"🎓 Coaching injecté aux IA","bt_alchimiste":"⚗ Backtest Alchimiste","bt_exits":"📈 Backtest sorties crypto","bt_archimages":"🏆 Rejeu des archimages","kelly":"⚖ Kelly réel","directional":"🧭 Précision directionnelle","breakers":"🚨 Circuit breakers","friction":"💸 Coûts de friction","sante_sources":"🟢 Santé des sources","learning":"🧠 État de l apprentissage","snapshot":"📸 Snapshot complet"};
-function fmt(v,k){if(v===null||v===undefined)return '—';if(typeof v==='boolean')return v?'✔':'✘';
-var n=parseFloat(v);if(typeof v!=='object'&&!isNaN(n)&&String(v).match(/^-?[0-9.]+$/)){var c=/ret|pnl|pct|accuracy|slippage/i.test(k||'')?(n>0?'oc-pos':(n<0?'oc-neg':'')):'';return '<span class="'+c+'">'+n.toLocaleString('fr-FR',{maximumFractionDigits:3})+'</span>';}
-if(typeof v==='object')return '<pre>'+JSON.stringify(v,null,1).slice(0,350)+'</pre>';return String(v).slice(0,160);}
-function tab(rows){if(!Array.isArray(rows)||!rows.length)return '<div class="oc-sub">Aucune ligne.</div>';var cols=Object.keys(rows[0]);var h='<table><tr>'+cols.map(function(c){return '<th>'+c+'</th>'}).join('')+'</tr>';rows.forEach(function(r){h+='<tr>'+cols.map(function(c){return '<td>'+fmt(r[c],c)+'</td>'}).join('')+'</tr>'});return h+'</table>';}
-function rend(a,d,at){var inner;if(Array.isArray(d))inner=tab(d);
-else if(a==='learning'&&d&&d.cerveaux)inner='<h3>Cerveaux</h3>'+tab(d.cerveaux)+'<h3 style="margin-top:10px">Dernières évaluations</h3>'+tab(d.feedback);
-else if(typeof d==='string')inner='<pre>'+d+'</pre>';
-else if(d&&typeof d==='object'){var e=Object.entries(d);if(e.length&&e.every(function(x){return x[1]&&typeof x[1]==='object'&&!Array.isArray(x[1])}))inner=tab(e.map(function(x){return Object.assign({cle:x[0]},x[1])}));else inner='<pre>'+JSON.stringify(d,null,2)+'</pre>';}
-else inner='<pre>'+JSON.stringify(d)+'</pre>';
-var div=document.createElement('div');div.className='oc-res';div.innerHTML='<span class="oc-when">'+new Date(at).toLocaleString('fr-FR')+'</span><h3>'+(T[a]||a)+'</h3>'+inner;document.getElementById('oc-out').prepend(div);}
-document.querySelectorAll('#oc-console button.oc-b').forEach(function(b){b.addEventListener('click',function(){var a=b.dataset.a;var st=document.getElementById('oc-status');st.textContent='⏳ '+(T[a]||a)+' en cours…';st.style.color='#d4af37';b.disabled=true;
-fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a})}).then(function(r){return r.json()}).then(function(j){if(j.error)throw new Error(j.error);rend(a,j.data,j.at);st.textContent='✔ Terminé.';st.style.color='#7a88a8';}).catch(function(e){st.textContent='✘ Erreur : '+e.message;st.style.color='#ff5c72';}).finally(function(){b.disabled=false;});});});})();</script></body>
+</body>
 </html>
