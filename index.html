@@ -304,14 +304,14 @@ async function hero(){try{
 async function alchimiste(){try{
   const d=await api('alchimiste');
   document.getElementById('alcWr').textContent=d.win_rate!=null?fr2(d.win_rate)+' %':'—';
-  document.getElementById('alcEvals').textContent=`${d.tp||0} take-profit / ${d.sl||0} stop-loss · ${d.clotures||0} trades clos`;
+  document.getElementById('alcEvals').textContent=`${d.tp||0} take-profit / ${d.sl||0} stop-loss · ${d.clotures||0} trades clos · ${d.positions_ouvertes||0} ouvertes`;
   const comp=d.rendement_compose_pct;
   const cEl=document.getElementById('alcCompose');
   cEl.textContent=comp!=null?(comp>=0?'+':'')+fr2(comp)+' %':'—'; cEl.className='val '+(comp>=0?'up':'');
   document.getElementById('alcEsp').textContent=d.esperance_pct!=null?(d.esperance_pct>=0?'+':'')+fr2(d.esperance_pct)+' %':'—';
   if(d.gain_moy_pct!=null)document.getElementById('alcGainPerte').textContent=`gain moy. +${fr2(d.gain_moy_pct)} % · perte moy. ${fr2(d.perte_moy_pct)} %`;
   document.getElementById('alcOpen').textContent=fr(d.positions_ouvertes||0);
-  if(d.tp&&d.sl)document.getElementById('alcTpsl').textContent=`TP ${d.tp} % / SL ${d.sl} %`;
+  if(d.tp_pct&&d.sl_pct)document.getElementById('alcTpsl').textContent=`TP ${d.tp_pct} % / SL ${d.sl_pct} %`;
   if(d.plafond_jour_usd)document.getElementById('alcPlafond').textContent=d.plafond_jour_usd;
 }catch(e){console.warn('alchimiste',e)}}
 const ORDRE_ARCH={JU:0,SYL:1,GIL:2};
