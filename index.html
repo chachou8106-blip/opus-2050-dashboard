@@ -136,6 +136,11 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
     <div class="legend" id="chartLegend"></div>
   </div>
 
+  <!-- ═══════════ RENDEMENTS MENSUELS ═══════════ -->
+  <h2>◈ Rendements mois par mois</h2>
+  <p class="sub">Le format que lisent les investisseurs : la performance de chaque robot, mois après mois, comparée au marché. Résultats en simulation.</p>
+  <div class="card" style="margin-top:14px;overflow-x:auto"><table id="mensuel"></table></div>
+
   <!-- ═══════════ ARCHIMAGES ═══════════ -->
   <h2>◈ Les trois Archimages — cliquez pour ouvrir leur dossier</h2>
   <div class="grid3" id="archCards"></div>
@@ -181,7 +186,7 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
 
   <!-- ═══════════ ABONNEMENT ═══════════ -->
   <h2 id="abo">◈ Accès membre — ouverture prochaine</h2>
-  <p class="sub">Le passage du robot en conditions réelles (Alpaca, puis Binance et Revolut X) est en préparation. Les membres fondateurs de la liste d'attente seront servis en premier et garderont leur tarif à vie. Paiement par carte et cryptomonnaie à l'ouverture.</p>
+  <p class="sub">Le passage du robot en conditions réelles (Alpaca, puis Binance et Revolut X) est en préparation. Les membres fondateurs de la liste d'attente seront servis en premier et garderont leur tarif à vie. Paiement par carte et cryptomonnaie à l'ouverture.<span id="waitCount" style="display:none;color:var(--goldsoft)"></span></p>
   <div class="plans" style="margin-top:16px">
     <div class="plan"><h3>Observateur</h3><div class="price">0 €</div><div class="per">pour toujours</div>
       <ul><li>Ce tableau de bord en direct</li><li>Le rapport de méthode PDF</li><li>Le récap hebdomadaire par email</li></ul>
@@ -232,6 +237,7 @@ async function hero(){try{
   document.getElementById('maj').textContent=' · MAJ '+t;
   document.getElementById('majFoot').textContent=new Date().toLocaleString('fr-FR');
   archCards(d.brains);
+  if(Number(d.leads_count)>=10){const w=document.getElementById('waitCount');w.textContent=' Déjà '+fr(d.leads_count)+' inscrits sur la liste d\'attente.';w.style.display='inline'}
 }catch(e){console.warn('hero',e)}}
 
 /* ---- CARTES ARCHIMAGES ---- */
@@ -245,6 +251,7 @@ function archCards(brains){
       <div class="m"><span>Win rate</span><b>${fr2(b.win_rate*100)} %</b></div>
       <div class="m"><span>Valeur du compte</span><b>${fr(b.alpaca_portfolio_value)} $</b></div>
       <div class="m"><span>Drawdown courant</span><b>${fr2(b.current_drawdown*100)} %</b></div>
+      <div class="m"><span>Score de risque <span title="De 1 (très calme) à 10 (très risqué). Calculé sur la volatilité quotidienne réelle et la perte maximale depuis un sommet — même logique que les scores des plateformes de copy trading." style="cursor:help;color:var(--muted)">ⓘ</span></span><b id="risk-${b.archimage}">…</b></div>
       <div class="hint">CLIQUER POUR OUVRIR LE DOSSIER →</div></div>`);
   }
 }
@@ -285,7 +292,49 @@ async function equity(){try{
   CHART={series,days:jours}; dessiner();
   const lg=document.getElementById('chartLegend'); lg.innerHTML='';
   for(const s of series)lg.insertAdjacentHTML('beforeend',`<span><span class="sw" style="background:${s.couleur};${s.dash?'background:repeating-linear-gradient(90deg,'+s.couleur+' 0 4px,transparent 4px 7px)':''}"></span>${s.nom==='SPY'?'S&P 500 (marché)':NOMS[s.nom]||s.nom}</span>`);
+  scoresRisque(series); tableauMensuel(series,jours);
 }catch(e){console.warn('equity',e)}}
+
+/* ---- SCORE DE RISQUE (1-10, volatilité + drawdown, façon copy trading) ---- */
+function scoresRisque(series){
+  for(const s of series){
+    if(s.nom==='SPY')continue;
+    const pts=s.pts.filter(v=>v!=null);
+    if(pts.length<5)continue;
+    let sig=0,n=0,moy=0; const difs=[];
+    for(let i=1;i<pts.length;i++)difs.push(pts[i]-pts[i-1]);
+    moy=difs.reduce((a,b)=>a+b,0)/difs.length;
+    sig=Math.sqrt(difs.reduce((a,b)=>a+(b-moy)*(b-moy),0)/difs.length);
+    let peak=-1e9,mdd=0;
+    for(const v of pts){peak=Math.max(peak,v);mdd=Math.max(mdd,peak-v)}
+    const score=Math.min(10,Math.max(1,Math.round(1+sig*2+mdd*0.5)));
+    const el=document.getElementById('risk-'+s.nom);
+    if(el){el.textContent=score+' / 10';el.style.color=score<=3?'#46b98d':score<=6?'#cba24a':'#c05370'}
+  }
+}
+
+/* ---- RENDEMENTS MOIS PAR MOIS (format copy trading) ---- */
+function tableauMensuel(series,jours){
+  const t=document.getElementById('mensuel'); if(!t||!jours.length)return;
+  const finMois={};
+  jours.forEach((j,i)=>{finMois[j.slice(0,7)]=i});
+  const mois=Object.keys(finMois).sort();
+  const nomMois=m=>new Date(m+'-15').toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  let html='<tr><th>Mois</th>'+series.map(s=>`<th style="color:${s.couleur}">${s.nom==='SPY'?'S&P 500':s.nom}</th>`).join('')+'</tr>';
+  mois.forEach((m,k)=>{
+    html+='<tr><td style="text-transform:capitalize"><b>'+nomMois(m)+'</b>'+(k===mois.length-1?' <span style="color:var(--muted);font-size:11px">(en cours)</span>':'')+'</td>';
+    for(const s of series){
+      const fin=s.pts[finMois[m]];
+      const deb=k===0?0:s.pts[finMois[mois[k-1]]];
+      if(fin==null||deb==null){html+='<td>—</td>';continue}
+      const r=((100+fin)/(100+deb)-1)*100;
+      html+=`<td class="${r>=0?'pos':'neg'}"><b>${r>=0?'+':''}${fr2(r)} %</b></td>`;
+    }
+    html+='</tr>';
+  });
+  t.innerHTML=html;
+  rendreTriable(t);
+}
 function dessiner(){
   const svg=document.getElementById('chart'); const W=svg.clientWidth||1100,H=360,P={t:18,r:56,b:26,l:46};
   const {series,days}=CHART; if(!days.length)return;
