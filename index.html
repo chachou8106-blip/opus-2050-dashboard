@@ -142,6 +142,24 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
     <div class="legend" id="chartLegend"></div>
   </div>
 
+  <!-- ═══════════ ALCHIMISTE / REVOLUT X (en avant) ═══════════ -->
+  <h2 id="alchimiste">◈ L'Alchimiste — le portefeuille Revolut X, futur premier compte réel</h2>
+  <div class="card" style="margin-top:14px;border:1px solid var(--gold)">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px">
+      <span class="pill" style="border:1px solid var(--goldsoft);color:var(--goldsoft);border-radius:20px;padding:3px 12px;font-family:var(--mono);font-size:11px">⚗ CRYPTO · BTC / ETH / SOL…</span>
+      <span class="pill" style="border:1px solid #8b8098;color:#b6ab98;border-radius:20px;padding:3px 12px;font-family:var(--mono);font-size:11px" title="Le kill switch bloque tout ordre réel : l'IA propose et apprend sur les prix réels, mais aucun euro n'est engagé.">🔒 100 % VIRTUEL — KILL SWITCH ACTIF</span>
+      <span class="pill" style="border:1px solid #46b98d;color:#46b98d;border-radius:20px;padding:3px 12px;font-family:var(--mono);font-size:11px">SEUL CERVEAU AVEC UN EDGE MESURÉ</span>
+    </div>
+    <p class="sub" style="margin-bottom:12px">Les trois Archimages tradent des comptes de simulation. L'Alchimiste, lui, est adossé à un <b>vrai compte Revolut X</b> — aujourd'hui verrouillé en mode virtuel par un kill switch : l'IA propose, apprend sur les prix réels, et <b>pas un euro n'est engagé</b> tant que ses preuves ne sont pas faites. C'est lui qui passera en réel en premier.</p>
+    <div class="tiles" id="alcTiles">
+      <div class="tile"><div class="lbl">Win rate virtuel</div><div class="val" id="alcWr">…</div><div class="note" id="alcEvals"></div></div>
+      <div class="tile"><div class="lbl">Edge Kelly mesuré</div><div class="val" id="alcKelly">…</div><div class="note">taille de position justifiée par les données</div></div>
+      <div class="tile"><div class="lbl">Propositions étudiées</div><div class="val" id="alcProps">…</div><div class="note">0 ordre réel — kill switch</div></div>
+      <div class="tile"><div class="lbl">Réglage backtesté</div><div class="val" id="alcTpsl">…</div><div class="note" id="alcBt"></div></div>
+    </div>
+    <p class="sub" style="margin-top:12px;font-size:12.5px">Garde-fous prévus pour le passage en réel : validation humaine trade par trade, plafond <span id="alcPlafond">200</span> $/jour, TP/SL automatiques. Résultats virtuels — ils ne préjugent pas du réel.</p>
+  </div>
+
   <!-- ═══════════ COMMENT ÇA MARCHE ═══════════ -->
   <h2>◈ Comment ça marche — un cycle toutes les 3 heures</h2>
   <div class="grid3" style="margin-top:14px">
@@ -283,9 +301,21 @@ async function hero(){try{
 }catch(e){console.warn('hero',e)}}
 
 /* ---- CARTES ARCHIMAGES ---- */
+async function alchimiste(){try{
+  const d=await api('alchimiste');
+  document.getElementById('alcWr').textContent=d.win_rate_pct!=null?fr2(d.win_rate_pct)+' %':'—';
+  document.getElementById('alcEvals').textContent=`${d.wins||0} gagnés / ${d.losses||0} perdus sur ${d.total_runs||0} évaluations`;
+  document.getElementById('alcKelly').textContent=d.kelly_pct!=null?fr2(d.kelly_pct)+' %':'—';
+  document.getElementById('alcProps').textContent=fr(d.propositions||0);
+  document.getElementById('alcTpsl').textContent=(d.tp&&d.sl)?`TP ${d.tp} % / SL ${d.sl} %`:'—';
+  if(d.backtest)document.getElementById('alcBt').textContent=`+${fr2(d.backtest.avg_ret_pct)} %/trade rejoué sur l'historique`;
+  if(d.plafond_jour_usd)document.getElementById('alcPlafond').textContent=d.plafond_jour_usd;
+}catch(e){console.warn('alchimiste',e)}}
+const ORDRE_ARCH={JU:0,SYL:1,GIL:2};
 function archCards(brains){
   const el=document.getElementById('archCards'); el.innerHTML='';
-  for(const b of (brains||[])){
+  const tries=(brains||[]).slice().sort((a,b)=>(ORDRE_ARCH[a.archimage]??9)-(ORDRE_ARCH[b.archimage]??9));
+  for(const b of tries){
     const c=COL[b.archimage]||'#888';
     el.insertAdjacentHTML('beforeend',`<div class="card arch" style="border-top-color:${c}" onclick="ouvrirArchimage('${b.archimage}')">
       <h3 style="color:${c}">${NOMS[b.archimage]||b.archimage}</h3>
@@ -586,7 +616,7 @@ async function lead(inputId, source, apres){
 }
 
 /* ---- LANCEMENT + AUTO-REFRESH ---- */
-hero(); equity(); sages(); heatmap(); timeline(); positions(); gardefous();
+hero(); alchimiste(); equity(); sages(); heatmap(); timeline(); positions(); gardefous();
 setInterval(hero, 60000);
 </script>
 </body>
