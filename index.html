@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0d0a12">
 <meta name="description" content="OPUS 2050 — Robot de trading multi-IA. Performances en direct, méthode transparente, garde-fous mesurés.">
+<meta property="og:title" content="OPUS 2050 — l'Oracle Financier · Trading IA en direct">
+<meta property="og:description" content="Trois IA concurrentes, cinq analystes notés en continu, un méta-cerveau qui apprend de ses erreurs. Chiffres vérifiables en direct — résultats en simulation.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://oracle-financier.netlify.app/">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230d0a12'/%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23c9a349' stroke-width='6'/%3E%3Ctext x='50' y='66' font-size='48' text-anchor='middle' fill='%23d9be74' font-family='Georgia,serif' font-weight='bold'%3E%CE%A9%3C/text%3E%3C/svg%3E">
 <title>OPUS 2050 — Le Conseil des Archimages · Trading IA en direct</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=EB+Garamond:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -136,6 +142,15 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
     <div class="legend" id="chartLegend"></div>
   </div>
 
+  <!-- ═══════════ COMMENT ÇA MARCHE ═══════════ -->
+  <h2>◈ Comment ça marche — un cycle toutes les 3 heures</h2>
+  <div class="grid3" style="margin-top:14px">
+    <div class="card"><h3 style="font-family:var(--disp);font-size:15px;color:var(--goldsoft)">1 · Les Sages analysent</h3><p class="sub" style="font-size:13.5px;margin-top:8px">Cinq analystes spécialisés (macro, technique, risque, mémoire, actualité) préparent le dossier de marché à partir de données réelles : prix, VIX, taux, inflation, Fear &amp; Greed. Chacun est noté en continu sur ses prédictions passées.</p></div>
+    <div class="card"><h3 style="font-family:var(--disp);font-size:15px;color:var(--goldsoft)">2 · Les Archimages délibèrent</h3><p class="sub" style="font-size:13.5px;margin-top:8px">Trois IA concurrentes — Claude (Anthropic), Mistral et Perplexity — reçoivent le même dossier et décident chacune pour leur propre portefeuille. Un méta-cerveau arbitre et pondère selon leurs performances mesurées.</p></div>
+    <div class="card"><h3 style="font-family:var(--disp);font-size:15px;color:var(--goldsoft)">3 · Exécution & apprentissage</h3><p class="sub" style="font-size:13.5px;margin-top:8px">Les ordres passent chez le courtier (simulation Alpaca) sous garde-fous : plafonds, circuit breakers, kill switch crypto. 24 h plus tard, chaque décision est évaluée, les erreurs archivées, les cerveaux mis à jour.</p></div>
+  </div>
+  <p class="sub" style="margin-top:12px;font-family:var(--mono);font-size:11.5px">PROPULSÉ PAR · Claude (Anthropic) · Mistral AI · Perplexity · Groq · Alpaca Markets · Supabase · Make</p>
+
   <!-- ═══════════ RENDEMENTS MENSUELS ═══════════ -->
   <h2>◈ Rendements mois par mois</h2>
   <p class="sub">Le format que lisent les investisseurs : la performance de chaque robot, mois après mois, comparée au marché. Résultats en simulation.</p>
@@ -156,6 +171,10 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
   <div class="card" style="margin-top:14px;overflow-x:auto"><div class="hm" id="heatmap"></div></div>
 
   <!-- ═══════════ TIMELINE ═══════════ -->
+  <!-- ═══════════ SIGNAL DIFFÉRÉ (teaser) ═══════════ -->
+  <h2>◈ La dernière décision du Collège — diffusée en différé</h2>
+  <div class="card" id="teaser" style="margin-top:14px"><p class="sub">Chargement…</p></div>
+
   <h2>◈ Les 40 derniers runs — le rythme du robot</h2>
   <p class="sub">Une barre par run. La hauteur = nombre d'ordres décidés ; la couleur = régime de marché détecté (rouge : peur, gris : neutre, vert : opportunité). Survolez.</p>
   <div class="card" style="margin-top:14px"><div class="tl" id="timeline"></div></div>
@@ -182,6 +201,29 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
     </div>
     <div class="msg" id="pdfEmailMsg"></div>
     <p class="sub" style="font-size:11px;margin-top:8px">En laissant votre email, vous acceptez de recevoir le rapport et nos actualités (max. 1 email/semaine). Désinscription en un clic, à tout moment, en répondant « STOP » — vos données ne sont jamais revendues.</p>
+  </div>
+
+  <!-- ═══════════ COMPARATIF ═══════════ -->
+  <h2>◈ Pourquoi pas un robot classique, ou du copy trading ?</h2>
+  <div class="card" style="margin-top:14px;overflow-x:auto"><table>
+    <tr><th></th><th style="color:var(--goldsoft)">OPUS 2050</th><th>Robot « boîte noire »</th><th>Copy trading humain</th></tr>
+    <tr><td><b>Qui décide</b></td><td>3 IA concurrentes + méta-cerveau</td><td>Une stratégie figée, souvent secrète</td><td>Un humain, avec ses émotions</td></tr>
+    <tr><td><b>Transparence</b></td><td class="pos">Tout est vérifiable en direct sur cette page</td><td class="neg">Captures d'écran invérifiables</td><td>Statistiques fournies par la plateforme</td></tr>
+    <tr><td><b>Apprentissage</b></td><td class="pos">Erreurs archivées, sages notés, coaching chiffré</td><td class="neg">Aucun — répète la même recette</td><td>Dépend de l'humain</td></tr>
+    <tr><td><b>Garde-fous</b></td><td class="pos">Circuit breakers, plafonds, kill switch — visibles</td><td>Rarement documentés</td><td>Stop-loss à régler soi-même</td></tr>
+    <tr><td><b>Votre argent</b></td><td class="pos">Reste chez vous — nous ne le touchons jamais</td><td class="neg">Souvent confié au robot</td><td>Confié à la plateforme</td></tr>
+    <tr><td><b>Honnêteté</b></td><td class="pos">Résultats simulés affichés comme tels, limites publiées</td><td class="neg">« 94 % de réussite garantie »</td><td>Variable</td></tr>
+  </table></div>
+
+  <!-- ═══════════ FAQ ═══════════ -->
+  <h2>◈ Questions fréquentes</h2>
+  <div style="margin-top:14px">
+    <details class="card" style="margin-bottom:10px"><summary style="cursor:pointer;font-family:var(--disp);font-size:15px;color:var(--goldsoft)">Est-ce que je vous confie mon argent ?</summary><p class="sub" style="margin-top:10px">Non, jamais. Nous ne collectons ni ne gérons aucun fonds. Un abonnement donne accès à de l'information (signaux, analyses, tableaux) — vous restez seul maître de vos comptes et de vos décisions.</p></details>
+    <details class="card" style="margin-bottom:10px"><summary style="cursor:pointer;font-family:var(--disp);font-size:15px;color:var(--goldsoft)">Les performances affichées sont-elles réelles ?</summary><p class="sub" style="margin-top:10px">Ce sont des résultats de <b>paper trading</b> : le robot trade des comptes de simulation Alpaca avec de l'argent fictif, aux prix réels du marché, ordres réellement passés et exécutés. C'est affiché partout sur cette page — et c'est précisément pour cela que vous pouvez y croire : nous publions aussi nos drawdowns, nos coûts de friction estimés et nos critères avant tout passage en réel. Un site qui vous cache ça devrait vous inquiéter.</p></details>
+    <details class="card" style="margin-bottom:10px"><summary style="cursor:pointer;font-family:var(--disp);font-size:15px;color:var(--goldsoft)">Quand le robot passera-t-il en argent réel ?</summary><p class="sub" style="margin-top:10px">Quand toutes ses gates seront vertes : win rate collectif ≥ 52 %, aucun portefeuille en drawdown &gt; 5 %, zéro rejet d'ordre récurrent, sécurité renforcée. Ces critères sont publics et datés — pas de date marketing.</p></details>
+    <details class="card" style="margin-bottom:10px"><summary style="cursor:pointer;font-family:var(--disp);font-size:15px;color:var(--goldsoft)">Que recevront les abonnés exactement ?</summary><p class="sub" style="margin-top:10px">Chaque décision du Collège en temps réel (les visiteurs la voient avec 24 h de délai), le détail des actifs, le raisonnement des trois IA, les analyses des cinq Sages et les alertes circuit-breaker. Le tarif fondateur sera annoncé à l'ouverture — les inscrits de la liste d'attente le garderont à vie.</p></details>
+    <details class="card" style="margin-bottom:10px"><summary style="cursor:pointer;font-family:var(--disp);font-size:15px;color:var(--goldsoft)">Est-ce un conseil en investissement ?</summary><p class="sub" style="margin-top:10px">Non. Tout le contenu est informatif et pédagogique : nous montrons ce que fait notre système, jamais ce que <i>vous</i> devriez faire. Nous ne sommes pas conseiller en investissements financiers. Le trading comporte un risque de perte totale — n'investissez que ce que vous acceptez de perdre.</p></details>
+    <details class="card" style="margin-bottom:10px"><summary style="cursor:pointer;font-family:var(--disp);font-size:15px;color:var(--goldsoft)">Qui est derrière OPUS 2050 ?</summary><p class="sub" style="margin-top:10px">Un créateur indépendant français, avec une conviction : la meilleure façon de vendre un robot de trading est de montrer TOUT ce qu'il fait — ses gains, ses erreurs, ses limites — plutôt que des promesses. Contact : chachou8106@gmail.com.</p></details>
   </div>
 
   <!-- ═══════════ ABONNEMENT ═══════════ -->
@@ -331,8 +373,9 @@ function tableauMensuel(series,jours){
   mois.forEach((m,k)=>{
     html+='<tr><td style="text-transform:capitalize"><b>'+nomMois(m)+'</b>'+(k===mois.length-1?' <span style="color:var(--muted);font-size:11px">(en cours)</span>':'')+'</td>';
     for(const s of series){
-      const fin=s.pts[finMois[m]];
-      const deb=k===0?0:s.pts[finMois[mois[k-1]]];
+      const valAt=idx=>{for(let i=idx;i>=0;i--)if(s.pts[i]!=null)return s.pts[i];return null};
+      const fin=valAt(finMois[m]);
+      const deb=k===0?0:valAt(finMois[mois[k-1]]);
       if(fin==null||deb==null){html+='<td>—</td>';continue}
       const r=((100+fin)/(100+deb)-1)*100;
       html+=`<td class="${r>=0?'pos':'neg'}"><b>${r>=0?'+':''}${fr2(r)} %</b></td>`;
@@ -488,7 +531,24 @@ async function timeline(){try{
     t2.style.top=(ev.clientY-t2.offsetHeight-14)+'px';
   });
   el.addEventListener('mouseleave',()=>{t2.style.display='none'});
+  teaser(rows);
 }catch(e){console.warn('timeline',e)}}
+
+/* ---- SIGNAL DIFFÉRÉ 24H (teaser) ---- */
+function teaser(rows){
+  const el=document.getElementById('teaser'); if(!el||!Array.isArray(rows))return;
+  const vieux=rows.find(r=>Date.now()-new Date(r.run_at).getTime()>24*3600*1000);
+  if(!vieux){el.innerHTML='<p class="sub">Aucun run assez ancien à diffuser.</p>';return}
+  const d=new Date(vieux.run_at); const ph=(vieux.market_phase||'—').toUpperCase();
+  el.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.1em">RUN DU ${d.toLocaleDateString('fr-FR')} À ${d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})} — DIFFUSÉ AVEC 24 H DE DÉLAI</div>
+      <div style="font-family:var(--disp);font-size:19px;margin-top:6px">Phase de marché : <b style="color:var(--goldsoft)">${ph}</b> · ${vieux.orders_count||0} ordres décidés <span class="pos">(${vieux.orders_buy||0} achats)</span> / <span class="neg">(${vieux.orders_sell||0} ventes)</span></div>
+      <p class="sub" style="margin-top:6px;font-size:13px">Les membres Signaux Oracle recevront chaque décision <b>en temps réel</b>, avec le détail des actifs et le raisonnement des trois IA.</p>
+    </div>
+    <button class="btn solid" onclick="document.getElementById('abo').scrollIntoView()">Rejoindre la liste d'attente</button>
+  </div>`;
+}
 
 /* ---- POSITIONS ---- */
 async function positions(){try{
