@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0a12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OPUS Suivi">
+<link rel="manifest" id="mf">
+<link rel="apple-touch-icon" id="ati">
+<title>OPUS 2050 — Suivi quotidien</title>
+<style>
+:root{--ink:#0d0a12;--card:#181321;--card2:#1f1830;--line:#332a44;--txt:#ece3d2;--dim:#b6ab98;--muted:#8b8098;
+--gold:#c9a349;--goldsoft:#d9be74;--green:#46b98d;--amber:#cba24a;--red:#d0596e;--gil:#ab8836;--ju:#4a87d4;--syl:#2c9862;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--ink);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+padding:calc(env(safe-area-inset-top) + 14px) 14px calc(env(safe-area-inset-bottom) + 24px);max-width:560px;margin:0 auto}
+.top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+h1{font-size:19px;letter-spacing:.02em;font-weight:700}
+h1 span{color:var(--goldsoft)}
+.live{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:p 2s infinite}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.3}}
+.verdict{border-radius:18px;padding:20px;margin:14px 0;text-align:center;border:1px solid var(--line)}
+.verdict.no{background:linear-gradient(160deg,#2a1620,#181321);border-color:#5a2b39}
+.verdict.go{background:linear-gradient(160deg,#16281f,#181321);border-color:#2c5a44}
+.verdict .k{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.15em;color:var(--muted)}
+.verdict .v{font-size:26px;font-weight:800;margin:6px 0 4px}
+.verdict.no .v{color:var(--red)}.verdict.go .v{color:var(--green)}
+.verdict .s{font-size:13px;color:var(--dim);line-height:1.45}
+.sec{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.14em;color:var(--goldsoft);margin:20px 2px 8px;text-transform:uppercase}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.gate{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid var(--card2)}
+.gate:last-child{border-bottom:none}
+.gate .ic{width:26px;height:26px;border-radius:50%;flex:0 0 26px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.gate .ic.ok{background:rgba(70,185,141,.16);color:var(--green)}
+.gate .ic.ko{background:rgba(208,89,110,.16);color:var(--red)}
+.gate .lb{flex:1;font-size:13.5px}
+.gate .lb small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+.gate .vl{font-family:ui-monospace,monospace;font-size:13px;font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 9px;text-align:center}
+.mini .nm{font-size:11px;color:var(--dim);font-weight:600}
+.mini .g{font-size:17px;font-weight:800;margin:3px 0}
+.mini .dd{font-family:ui-monospace,monospace;font-size:10.5px}
+.tiles2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.tile .l{font-size:11px;color:var(--dim)}
+.tile .n{font-size:20px;font-weight:800;margin-top:3px}
+.pos{color:var(--green)}.neg{color:var(--red)}
+.row{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--card2)}
+.row:last-child{border-bottom:none}
+.row .p{font-family:ui-monospace,monospace;color:var(--dim)}
+.badge{display:inline-block;font-family:ui-monospace,monospace;font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
+.foot{color:var(--muted);font-size:10.5px;line-height:1.5;margin-top:18px;text-align:center}
+#install{position:fixed;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 12px);background:var(--goldsoft);color:#1a1206;
+border:none;border-radius:12px;padding:13px;font-weight:700;font-size:14px;display:none;max-width:532px;margin:0 auto;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.err{color:var(--red);font-size:12px;text-align:center;padding:8px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1><span>◈</span> OPUS 2050 — Suivi</h1>
+  <div class="live"><span class="dot"></span><span id="maj">…</span></div>
+</div>
+<div class="sub" style="color:var(--muted);font-size:11.5px;margin-bottom:6px">Objectif : <b style="color:var(--goldsoft)">+15 à +20 %</b> · résultats en simulation</div>
+
+<div class="verdict" id="verdict"><div class="k">PRÊT À LANCER LE RÉEL ?</div><div class="v" id="verdictV">…</div><div class="s" id="verdictS">Chargement…</div></div>
+
+<div class="sec">Les 3 archimages</div>
+<div class="grid" id="archs"></div>
+
+<div class="sec">Feu vert / feu rouge — gates du 2 août</div>
+<div class="card" id="gates"></div>
+
+<div class="sec">L'Alchimiste (crypto virtuel)</div>
+<div class="tiles2" id="alcTiles"></div>
+<div class="card" id="alcPos" style="margin-top:8px"></div>
+
+<div class="foot">
+Données servies en direct depuis Supabase. Résultats en <b>paper trading</b> / simulation — pas un conseil en investissement, aucune promesse de gain.<br>
+Actualisation auto toutes les 2 min · <span id="majFoot"></span>
+</div>
+
+<button id="install">📲 Installer sur mon téléphone</button>
+
+<script>
+const EP='https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/oracle-tests';
+const COL={GIL:'var(--gil)',JU:'var(--ju)',SYL:'var(--syl)'};
+const NOM={GIL:'GIL',JU:'JU',SYL:'SYL'};
+async function api(action){const r=await fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action})});const j=await r.json();if(j.error)throw new Error(j.error);return j.data;}
+const fr=n=>Number(n).toLocaleString('fr-FR',{maximumFractionDigits:0});
+const f2=n=>Number(n).toLocaleString('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2});
+
+async function charger(){
+ try{
+  const [h,a]=await Promise.all([api('hero'),api('alchimiste')]);
+  const t=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('maj').textContent='MAJ '+t;
+  document.getElementById('majFoot').textContent=new Date().toLocaleString('fr-FR');
+
+  // --- Archimages ---
+  const brains=(h.brains||[]).slice().sort((x,y)=>({JU:0,SYL:1,GIL:2}[x.archimage])-({JU:0,SYL:1,GIL:2}[y.archimage]));
+  let hg='';
+  for(const b of brains){
+   const gain=(b.cumulative_pnl/ (b.alpaca_portfolio_value-b.cumulative_pnl))*100;
+   const dd=b.current_drawdown*100;
+   const ddc=dd<5?'var(--green)':'var(--red)';
+   hg+=`<div class="mini"><div class="nm" style="color:${COL[b.archimage]}">${NOM[b.archimage]}</div>
+     <div class="g ${gain>=0?'pos':'neg'}">${gain>=0?'+':''}${f2(gain)} %</div>
+     <div class="dd" style="color:${ddc}">DD ${f2(dd)} %</div></div>`;
+  }
+  document.getElementById('archs').innerHTML=hg;
+
+  // --- Gates ---
+  const gJU=brains.find(b=>b.archimage==='JU'), gSYL=brains.find(b=>b.archimage==='SYL'), gGIL=brains.find(b=>b.archimage==='GIL');
+  const wrMoy=h.win_rate_moyen;
+  const ddMax=Math.max(...brains.map(b=>b.current_drawdown*100));
+  const wrMin=Math.min(...brains.map(b=>b.win_rate*100));
+  const gates=[
+   {ok:ddMax<5, lb:'Aucun drawdown au-dessus de 5 %', sub:'protège le capital', vl:'max '+f2(ddMax)+' %'},
+   {ok:wrMoy>=52, lb:'Win rate collectif ≥ 52 %', sub:'sur l\'ensemble des runs', vl:f2(wrMoy)+' %'},
+   {ok:wrMin>=45, lb:'Aucun archimage sous 45 %', sub:'chaque IA reste fiable', vl:'min '+f2(wrMin)+' %'},
+   {ok:h.alpha_moyen_pct>0, lb:'Alpha positif vs marché', sub:'on bat le S&P 500', vl:(h.alpha_moyen_pct>=0?'+':'')+f2(h.alpha_moyen_pct)+' pts'}
+  ];
+  document.getElementById('gates').innerHTML=gates.map(g=>`<div class="gate">
+    <div class="ic ${g.ok?'ok':'ko'}">${g.ok?'✓':'✕'}</div>
+    <div class="lb">${g.lb}<small>${g.sub}</small></div>
+    <div class="vl" style="color:${g.ok?'var(--green)':'var(--red)'}">${g.vl}</div></div>`).join('');
+
+  const tousVerts=gates.every(g=>g.ok);
+  const nOk=gates.filter(g=>g.ok).length;
+  const vd=document.getElementById('verdict');
+  vd.className='verdict '+(tousVerts?'go':'no');
+  document.getElementById('verdictV').textContent=tousVerts?'OUI — feu vert':'PAS ENCORE';
+  document.getElementById('verdictS').innerHTML=tousVerts
+    ? 'Tous les critères sont au vert. Tu peux réactiver « Trading Algo » dans MetaTrader et lancer la réplication.'
+    : `${nOk}/4 critères au vert. ${ddMax>=5?'Le drawdown de <b>'+f2(ddMax)+' %</b> doit repasser sous 5 %.':''} On attend que tout soit vert avant de lancer.`;
+
+  // --- Alchimiste ---
+  document.getElementById('alcTiles').innerHTML=`
+   <div class="tile"><div class="l">Win rate réel</div><div class="n">${a.win_rate!=null?f2(a.win_rate)+' %':'—'}</div></div>
+   <div class="tile"><div class="l">Rendement composé</div><div class="n ${a.rendement_compose_pct>=0?'pos':'neg'}">${a.rendement_compose_pct!=null?(a.rendement_compose_pct>=0?'+':'')+f2(a.rendement_compose_pct)+' %':'—'}</div></div>
+   <div class="tile"><div class="l">Positions ouvertes</div><div class="n">${a.positions_ouvertes||0}</div></div>
+   <div class="tile"><div class="l">Espérance / trade</div><div class="n ${a.esperance_pct>=0?'pos':'neg'}">${a.esperance_pct!=null?(a.esperance_pct>=0?'+':'')+f2(a.esperance_pct)+' %':'—'}</div></div>`;
+  const top=a.top_ouvertes||[];
+  document.getElementById('alcPos').innerHTML=top.length
+   ? '<div style="font-size:11px;color:var(--dim);margin-bottom:6px">MEILLEURES POSITIONS OUVERTES</div>'+top.map(p=>`<div class="row"><span><span class="badge">${p.side==='sell'?'VENTE':'ACHAT'}</span> ${p.paire.replace('-USD','')}</span><span class="p ${p.rendement>=0?'pos':'neg'}">${p.rendement>=0?'+':''}${f2(p.rendement)} %</span></div>`).join('')
+   : '<div style="font-size:12px;color:var(--muted)">Aucune position ouverte.</div>';
+ }catch(e){
+  document.getElementById('verdictS').innerHTML='<span class="err">Connexion impossible : '+e.message+'</span>';
+ }
+}
+charger();
+setInterval(charger,120000);
+
+// --- PWA : manifeste + icône + service worker en ligne (fichier unique) ---
+(function(){
+ const cv=document.createElement('canvas');cv.width=192;cv.height=192;const c=cv.getContext('2d');
+ c.fillStyle='#0d0a12';c.fillRect(0,0,192,192);
+ const g=c.createRadialGradient(96,74,10,96,96,150);g.addColorStop(0,'#2a2138');g.addColorStop(1,'#0d0a12');
+ c.fillStyle=g;c.fillRect(0,0,192,192);
+ c.strokeStyle='#c9a349';c.lineWidth=7;c.beginPath();c.arc(96,96,78,0,Math.PI*2);c.stroke();
+ c.fillStyle='#d9be74';c.font='bold 96px Georgia,serif';c.textAlign='center';c.textBaseline='middle';c.fillText('Ω',97,106);
+ const icon=cv.toDataURL('image/png');
+ document.getElementById('ati').href=icon;
+ const mf={name:'OPUS 2050 — Suivi quotidien',short_name:'OPUS Suivi',description:'Suivi quotidien du robot de trading OPUS 2050',
+   start_url:'./suivi.html',scope:'./',display:'standalone',orientation:'portrait',
+   background_color:'#0d0a12',theme_color:'#0d0a12',
+   icons:[{src:icon,sizes:'192x192',type:'image/png',purpose:'any maskable'},{src:icon,sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+ document.getElementById('mf').href=URL.createObjectURL(new Blob([JSON.stringify(mf)],{type:'application/manifest+json'}));
+ if('serviceWorker' in navigator){
+   const sw=`self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());
+   self.addEventListener('fetch',e=>{e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))});`;
+   navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{});
+ }
+ let deferred;
+ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;const b=document.getElementById('install');b.style.display='block';
+   b.onclick=async()=>{b.style.display='none';deferred.prompt();await deferred.userChoice;deferred=null;};});
+ // iOS : pas de beforeinstallprompt -> instructions
+ const iOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+ const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+ if(iOS && !standalone){const b=document.getElementById('install');b.textContent='📲 Installer : appuie sur Partager puis « Sur l\\'écran d\\'accueil »';b.style.display='block';b.onclick=()=>b.style.display='none';}
+})();
+</script>
+</body>
+</html>
