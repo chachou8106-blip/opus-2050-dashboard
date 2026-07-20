@@ -254,6 +254,7 @@ function archCards(brains){
       <div class="m"><span>Score de risque <span title="De 1 (très calme) à 10 (très risqué). Calculé sur la volatilité quotidienne réelle et la perte maximale depuis un sommet — même logique que les scores des plateformes de copy trading." style="cursor:help;color:var(--muted)">ⓘ</span></span><b id="risk-${b.archimage}">…</b></div>
       <div class="hint">CLIQUER POUR OUVRIR LE DOSSIER →</div></div>`);
   }
+  appliquerScores();
 }
 async function ouvrirArchimage(a){
   const m=document.getElementById('modal'); const bdy=document.getElementById('modalBody');
@@ -296,21 +297,27 @@ async function equity(){try{
 }catch(e){console.warn('equity',e)}}
 
 /* ---- SCORE DE RISQUE (1-10, volatilité + drawdown, façon copy trading) ---- */
+const SCORES={};
+function appliquerScores(){
+  for(const [a,score] of Object.entries(SCORES)){
+    const el=document.getElementById('risk-'+a);
+    if(el){el.textContent=score+' / 10';el.style.color=score<=3?'#46b98d':score<=6?'#cba24a':'#c05370'}
+  }
+}
 function scoresRisque(series){
   for(const s of series){
     if(s.nom==='SPY')continue;
     const pts=s.pts.filter(v=>v!=null);
     if(pts.length<5)continue;
-    let sig=0,n=0,moy=0; const difs=[];
+    const difs=[];
     for(let i=1;i<pts.length;i++)difs.push(pts[i]-pts[i-1]);
-    moy=difs.reduce((a,b)=>a+b,0)/difs.length;
-    sig=Math.sqrt(difs.reduce((a,b)=>a+(b-moy)*(b-moy),0)/difs.length);
+    const moy=difs.reduce((a,b)=>a+b,0)/difs.length;
+    const sig=Math.sqrt(difs.reduce((a,b)=>a+(b-moy)*(b-moy),0)/difs.length);
     let peak=-1e9,mdd=0;
     for(const v of pts){peak=Math.max(peak,v);mdd=Math.max(mdd,peak-v)}
-    const score=Math.min(10,Math.max(1,Math.round(1+sig*2+mdd*0.5)));
-    const el=document.getElementById('risk-'+s.nom);
-    if(el){el.textContent=score+' / 10';el.style.color=score<=3?'#46b98d':score<=6?'#cba24a':'#c05370'}
+    SCORES[s.nom]=Math.min(10,Math.max(1,Math.round(1+sig*2+mdd*0.5)));
   }
+  appliquerScores();
 }
 
 /* ---- RENDEMENTS MOIS PAR MOIS (format copy trading) ---- */
