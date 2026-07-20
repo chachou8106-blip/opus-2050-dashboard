@@ -181,7 +181,7 @@ setInterval(charger,120000);
  // iOS : pas de beforeinstallprompt -> instructions
  const iOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
  const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
- if(iOS && !standalone){const b=document.getElementById('install');b.textContent='📲 Installer : appuie sur Partager puis « Sur l\\'écran d\\'accueil »';b.style.display='block';b.onclick=()=>b.style.display='none';}
+ if(iOS && !standalone){const b=document.getElementById('install');b.textContent="📲 Installer : appuie sur Partager puis « Sur l'écran d'accueil »";b.style.display='block';b.onclick=()=>b.style.display='none';}
 })();
 </script>
 </body>
