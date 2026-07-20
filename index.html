@@ -150,14 +150,14 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
       <span class="pill" style="border:1px solid #8b8098;color:#b6ab98;border-radius:20px;padding:3px 12px;font-family:var(--mono);font-size:11px" title="Le kill switch bloque tout ordre réel : l'IA propose et apprend sur les prix réels, mais aucun euro n'est engagé.">🔒 100 % VIRTUEL — KILL SWITCH ACTIF</span>
       <span class="pill" style="border:1px solid #46b98d;color:#46b98d;border-radius:20px;padding:3px 12px;font-family:var(--mono);font-size:11px">SEUL CERVEAU AVEC UN EDGE MESURÉ</span>
     </div>
-    <p class="sub" style="margin-bottom:12px">Les trois Archimages tradent des comptes de simulation. L'Alchimiste, lui, est adossé à un <b>vrai compte Revolut X</b> — aujourd'hui verrouillé en mode virtuel par un kill switch : l'IA propose, apprend sur les prix réels, et <b>pas un euro n'est engagé</b> tant que ses preuves ne sont pas faites. C'est lui qui passera en réel en premier.</p>
+    <p class="sub" style="margin-bottom:12px">Les trois Archimages tradent des comptes de simulation. L'Alchimiste, lui, est adossé à un <b>vrai compte Revolut X</b> — verrouillé en mode virtuel par un kill switch : chacune de ses propositions est <b>rejouée sur les vrais prix</b> (tenue jusqu'au take-profit ou stop-loss), ce qui lui donne un portefeuille et des résultats mesurés, <b>sans qu'un euro soit engagé</b>. C'est lui qui passera en réel en premier.</p>
     <div class="tiles" id="alcTiles">
-      <div class="tile"><div class="lbl">Win rate virtuel</div><div class="val" id="alcWr">…</div><div class="note" id="alcEvals"></div></div>
-      <div class="tile"><div class="lbl">Edge Kelly mesuré</div><div class="val" id="alcKelly">…</div><div class="note">taille de position justifiée par les données</div></div>
-      <div class="tile"><div class="lbl">Propositions étudiées</div><div class="val" id="alcProps">…</div><div class="note">0 ordre réel — kill switch</div></div>
-      <div class="tile"><div class="lbl">Réglage backtesté</div><div class="val" id="alcTpsl">…</div><div class="note" id="alcBt"></div></div>
+      <div class="tile"><div class="lbl">Win rate réel <span title="Mesuré sur les trades effectivement tenus jusqu'au TP/SL sur les vrais prix — pas une estimation." style="cursor:help;color:var(--muted)">ⓘ</span></div><div class="val" id="alcWr">…</div><div class="note" id="alcEvals"></div></div>
+      <div class="tile"><div class="lbl">Rendement composé</div><div class="val" id="alcCompose">…</div><div class="note">à mise égale sur chaque signal</div></div>
+      <div class="tile"><div class="lbl">Espérance par trade</div><div class="val" id="alcEsp">…</div><div class="note" id="alcGainPerte"></div></div>
+      <div class="tile"><div class="lbl">Positions virtuelles ouvertes</div><div class="val" id="alcOpen">…</div><div class="note">suivies en temps réel</div></div>
     </div>
-    <p class="sub" style="margin-top:12px;font-size:12.5px">Garde-fous prévus pour le passage en réel : validation humaine trade par trade, plafond <span id="alcPlafond">200</span> $/jour, TP/SL automatiques. Résultats virtuels — ils ne préjugent pas du réel.</p>
+    <p class="sub" style="margin-top:12px;font-size:12.5px">Réglage backtesté <b id="alcTpsl">TP 5 % / SL 4 %</b>. Garde-fous prévus pour le passage en réel : validation humaine trade par trade, plafond <span id="alcPlafond">200</span> $/jour. <b>Résultats virtuels</b>, frais déduits — ils ne préjugent pas du réel. Les paires trop peu liquides sans historique de prix fiable sont exclues du calcul.</p>
   </div>
 
   <!-- ═══════════ COMMENT ÇA MARCHE ═══════════ -->
@@ -303,12 +303,15 @@ async function hero(){try{
 /* ---- CARTES ARCHIMAGES ---- */
 async function alchimiste(){try{
   const d=await api('alchimiste');
-  document.getElementById('alcWr').textContent=d.win_rate_pct!=null?fr2(d.win_rate_pct)+' %':'—';
-  document.getElementById('alcEvals').textContent=`${d.wins||0} gagnés / ${d.losses||0} perdus sur ${d.total_runs||0} évaluations`;
-  document.getElementById('alcKelly').textContent=d.kelly_pct!=null?fr2(d.kelly_pct)+' %':'—';
-  document.getElementById('alcProps').textContent=fr(d.propositions||0);
-  document.getElementById('alcTpsl').textContent=(d.tp&&d.sl)?`TP ${d.tp} % / SL ${d.sl} %`:'—';
-  if(d.backtest)document.getElementById('alcBt').textContent=`+${fr2(d.backtest.avg_ret_pct)} %/trade rejoué sur l'historique`;
+  document.getElementById('alcWr').textContent=d.win_rate!=null?fr2(d.win_rate)+' %':'—';
+  document.getElementById('alcEvals').textContent=`${d.tp||0} take-profit / ${d.sl||0} stop-loss · ${d.clotures||0} trades clos`;
+  const comp=d.rendement_compose_pct;
+  const cEl=document.getElementById('alcCompose');
+  cEl.textContent=comp!=null?(comp>=0?'+':'')+fr2(comp)+' %':'—'; cEl.className='val '+(comp>=0?'up':'');
+  document.getElementById('alcEsp').textContent=d.esperance_pct!=null?(d.esperance_pct>=0?'+':'')+fr2(d.esperance_pct)+' %':'—';
+  if(d.gain_moy_pct!=null)document.getElementById('alcGainPerte').textContent=`gain moy. +${fr2(d.gain_moy_pct)} % · perte moy. ${fr2(d.perte_moy_pct)} %`;
+  document.getElementById('alcOpen').textContent=fr(d.positions_ouvertes||0);
+  if(d.tp&&d.sl)document.getElementById('alcTpsl').textContent=`TP ${d.tp} % / SL ${d.sl} %`;
   if(d.plafond_jour_usd)document.getElementById('alcPlafond').textContent=d.plafond_jour_usd;
 }catch(e){console.warn('alchimiste',e)}}
 const ORDRE_ARCH={JU:0,SYL:1,GIL:2};
