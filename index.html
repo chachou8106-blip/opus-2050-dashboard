@@ -178,6 +178,20 @@ footer h4{font-family:var(--disp);font-size:13px;color:var(--dim);letter-spacing
   <h2>◈ Les trois Archimages — cliquez pour ouvrir leur dossier</h2>
   <div class="grid3" id="archCards"></div>
 
+  <!-- ═══════════ MARÉES (FOREX) ═══════════ -->
+  <h2>🌊 L'Archimage des Marées — le petit dernier (Forex)</h2>
+  <p class="sub">Un nouveau mage vient de rejoindre le Conseil : il analyse les grandes paires de devises (EUR-USD, USD-JPY, GBP-JPY…) et propose des positions rejouées sur les vrais cours. Encore en apprentissage — ses résultats se construisent trade après trade.</p>
+  <div class="card" id="mareesCard" style="margin-top:14px;border-top:2px solid #3aa6c9">
+    <div style="display:flex;flex-wrap:wrap;gap:22px;font-size:14px">
+      <div>Propositions <b id="mrNprops">…</b></div>
+      <div>Positions ouvertes <b id="mrOpen">…</b></div>
+      <div>Trades évalués <b id="mrEval">…</b></div>
+      <div>Win rate réel <b id="mrWr">…</b></div>
+      <div>Univers <b id="mrUniv">FOREX</b></div>
+    </div>
+    <div id="mrTable" style="margin-top:12px;overflow-x:auto"></div>
+  </div>
+
   <!-- ═══════════ SAGES ═══════════ -->
   <h2>◈ Le Conseil des cinq Sages — fiabilité mesurée en continu</h2>
   <p class="sub">Chaque Sage est noté contre le mouvement réellement observé du marché à 24 h. Les scores bougent avec les données — rien n'est figé.</p>
@@ -314,6 +328,21 @@ async function alchimiste(){try{
   if(d.tp_pct&&d.sl_pct)document.getElementById('alcTpsl').textContent=`TP ${d.tp_pct} % / SL ${d.sl_pct} %`;
   if(d.plafond_jour_usd)document.getElementById('alcPlafond').textContent=d.plafond_jour_usd;
 }catch(e){console.warn('alchimiste',e)}}
+async function marees(){try{
+  const d=await api('marees'); const s=d.stats||{}, c=d.cerveau||{};
+  const set=(id,v)=>{const e=document.getElementById(id); if(e)e.textContent=v;};
+  set('mrNprops', s.n_propositions!=null?s.n_propositions:'—');
+  set('mrOpen', s.n_open!=null?s.n_open:'—');
+  set('mrEval', s.n_evaluated!=null?s.n_evaluated:0);
+  set('mrWr', s.win_rate_reel!=null?fr2(s.win_rate_reel*100)+' %':'en apprentissage');
+  set('mrUniv', String(c.univers||'FOREX').replace(/_/g,' '));
+  const props=(d.propositions||[]).slice(0,6);
+  const el=document.getElementById('mrTable'); if(!el)return;
+  if(!props.length){el.innerHTML='<p class="sub">Aucune proposition pour l\'instant.</p>';return;}
+  el.innerHTML='<table style="width:100%;font-size:13px;border-collapse:collapse"><tr style="text-align:left;color:var(--muted)"><th>Paire</th><th>Sens</th><th>Conf.</th><th>TP/SL %</th><th>Raison</th></tr>'+
+    props.map(p=>{const sens=p.side==='buy'?'<span style="color:#4ecb71">▲ achat</span>':'<span style="color:#ff6b8a">▼ vente</span>';
+      return '<tr><td><b>'+(p.paire||'')+'</b></td><td>'+sens+'</td><td>'+(p.confidence!=null?Math.round(p.confidence*100)+'%':'—')+'</td><td>'+(p.tp_pct!=null?p.tp_pct:'—')+' / '+(p.sl_pct!=null?p.sl_pct:'—')+'</td><td class="sub" style="font-size:12px">'+((p.raison||'').slice(0,120))+'</td></tr>';}).join('')+'</table>';
+}catch(e){console.warn('marees',e)}}
 const ORDRE_ARCH={JU:0,SYL:1,GIL:2};
 function archCards(brains){
   const el=document.getElementById('archCards'); el.innerHTML='';
@@ -619,7 +648,7 @@ async function lead(inputId, source, apres){
 }
 
 /* ---- LANCEMENT + AUTO-REFRESH ---- */
-hero(); alchimiste(); equity(); sages(); heatmap(); timeline(); positions(); gardefous();
+hero(); alchimiste(); marees(); equity(); sages(); heatmap(); timeline(); positions(); gardefous();
 setInterval(hero, 60000);
 </script>
 </body>

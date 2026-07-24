@@ -289,6 +289,19 @@
       <th class="tri" onclick="trier('props',5,false)">Statut <span class="fleche">↕</span></th>
     </tr></thead><tbody></tbody></table>
 
+    <h2>🌊 L'Archimage des Marées — Forex (en apprentissage)</h2>
+    <p class="hint">Nouveau mage : il propose des positions sur les paires de devises majeures (moteur Gemini). Encore en phase d'apprentissage — ses trades virtuels se dénouent au fil des prix, le win rate réel se remplira ensuite.</p>
+    <div id="marees-stats" style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px"></div>
+    <table id="marees-props"><thead><tr>
+      <th>Quand</th>
+      <th>Paire</th>
+      <th>Sens</th>
+      <th class="num">Poids %</th>
+      <th class="num">Conf.</th>
+      <th class="num">TP / SL %</th>
+      <th>Raison</th>
+    </tr></thead><tbody></tbody></table>
+
     <h2>◈ Runs récents</h2>
     <button class="ghost mini" onclick="exportCSV('runs','runs_recents_opus2050')">⇩ Exporter en CSV</button>
     <table id="runs"><thead><tr>
@@ -886,5 +899,42 @@ else if(d&&typeof d==='object'){var e=Object.entries(d);if(e.length&&e.every(fun
 else inner='<pre>'+JSON.stringify(d)+'</pre>';
 var div=document.createElement('div');div.className='oc-res';div.innerHTML='<span class="oc-when">'+new Date(at).toLocaleString('fr-FR')+'</span><h3>'+(T[a]||a)+'</h3>'+inner;document.getElementById('oc-out').prepend(div);}
 document.querySelectorAll('#oc-console button.oc-b').forEach(function(b){b.addEventListener('click',function(){var a=b.dataset.a;var st=document.getElementById('oc-status');st.textContent='⏳ '+(T[a]||a)+' en cours…';st.style.color='#d4af37';b.disabled=true;
-fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a})}).then(function(r){return r.json()}).then(function(j){if(j.error)throw new Error(j.error);rend(a,j.data,j.at);st.textContent='✔ Terminé.';st.style.color='#7a88a8';}).catch(function(e){st.textContent='✘ Erreur : '+e.message;st.style.color='#ff5c72';}).finally(function(){b.disabled=false;});});});})();</script></body>
+fetch(EP,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:a})}).then(function(r){return r.json()}).then(function(j){if(j.error)throw new Error(j.error);rend(a,j.data,j.at);st.textContent='✔ Terminé.';st.style.color='#7a88a8';}).catch(function(e){st.textContent='✘ Erreur : '+e.message;st.style.color='#ff5c72';}).finally(function(){b.disabled=false;});});});})();</script>
+<script>
+/* === MARÉES (Forex) — section additive, appelle la RPC marees_resume === */
+(function(){
+  function pct(x){return (x==null)?'—':(Math.round(x*100)+'%');}
+  async function loadMarees(){
+    try{
+      var key=localStorage.getItem('opus_anon'); if(!key) return;
+      var r=await fetch("https://smddzybxebwhfnitxuyp.supabase.co/rest/v1/rpc/marees_resume",{method:"POST",headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json"},body:"{}"});
+      if(!r.ok) return;
+      var m=await r.json(); var c=m.cerveau||{}, s=m.stats||{};
+      var wr=(s.win_rate_reel!=null)?(Math.round(s.win_rate_reel*1000)/10)+'%':'— (0 évalué)';
+      var st=document.getElementById('marees-stats');
+      if(st) st.innerHTML=
+        '<span class="badge">Propositions <b>'+(s.n_propositions!=null?s.n_propositions:'—')+'</b></span>'+
+        '<span class="badge">Positions ouvertes <b>'+(s.n_open!=null?s.n_open:'—')+'</b></span>'+
+        '<span class="badge">Trades évalués <b>'+(s.n_evaluated!=null?s.n_evaluated:0)+'</b></span>'+
+        '<span class="badge">Win rate réel <b>'+wr+'</b></span>'+
+        '<span class="badge">Poids conseil <b>'+pct(c.poids)+'</b></span>'+
+        '<span class="badge">Univers <b>'+(c.univers||'FOREX')+'</b></span>';
+      var tb=document.querySelector('#marees-props tbody'); if(!tb) return; tb.innerHTML='';
+      (m.propositions||[]).forEach(function(p){
+        var tr=document.createElement('tr');
+        var when=(p.x_proposed_at||'').slice(5,16).replace('T',' ');
+        var sens=(p.side==='buy')?'<span style="color:#4ecb71">▲ ACHAT</span>':'<span style="color:#ff6b8a">▼ VENTE</span>';
+        tr.innerHTML='<td class="maj">'+when+'</td><td><b>'+(p.paire||'')+'</b></td><td>'+sens+'</td>'+
+          '<td class="num">'+(p.poids_pct!=null?p.poids_pct:'—')+'</td>'+
+          '<td class="num">'+(p.confidence!=null?Math.round(p.confidence*100)+'%':'—')+'</td>'+
+          '<td class="num">'+(p.tp_pct!=null?p.tp_pct:'—')+' / '+(p.sl_pct!=null?p.sl_pct:'—')+'</td>'+
+          '<td class="hint" style="max-width:360px">'+((p.raison||'').slice(0,170))+'</td>';
+        tb.appendChild(tr);
+      });
+      if(!(m.propositions||[]).length && tb) tb.innerHTML='<tr><td colspan="7" class="hint">Aucune proposition Marées pour l’instant.</td></tr>';
+    }catch(e){ console.error('marees',e); }
+  }
+  loadMarees();
+})();
+</script></body>
 </html>
