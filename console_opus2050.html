@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OPUS 2050 — Console de suivi</title>
+<style>
+  :root{ --bg:#0b0e14; --card:#141a24; --line:#232c3a; --txt:#e6ebf2; --dim:#8b97a8; --gold:#e5b567; --grn:#38c172; --red:#e3524f; --blue:#5b8def; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:16px;max-width:640px;margin:0 auto}
+  h1{font-size:19px;margin:4px 0 2px;letter-spacing:.4px}
+  .sub{color:var(--dim);font-size:12.5px;margin-bottom:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);margin:0 0 10px}
+  textarea{width:100%;min-height:96px;background:#0e131b;border:1px solid var(--line);border-radius:10px;color:var(--txt);padding:12px;font:15px inherit;resize:vertical}
+  button{width:100%;border:0;border-radius:10px;padding:13px;font-size:15px;font-weight:600;color:#0b0e14;background:var(--gold);margin-top:10px}
+  button:active{opacity:.8}
+  button.ghost{background:transparent;color:var(--dim);border:1px solid var(--line);font-weight:500}
+  .msg{font-size:13px;margin-top:8px;min-height:18px}
+  .msg.ok{color:var(--grn)} .msg.err{color:var(--red)}
+  .jrn{white-space:pre-wrap;font-size:13.5px}
+  .day{border-top:1px solid var(--line);padding:12px 0}
+  .day:first-child{border-top:0;padding-top:0}
+  .date{color:var(--blue);font-weight:600;font-size:12.5px;margin-bottom:6px}
+  .pb{border-left:3px solid var(--line);padding:8px 0 8px 10px;margin:8px 0;font-size:13.5px}
+  .pb.nouveau{border-color:var(--gold)} .pb.analyse{border-color:var(--grn)}
+  .pb .st{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+  .empty{color:var(--dim);font-size:13px;font-style:italic}
+</style>
+</head>
+<body>
+  <h1>OPUS 2050 — Console</h1>
+  <div class="sub">Envoie-moi un problème, je le diagnostique et je le journalise. Priorité : <b>Revolut X (passage réel fin du mois)</b>.</div>
+
+  <div class="card">
+    <h2>📨 Signaler un problème</h2>
+    <textarea id="msg" placeholder="Décris précisément ce que tu observes (ex : l'Alchimiste a shorté BTC alors que c'est exclu ; JU en VOID ce matin ; drawdown SYL qui monte…). Sois factuel, je gère sans inventer."></textarea>
+    <button id="send">Envoyer au robot</button>
+    <div class="msg" id="sendMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>🧭 Problèmes en cours</h2>
+    <div id="pbs"><div class="empty">Chargement…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>📓 Journal quotidien</h2>
+    <div id="journal"><div class="empty">Chargement…</div></div>
+    <button class="ghost" id="refresh">Rafraîchir</button>
+  </div>
+
+<script>
+const FN="https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/oracle-inbox";
+const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODk4NzksImV4cCI6MjA5NTQ2NTg3OX0.ppjgF79OokQ-2jE8UCp26U-E-YZPcmf6TNnYEKHGKSM";
+async function call(body){
+  const r=await fetch(FN,{method:"POST",headers:{"Content-Type":"application/json","apikey":ANON,"Authorization":"Bearer "+ANON},body:JSON.stringify(body)});
+  return r.json();
+}
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+async function load(){
+  try{
+    const d=await call({action:"journal"});
+    const pbs=document.getElementById("pbs");
+    const open=(d.problemes||[]).filter(p=>p.statut!=="resolu");
+    pbs.innerHTML = open.length? open.map(p=>`<div class="pb ${esc(p.statut)}"><div class="st">${esc(p.statut)} · ${new Date(p.created_at).toLocaleString("fr-FR")}</div><div>${esc(p.message)}</div>${p.diagnostic?`<div style="color:#8b97a8;margin-top:6px">🔎 ${esc(p.diagnostic)}</div>`:""}${p.recommandation?`<div style="color:#38c172;margin-top:4px">💡 ${esc(p.recommandation)}</div>`:""}</div>`).join("") : '<div class="empty">Aucun problème en cours.</div>';
+    const j=document.getElementById("journal");
+    j.innerHTML = (d.journal&&d.journal.length)? d.journal.map(e=>`<div class="day"><div class="date">${esc(e.jour)}</div><div class="jrn">${esc(e.resume||"(pas de résumé)")}</div></div>`).join("") : '<div class="empty">Le journal se remplira dès le premier résumé quotidien.</div>';
+  }catch(e){ document.getElementById("journal").innerHTML='<div class="empty">Connexion impossible.</div>'; }
+}
+document.getElementById("send").onclick=async()=>{
+  const t=document.getElementById("msg").value.trim();
+  const m=document.getElementById("sendMsg");
+  if(!t){m.className="msg err";m.textContent="Écris d'abord ton message.";return;}
+  m.className="msg";m.textContent="Envoi…";
+  try{ const r=await call({action:"report",message:t}); if(r.enregistre){m.className="msg ok";m.textContent="✓ Envoyé. Je le traiterai au prochain passage quotidien.";document.getElementById("msg").value="";load();} else {m.className="msg err";m.textContent="Échec de l'envoi.";} }
+  catch(e){ m.className="msg err";m.textContent="Erreur réseau."; }
+};
+document.getElementById("refresh").onclick=load;
+load();
+</script>
+</body>
+</html>
