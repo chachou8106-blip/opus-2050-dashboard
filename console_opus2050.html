@@ -187,7 +187,7 @@ const BENCH=[
  {k:"BNB-USD",n:"BNB",c:"#f2b84b"},{k:"XRP-USD",n:"XRP",c:"#a99fc4"}];
 const STRAT_SERIES=[{k:"OPUS",n:"OPUS",c:"#a06bff"},{k:"SYL",n:"SYL",c:"#3ecf8e"},{k:"JU",n:"JU",c:"#6ea0ff"},{k:"GIL",n:"GIL",c:"#f2b84b"},{k:"ALCHIMISTE",n:"Alchimiste",c:"#e5709b"},{k:"MAREES",n:"Marées",c:"#2bb8a3"}];
 const SEL=new Set(["OPUS","SPY"]);
-let AVANCE={},STATS={},MENSUEL={};
+let AVANCE={},STATS={},MENSUEL={},RND=[];
 function serieColor(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.c;const b=BENCH.find(x=>x.k===k);return b?b.c:"#a99fc4";}
 function serieName(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.n;const b=BENCH.find(x=>x.k===k);return b?b.n:k;}
 const ACC="#a06bff";
@@ -209,34 +209,44 @@ function lineChart(series,w,h){
 }
 function wireChart(box,series){
   const svg=box.querySelector("svg");if(!svg)return;const tip=box.querySelector(".tip"),cross=svg.querySelector(".cross"),cdot=svg.querySelector(".cdot");
-  svg.querySelectorAll("circle[data-i]").forEach(c=>{c.addEventListener("mouseenter",()=>{
-    const i=+c.getAttribute("data-i"),p=series[i],cx=c.getAttribute("cx"),cy=c.getAttribute("cy");
-    cross.setAttribute("x1",cx);cross.setAttribute("x2",cx);cross.setAttribute("opacity","0.5");cdot.setAttribute("cx",cx);cdot.setAttribute("cy",cy);cdot.setAttribute("opacity","1");
-    const r=svg.getBoundingClientRect(),br=box.getBoundingClientRect();
-    const px=(cx/svg.viewBox.baseVal.width)*r.width+(r.left-br.left),py=(cy/svg.viewBox.baseVal.height)*r.height+(r.top-br.top);
+  const circs=Array.from(svg.querySelectorAll("circle[data-i]")),vw=svg.viewBox.baseVal.width,vh=svg.viewBox.baseVal.height;
+  const show=cx=>{const r=svg.getBoundingClientRect();const vx=((cx-r.left)/r.width)*vw;let best=null,bd=1e15;
+    circs.forEach(c=>{const dd=Math.abs(parseFloat(c.getAttribute("cx"))-vx);if(dd<bd){bd=dd;best=c;}});if(!best)return;
+    const i=+best.getAttribute("data-i"),p=series[i],cxx=best.getAttribute("cx"),cyy=best.getAttribute("cy");
+    cross.setAttribute("x1",cxx);cross.setAttribute("x2",cxx);cross.setAttribute("opacity","0.5");cdot.setAttribute("cx",cxx);cdot.setAttribute("cy",cyy);cdot.setAttribute("opacity","1");
+    const br=box.getBoundingClientRect(),px=(cxx/vw)*r.width+(r.left-br.left),py=(cyy/vh)*r.height+(r.top-br.top);
     const dt=p.t?new Date(p.t).toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"}):("#"+i);
-    tip.innerHTML="<b>"+fmt(p.v)+"</b> · "+dt;tip.style.left=px+"px";tip.style.top=py+"px";tip.style.opacity="1";});});
+    tip.innerHTML="<b>"+fmt(p.v)+"</b> · "+dt;tip.style.left=px+"px";tip.style.top=py+"px";tip.style.opacity="1";};
+  svg.addEventListener("mousemove",ev=>show(ev.clientX));
+  svg.addEventListener("touchstart",ev=>show(ev.touches[0].clientX),{passive:true});
+  svg.addEventListener("touchmove",ev=>{show(ev.touches[0].clientX);ev.preventDefault();},{passive:false});
   svg.addEventListener("mouseleave",()=>{tip.style.opacity="0";cross.setAttribute("opacity","0");cdot.setAttribute("opacity","0");});
 }
+function niceTicks(mn,mx,n){const span=(mx-mn)||1;let step=Math.pow(10,Math.floor(Math.log10(span/n)));const err=(span/n)/step;if(err>=7.5)step*=10;else if(err>=3.5)step*=5;else if(err>=1.5)step*=2;const out=[];for(let v=Math.ceil(mn/step)*step;v<=mx+1e-9;v+=step)out.push(Math.round(v*1000)/1000);return out;}
 function multiLine(selKeys){
   const keys=selKeys.slice(); window.CUR_KEYS=keys;
-  const colOf=serieColor;
   let allT=[],allR=[0];
   keys.forEach(k=>{(CMP[k]||[]).forEach(p=>{allT.push(Date.parse(p.j));allR.push(p.r);});});
   if(allT.length<2) return {svg:'<div class="empty">Données indisponibles.</div>',leg:''};
-  const t0=Math.min.apply(null,allT),t1=Math.max.apply(null,allT),rmn=Math.min.apply(null,allR),rmx=Math.max.apply(null,allR);
-  const w=760,h=300,pad=12,iw=w-pad*2,ih=h-pad*2,rg=(rmx-rmn)||1;
-  const X=t=>pad+((t-t0)/((t1-t0)||1))*iw,Y=r=>pad+ih-((r-rmn)/rg)*ih;
-  let paths='';const zy=Y(0).toFixed(1);
-  paths+='<line x1="'+pad+'" x2="'+(w-pad)+'" y1="'+zy+'" y2="'+zy+'" stroke="#2a2340" stroke-width="1" stroke-dasharray="4 4"/>';
-  keys.forEach(k=>{const arr=(CMP[k]||[]).slice().sort((a,b)=>a.j<b.j?-1:1);if(arr.length<2)return;const col=colOf(k),lead=k==="OPUS";
+  const t0=Math.min.apply(null,allT),t1=Math.max.apply(null,allT);
+  let rmn=Math.min.apply(null,allR),rmx=Math.max.apply(null,allR);const padd=(rmx-rmn)*0.08||1;rmn-=padd;rmx+=padd;
+  const w=760,h=320,L=40,R=12,T=12,B=24,pw=w-L-R,ph=h-T-B,rg=(rmx-rmn)||1;
+  const X=t=>L+((t-t0)/((t1-t0)||1))*pw,Y=r=>T+ph-((r-rmn)/rg)*ph;
+  let ax='';
+  niceTicks(rmn,rmx,5).forEach(v=>{const y=Y(v).toFixed(1);const zero=Math.abs(v)<1e-9;
+    ax+='<line x1="'+L+'" x2="'+(w-R)+'" y1="'+y+'" y2="'+y+'" stroke="'+(zero?'#4a3f66':'#241d38')+'" stroke-width="1"'+(zero?'':' stroke-dasharray="3 4"')+'/>';
+    ax+='<text x="'+(L-6)+'" y="'+y+'" fill="#8f84ad" font-size="10" text-anchor="end" dominant-baseline="middle">'+((v>0?'+':'')+v.toFixed(0))+'%</text>';});
+  const nT=5;for(let i=0;i<nT;i++){const tt=t0+(t1-t0)*i/(nT-1);const x=X(tt).toFixed(1);const dt=new Date(tt).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
+    ax+='<text x="'+x+'" y="'+(h-6)+'" fill="#8f84ad" font-size="10" text-anchor="'+(i===0?'start':(i===nT-1?'end':'middle'))+'">'+dt+'</text>';}
+  let paths='';
+  keys.forEach(k=>{const arr=(CMP[k]||[]).slice().sort((a,b)=>a.j<b.j?-1:1);if(arr.length<2)return;const col=serieColor(k),lead=k==="OPUS";
     let ln='';arr.forEach((p,i)=>{ln+=(i?' L':'M')+X(Date.parse(p.j)).toFixed(1)+' '+Y(p.r).toFixed(1);});
-    paths+='<path d="'+ln+'" fill="none" stroke="'+col+'" stroke-width="'+(lead?3.4:2)+'" stroke-linejoin="round" stroke-linecap="round" opacity="'+(lead?1:0.9)+'"/>';
+    paths+='<path d="'+ln+'" fill="none" stroke="'+col+'" stroke-width="'+(lead?3.2:1.8)+'" stroke-linejoin="round" stroke-linecap="round" opacity="'+(lead?1:0.92)+'"/>';
     const last=arr[arr.length-1];paths+='<circle cx="'+X(Date.parse(last.j)).toFixed(1)+'" cy="'+Y(last.r).toFixed(1)+'" r="'+(lead?4:3)+'" fill="'+col+'"/>';});
-  paths+='<line class="xcross" y1="'+pad+'" y2="'+(pad+ih)+'" stroke="#c9a6ff" stroke-width="1" opacity="0"/>';
-  paths+='<rect class="hit" x="'+pad+'" y="'+pad+'" width="'+iw+'" height="'+ih+'" fill="transparent"/>';
-  const svg='<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block" data-t0="'+t0+'" data-t1="'+t1+'" data-pad="'+pad+'" data-iw="'+iw+'">'+paths+'</svg>';
-  const leg=keys.map(k=>{const col=colOf(k),name=(k==="OPUS"?"OPUS (portefeuille)":serieName(k));const sh=SHARPE[k];const arr=CMP[k]||[];const last=arr.length?arr[arr.length-1].r:null;
+  paths+='<line class="xcross" y1="'+T+'" y2="'+(T+ph)+'" stroke="#c9a6ff" stroke-width="1" opacity="0"/>';
+  paths+='<rect class="hit" x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" fill="transparent"/>';
+  const svg='<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block" data-t0="'+t0+'" data-t1="'+t1+'" data-l="'+L+'" data-pw="'+pw+'">'+ax+paths+'</svg>';
+  const leg=keys.map(k=>{const col=serieColor(k),name=(k==="OPUS"?"OPUS (portefeuille)":serieName(k));const sh=SHARPE[k];const arr=CMP[k]||[];const last=arr.length?arr[arr.length-1].r:null;
     const rv=last==null?"":((last>0?"+":"")+last.toFixed(1)+"%");
     return '<span class="lg"><i style="background:'+col+'"></i>'+esc(name)+' <b>'+rv+'</b>'+((sh!=null&&!isNaN(sh))?' · Sharpe '+sh:'')+'</span>';}).join("");
   return {svg:svg,leg:leg};
@@ -244,22 +254,23 @@ function multiLine(selKeys){
 function wireCompare(box){
   const svg=box.querySelector('svg');if(!svg)return;
   const tip=box.querySelector('.tip'),cross=svg.querySelector('.xcross');if(!tip||!cross)return;
-  const t0=+svg.getAttribute('data-t0'),t1=+svg.getAttribute('data-t1'),pad=+svg.getAttribute('data-pad'),iw=+svg.getAttribute('data-iw');
+  const t0=+svg.getAttribute('data-t0'),t1=+svg.getAttribute('data-t1'),L=+svg.getAttribute('data-l'),pw=+svg.getAttribute('data-pw');
   const grid=Array.from(new Set([].concat.apply([],(window.CUR_KEYS||[]).map(k=>(CMP[k]||[]).map(p=>Date.parse(p.j)))))).sort((a,b)=>a-b);
   const vw=svg.viewBox.baseVal.width;
-  svg.addEventListener('mousemove',ev=>{
-    const r=svg.getBoundingClientRect();if(!grid.length)return;
-    const vx=((ev.clientX-r.left)/r.width)*vw;let tt=t0+((vx-pad)/iw)*(t1-t0);
+  const move=cx=>{const r=svg.getBoundingClientRect();if(!grid.length)return;
+    const vx=((cx-r.left)/r.width)*vw;let tt=t0+((vx-L)/pw)*(t1-t0);
     let best=grid[0],bd=1e15;grid.forEach(g=>{const dd=Math.abs(g-tt);if(dd<bd){bd=dd;best=g;}});
-    const x=pad+((best-t0)/((t1-t0)||1))*iw;
+    const x=L+((best-t0)/((t1-t0)||1))*pw;
     cross.setAttribute('x1',x);cross.setAttribute('x2',x);cross.setAttribute('opacity','0.5');
     const dstr=new Date(best).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});
     const rows=(window.CUR_KEYS||[]).map(k=>{const arr=CMP[k]||[];let v=null;for(const p of arr){if(Date.parse(p.j)<=best+43200000)v=p.r;}
       if(v==null)return'';const col=serieColor(k),nm=serieName(k);
       return '<span style="color:'+col+'">■</span> '+esc(nm)+' <b>'+((v>0?'+':'')+v.toFixed(1))+'%</b>';}).filter(Boolean).join('<br>');
     tip.innerHTML='<b>'+dstr+'</b><br>'+rows;
-    tip.style.left=((x/vw)*r.width)+'px';tip.style.top='4px';tip.style.transform='translate(-50%,0)';tip.style.whiteSpace='nowrap';tip.style.opacity='1';
-  });
+    tip.style.left=((x/vw)*r.width)+'px';tip.style.top='4px';tip.style.transform='translate(-50%,0)';tip.style.whiteSpace='nowrap';tip.style.opacity='1';};
+  svg.addEventListener('mousemove',ev=>move(ev.clientX));
+  svg.addEventListener('touchstart',ev=>move(ev.touches[0].clientX),{passive:true});
+  svg.addEventListener('touchmove',ev=>{move(ev.touches[0].clientX);ev.preventDefault();},{passive:false});
   svg.addEventListener('mouseleave',()=>{tip.style.opacity='0';cross.setAttribute('opacity','0');});
 }
 function renderChips(){
@@ -277,11 +288,12 @@ function renderCompare(){
 function underwater(cmp,w,h){
   if(!cmp||cmp.length<2)return '<div class="empty">—</div>';
   const arr=cmp.slice().sort((a,b)=>a.j<b.j?-1:1);let peak=-1e9;const dd=arr.map(p=>{if(p.r>peak)peak=p.r;return p.r-peak;});
-  const mn=Math.min.apply(null,dd),pad=6,iw=w-pad*2,ih=h-pad*2;
-  const X=i=>pad+(i/(dd.length-1))*iw,Y=v=>pad+((-v)/((-mn)||1))*ih;
+  const mn=Math.min.apply(null,dd),L=38,R=10,T=8,B=8,pw=w-L-R,ph=h-T-B;
+  const X=i=>L+(i/(dd.length-1))*pw,Y=v=>T+((-v)/((-mn)||1))*ph;
+  let ax='';niceTicks(mn,0,3).forEach(v=>{const y=Y(v).toFixed(1);ax+='<line x1="'+L+'" x2="'+(w-R)+'" y1="'+y+'" y2="'+y+'" stroke="#241d38" stroke-width="1"/><text x="'+(L-6)+'" y="'+y+'" fill="#8f84ad" font-size="10" text-anchor="end" dominant-baseline="middle">'+v.toFixed(0)+'%</text>';});
   let line="";dd.forEach((v,i)=>{line+=(i?" L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1);});
-  const area=line+" L"+X(dd.length-1).toFixed(1)+" "+pad+" L"+X(0).toFixed(1)+" "+pad+" Z";
-  return '<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" height="'+h+'"><path d="'+area+'" fill="#ff5d73" fill-opacity="0.16"/><path d="'+line+'" fill="none" stroke="#ff5d73" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+  const area=line+" L"+X(dd.length-1).toFixed(1)+" "+T+" L"+X(0).toFixed(1)+" "+T+" Z";
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;display:block">'+ax+'<path d="'+area+'" fill="#ff5d73" fill-opacity="0.16"/><path d="'+line+'" fill="none" stroke="#ff5d73" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 }
 function renderStats(){
   const a=AVANCE["OPUS"]||{},s=STATS["OPUS"]||{},sh=SHARPE["OPUS"];
@@ -315,12 +327,13 @@ function stratCard(x){
 }
 function renderReport(gran){
   document.querySelectorAll(".tg").forEach(b=>b.classList.toggle("on",b.dataset.g===gran));
-  const rows=PER.filter(p=>p.granularite===gran),byT={};rows.forEach(p=>{(byT[p.trader]=byT[p.trader]||[]).push(p);});
-  const lim={jour:14,semaine:10,mois:12,annee:5}[gran]||12;let html="";
-  Object.keys(byT).forEach(tr=>{const arr=byT[tr].sort((a,b)=>a.periode<b.periode?-1:1).slice(-lim);
-    const rws=arr.map(m=>{const e=m.esperance_pct,pos=e>0,wpx=Math.min(100,Math.abs(e||0)*40),espTxt=(e==null?"—":((e>0?"+":"")+e+"%")),op=(m.encore_ouverts?(" · "+m.encore_ouverts+" en cours"):"");
-      return '<div class="mrow"><div class="mmo">'+esc(m.periode)+'</div><div class="mst">'+(m.trades||0)+' opérations · réussite '+(m.wr_pct==null?"—":m.wr_pct+"%")+' · rendement moyen '+espTxt+op+'</div><div class="barw"><div class="bar '+(pos?"p":"n")+'" style="width:'+wpx+'%"></div></div></div>';}).join("");
-    html+='<div style="margin:12px 0"><div class="clabel" style="color:var(--acc2)">'+esc(NAMES[tr]||tr)+'</div>'+rws+'</div>';});
+  const order=["OPUS","SYL","JU","GIL","ALCHIMISTE","MAREES"];
+  const rows=RND.filter(p=>p.granularite===gran),byS={};rows.forEach(p=>{(byS[p.serie]=byS[p.serie]||[]).push(p);});
+  const lim={jour:12,semaine:10,mois:12,annee:6}[gran]||12;let html="";
+  order.forEach(k=>{const arr=(byS[k]||[]).sort((a,b)=>a.periode<b.periode?-1:1).slice(-lim);if(!arr.length)return;
+    const rws=arr.map(m=>{const v=m.rendement_pct,pos=v>0,wpx=Math.min(100,Math.abs(v||0)*20);
+      return '<div class="mrow"><div class="mmo">'+esc(m.periode)+'</div><div class="mst" style="color:'+(pos?"var(--grn)":(v<0?"var(--red)":"var(--dim)"))+'">'+(v==null?"—":((v>0?"+":"")+v+"%"))+'</div><div class="barw"><div class="bar '+(pos?"p":"n")+'" style="width:'+wpx+'%"></div></div></div>';}).join("");
+    html+='<div style="margin:12px 0"><div class="clabel" style="color:var(--acc2)">'+esc(serieName(k))+'</div>'+rws+'</div>';});
   document.getElementById("report").innerHTML=html||'<div class="empty">Pas de données sur cette période.</div>';
 }
 function renderKeys(){
@@ -347,7 +360,7 @@ function renderBand(){
 async function loadSuivi(){
   try{
     const d=await call({action:"suivi"});if(!d.ok){document.getElementById("strats").innerHTML='<div class="empty">Indisponible.</div>';return;}
-    PER=d.periodes||[];EQ=d.equity||{};PERF={};(d.perf||[]).forEach(p=>PERF[p.trader]=p);CMP=d.comparaison||{};SHARPE=d.sharpe||{};AVANCE=d.avance||{};STATS=d.stats||{};MENSUEL=d.mensuel||{};
+    PER=d.periodes||[];EQ=d.equity||{};PERF={};(d.perf||[]).forEach(p=>PERF[p.trader]=p);CMP=d.comparaison||{};SHARPE=d.sharpe||{};AVANCE=d.avance||{};STATS=d.stats||{};MENSUEL=d.mensuel||{};RND=d.rendements||[];
     renderBand();renderKeys();renderChips();renderCompare();renderStats();renderMonthly();
     const traders=(d.traders||[]);const order=["CRYPTE_JU","SYL","JU","GIL","MAREES"];traders.sort((a,b)=>order.indexOf(a.nom)-order.indexOf(b.nom));
     document.getElementById("strats").innerHTML=traders.map(x=>stratCard(x)).join("")||'<div class="empty">—</div>';
