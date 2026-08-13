@@ -159,9 +159,9 @@
     </div>
   </div>
 
-  <h2>Portefeuille virtuel — l'Alchimiste</h2>
+  <h2>Portefeuille virtuel — l'Alchimiste <span style="font-size:14px;opacity:.7">(apprentissage papier)</span></h2>
   <div class="strat lead-strat">
-    <p class="lead" style="margin-top:0">Ce que l'Alchimiste <b class="hl">aurait généré</b> s'il gérait réellement ton portefeuille. Ses décisions crypto sont exécutées en <b class="hl">virtuel</b> (papier) et notées sur les vrais prix du marché — aucun ordre réel n'est passé. C'est son bulletin de notes.</p>
+    <p class="lead" style="margin-top:0"><b class="hl">Bulletin d'apprentissage</b> : ses décisions crypto sont rejouées en <b class="hl">virtuel</b> (papier) et notées sur les vrais prix — c'est ainsi qu'il apprend. À <b class="hl">ne pas confondre</b> avec la courbe <b class="hl">RÉELLE</b> de ton compte Revolut X (section « Les stratégies » plus haut, badge « Réel »). Le passage à l'exécution réelle est piloté par le <b class="hl">kill-switch</b> (espace opérationnel).</p>
     <div id="alcTiles" class="tiles"></div>
     <div class="clabel" style="margin-top:16px">Performance virtuelle cumulée (base 0 %) — brute vs nette de frais</div>
     <div id="alcChart" class="chart"></div>
@@ -219,7 +219,7 @@ const FN="https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/oracle-inbox";
 const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODk4NzksImV4cCI6MjA5NTQ2NTg3OX0.ppjgF79OokQ-2jE8UCp26U-E-YZPcmf6TNnYEKHGKSM";
 const NAMES={CRYPTE_JU:"Alchimiste",ALCHIMISTE:"Alchimiste",JU:"JU",SYL:"SYL",GIL:"GIL",MAREES:"Marées"};
 const DESC={
- CRYPTE_JU:{titre:"Alchimiste",marche:"Cryptomonnaies — au comptant",badge:"reel",statut:"Réel imminent",curve:"Valeur du portefeuille (fiabilisation en cours)",
+ CRYPTE_JU:{titre:"Alchimiste",marche:"Cryptomonnaies — au comptant",badge:"reel",statut:"Réel imminent",curve:"Valeur RÉELLE de ton portefeuille Revolut X (argent réel — dates & montants réels)",
    texte:"Analyse en continu des dizaines de cryptomonnaies et prend des positions de court terme. Première stratégie du système à engager du capital réel, sur un périmètre restreint et sous contrôles de risque stricts."},
  SYL:{titre:"Macro Internationale",marche:"Tendances économiques mondiales",badge:"sim",statut:"Simulation",curve:"Évolution du capital (simulation)",
    texte:"Se positionne sur les grands mouvements de marché à partir de l'actualité économique et géopolitique mondiale. La stratégie la plus solide du portefeuille à ce jour."},
