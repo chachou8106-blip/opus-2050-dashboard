@@ -1,0 +1,5 @@
+# Netlify: ne jamais servir un HTML périmé (les changements apparaissent tout de suite)
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/
+  Cache-Control: public, max-age=0, must-revalidate
