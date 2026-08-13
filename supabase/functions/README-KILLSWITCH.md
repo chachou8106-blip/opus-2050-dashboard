@@ -35,3 +35,15 @@ update ju_crypte_config set value='<NOUVEAU_PIN>' where key='arm_pin';
 ```
 
 PIN initial : `2050` (à changer). Le bouton demande ce PIN uniquement pour ARMER.
+
+## Face ID / passkey (option B)
+Armement possible aussi via Face ID (WebAuthn), fonction `ju-passkey`, domaine
+`oracle-financier.netlify.app`. Le **PIN reste le secours** : si le Face ID échoue ou
+l'appareil est perdu, le bouton bascule sur le PIN, et OFF reste libre → **aucun lockout**.
+
+```sql
+-- Voir / reinitialiser les passkeys enregistrees (si appareil perdu)
+select credential_id, label, created_at from killswitch_passkeys;
+delete from killswitch_passkeys;               -- supprime toutes les passkeys (on re-enregistre via le bouton)
+```
+Après un `delete`, l'armement se fait au PIN jusqu'à ce qu'on ré-enregistre un Face ID.
