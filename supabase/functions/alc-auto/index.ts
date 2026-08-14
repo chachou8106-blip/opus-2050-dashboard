@@ -75,40 +75,36 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "run_id obligatoire en mode reel" });
     }
 
-    // ── Config + money-locks (inchanges) ─────────────────────────────────────
+    // Config + money-locks (inchanges)
     const cfgRows = await sb("ju_crypte_config?select=key,value");
     const cfg: Record<string, string> = Object.fromEntries((cfgRows || []).map((r: any) => [r.key, r.value]));
     const killSwitch = (cfg.kill_switch || "").toLowerCase();
     const arme = killSwitch === "on";
     const rawAllowed = (cfg.allowed_pairs || "").trim();
-    // whitelist optionnelle : "*" ou vide => aucun filtre statique (on suit la realite live)
     const whitelist = (rawAllowed === "" || rawAllowed === "*")
       ? null
       : new Set(rawAllowed.split(",").map((s: string) => s.trim()).filter(Boolean));
     const maxOrder = parseFloat(cfg.max_order_usd || "0");
     const maxDaily = parseFloat(cfg.max_daily_usd || "0");
 
-    // ── Realite LIVE : univers tradable + soldes reels ───────────────────────
+    // Realite LIVE : univers tradable + soldes reels
     const [prices, read] = await Promise.all([fn("revolut-x-prices", {}), fn("revolut-x-read", {})]);
-    // Univers : map paire -> {bid, ask}. Seules les paires -USD cotees sont tradables.
     const univers = new Map<string, { bid: number; ask: number }>();
     for (const t of (prices?.prix || [])) {
       const p = String(t.paire || "").toUpperCase();
       if (p.endsWith("-USD")) univers.set(p, { bid: num(t.bid), ask: num(t.ask) });
     }
-    // Soldes : map devise -> {dispo, stake}. cashUSD = USD disponible.
     const soldes = new Map<string, { dispo: number; stake: number }>();
     for (const b of (read?.soldes || [])) {
       soldes.set(String(b.devise || "").toUpperCase(), { dispo: num(b.disponible), stake: num(b.stake) });
     }
     let cashUSD = soldes.get("USD")?.dispo ?? 0;
 
-    // Delais de deblocage staking (pour tracer, pas pour executer)
     const delaiRows = await sb("alc_staking_delais?select=devise,unbonding_jours");
     const delais: Record<string, string> = Object.fromEntries(
       (delaiRows || []).map((r: any) => [String(r.devise).toUpperCase(), String(r.unbonding_jours)]));
 
-    // ── Propositions du cycle ────────────────────────────────────────────────
+    // Propositions du cycle
     let q = "alchimiste_crypte_propositions?select=id,paire,side,montant,confidence,run_id,statut&statut=eq.proposee&order=confidence.desc.nullslast,id.desc";
     if (run_id) q += `&run_id=eq.${encodeURIComponent(run_id)}`;
     else {
@@ -129,26 +125,18 @@ Deno.serve(async (req) => {
       const base = baseOf(paire);
       const line: any = { id: p.id, paire, side, montant_demande: montant, confidence: p.confidence };
 
-      // 1) kill_switch (money-lock inchange)
       if (!simulate && !arme) { line.statut = "bloque"; line.raison = `kill_switch=${cfg.kill_switch || "?"} (desarme)`; results.push(line); continue; }
-      // 2) sens valide (spot buy|sell uniquement)
       if (side !== "buy" && side !== "sell") { line.statut = "ignore"; line.raison = `side invalide (${p.side})`; results.push(line); continue; }
-      // 3) whitelist optionnelle
       if (whitelist && !whitelist.has(paire)) { line.statut = "ignore"; line.raison = "hors whitelist allowed_pairs"; results.push(line); continue; }
-      // 4) TRADABILITE : paire cotee dans l'univers Revolut X (-USD)
       const cote = univers.get(paire);
       if (!cote || (!(cote.bid > 0) && !(cote.ask > 0))) { line.statut = "ignore"; line.raison = "hors univers Revolut X (non cotee)"; results.push(line); continue; }
-      // 5) montant valide
       if (!(montant > 0)) { line.statut = "ignore"; line.raison = "montant nul"; results.push(line); continue; }
 
-      // 6) tradabilite reelle selon le sens (le coeur du correctif)
       if (side === "buy") {
-        // il faut du cash USD (quote). On plafonne au cash restant.
         if (!(cashUSD > 0)) { line.statut = "ignore"; line.raison = "cash USD insuffisant (rien a investir)"; results.push(line); continue; }
         const plafond = Math.min(maxOrder, cashUSD);
         if (montant > plafond) { montant = plafond; line.montant_plafonne = montant; }
       } else {
-        // SELL : il faut DETENIR l'actif et qu'il soit LIQUIDE (dispo>0, hors stake).
         const h = soldes.get(soldeKey(base)) || { dispo: 0, stake: 0 };
         if (!(h.dispo > 0)) {
           if (h.stake > 0) {
@@ -159,24 +147,22 @@ Deno.serve(async (req) => {
           }
           results.push(line); continue;
         }
-        const valeurLiquide = h.dispo * cote.bid; // valeur vendable au bid
+        const valeurLiquide = h.dispo * cote.bid;
         const plafond = Math.min(maxOrder, valeurLiquide);
         if (montant > plafond) { montant = plafond; line.montant_plafonne = montant; }
         if (!(montant > 0)) { line.statut = "ignore"; line.raison = "valeur liquide detenue trop faible"; results.push(line); continue; }
       }
 
-      // 7) plafond journalier (money-lock inchange)
       if (plannedDaily + montant > maxDaily) { line.statut = "ignore"; line.raison = `plafond jour atteint (${plannedDaily}/${maxDaily})`; results.push(line); continue; }
 
       line.montant_execute = montant;
       if (simulate) {
         line.statut = arme ? "a_executer" : "a_executer_si_arme";
         plannedDaily += montant;
-        if (side === "buy") cashUSD -= montant; // reserve le cash pour les buys suivants du meme cycle
+        if (side === "buy") cashUSD -= montant;
         results.push(line); continue;
       }
 
-      // 8) execution via revolut-x-trade (re-applique TOUS les verrous + check spot).
       const rr = await fn("revolut-x-trade", { pair: paire, side, amount: montant, dry_run });
       line.resultat = rr;
       if (rr?.ok) {

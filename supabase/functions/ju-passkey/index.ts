@@ -1,6 +1,5 @@
-// ju-passkey — enregistrement + verification WebAuthn (Face ID) pour ARMER le kill_switch.
-// Le PIN (ju-killswitch) reste en secours : ceci n'ajoute qu'une methode d'armement.
-// verify_jwt=false ; clef service cote serveur ; origin/rpID verrouilles sur le domaine Netlify.
+// ju-passkey — WebAuthn (Face ID) : (a) ARMER le kill-switch, (b) DEVERROUILLER le menu technique.
+// Le PIN (ju_crypte_config.arm_pin) reste en secours. verify_jwt=false ; clef service serveur.
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -43,12 +42,41 @@ async function getChallenge(purpose: string): Promise<string | null> {
 async function listCreds(): Promise<any[]> {
   return await sbSelect("killswitch_passkeys?select=credential_id,public_key,counter,transports");
 }
+async function getPin(): Promise<string> {
+  const rows = await sbSelect("ju_crypte_config?key=eq.arm_pin&select=value");
+  return String(rows[0]?.value ?? "");
+}
 async function setKillSwitch(val: "ON" | "OFF") {
   await fetch(`${SUPABASE_URL}/rest/v1/ju_crypte_config?key=eq.kill_switch`, {
-    method: "PATCH",
-    headers: { ...H, Prefer: "return=minimal" },
-    body: JSON.stringify({ value: val }),
+    method: "PATCH", headers: { ...H, Prefer: "return=minimal" }, body: JSON.stringify({ value: val }),
   });
+}
+
+async function buildAuthOptions(purpose: string) {
+  const creds = await listCreds();
+  if (!creds.length) return { ok: false, error: "aucune passkey enregistree" };
+  const opts = await generateAuthenticationOptions({
+    rpID: RP_ID, userVerification: "preferred",
+    allowCredentials: creds.map((c) => ({ id: c.credential_id, transports: c.transports ? c.transports.split(",").filter(Boolean) : undefined })),
+  });
+  await setChallenge(purpose, opts.challenge);
+  return { ok: true, options: opts };
+}
+async function verifyAuth(purpose: string, response: any) {
+  const expectedChallenge = await getChallenge(purpose);
+  if (!expectedChallenge) return { ok: false, error: "challenge expire, reessaie" };
+  const creds = await listCreds();
+  const cred = creds.find((c) => c.credential_id === response?.id || c.credential_id === response?.rawId);
+  if (!cred) return { ok: false, error: "passkey inconnue" };
+  const v = await verifyAuthenticationResponse({
+    response, expectedChallenge, expectedOrigin: ORIGIN, expectedRPID: RP_ID, requireUserVerification: false,
+    credential: { id: cred.credential_id, publicKey: isoBase64URL.toBuffer(cred.public_key), counter: Number(cred.counter) || 0, transports: cred.transports ? cred.transports.split(",").filter(Boolean) : undefined },
+  });
+  if (!v.verified) return { ok: false, error: "Face ID non verifie" };
+  await fetch(`${SUPABASE_URL}/rest/v1/killswitch_passkeys?credential_id=eq.${encodeURIComponent(cred.credential_id)}`, {
+    method: "PATCH", headers: { ...H, Prefer: "return=minimal" }, body: JSON.stringify({ counter: v.authenticationInfo.newCounter }),
+  });
+  return { ok: true };
 }
 
 Deno.serve(async (req) => {
@@ -65,83 +93,41 @@ Deno.serve(async (req) => {
     if (action === "reg-options") {
       const creds = await listCreds();
       const opts = await generateRegistrationOptions({
-        rpName: RP_NAME,
-        rpID: RP_ID,
-        userName: "JU — Alchimiste",
-        userID: new TextEncoder().encode("ju-killswitch"),
-        attestationType: "none",
-        excludeCredentials: creds.map((c) => ({ id: c.credential_id })),
+        rpName: RP_NAME, rpID: RP_ID, userName: "JU — Alchimiste", userID: new TextEncoder().encode("ju-killswitch"),
+        attestationType: "none", excludeCredentials: creds.map((c) => ({ id: c.credential_id })),
         authenticatorSelection: { residentKey: "preferred", userVerification: "preferred", authenticatorAttachment: "platform" },
       });
       await setChallenge("reg", opts.challenge);
       return json({ ok: true, options: opts });
     }
-
     if (action === "reg-verify") {
       const expectedChallenge = await getChallenge("reg");
       if (!expectedChallenge) return json({ ok: false, error: "challenge expire, reessaie" });
-      const v = await verifyRegistrationResponse({
-        response: body.response,
-        expectedChallenge,
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID,
-        requireUserVerification: false,
-      });
+      const v = await verifyRegistrationResponse({ response: body.response, expectedChallenge, expectedOrigin: ORIGIN, expectedRPID: RP_ID, requireUserVerification: false });
       if (!v.verified || !v.registrationInfo) return json({ ok: false, error: "verification enregistrement echouee" });
       const cred = v.registrationInfo.credential;
-      const transports = (body.response?.response?.transports || []).join(",");
       await fetch(`${SUPABASE_URL}/rest/v1/killswitch_passkeys`, {
-        method: "POST",
-        headers: { ...H, Prefer: "resolution=merge-duplicates,return=minimal" },
-        body: JSON.stringify({
-          credential_id: cred.id,
-          public_key: isoBase64URL.fromBuffer(cred.publicKey),
-          counter: cred.counter ?? 0,
-          transports,
-          label: body.label || "Face ID",
-        }),
+        method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates,return=minimal" },
+        body: JSON.stringify({ credential_id: cred.id, public_key: isoBase64URL.fromBuffer(cred.publicKey), counter: cred.counter ?? 0, transports: (body.response?.response?.transports || []).join(","), label: body.label || "Face ID" }),
       });
       return json({ ok: true, registered: true });
     }
 
-    if (action === "auth-options") {
-      const creds = await listCreds();
-      if (!creds.length) return json({ ok: false, error: "aucune passkey enregistree" });
-      const opts = await generateAuthenticationOptions({
-        rpID: RP_ID,
-        userVerification: "preferred",
-        allowCredentials: creds.map((c) => ({ id: c.credential_id, transports: c.transports ? c.transports.split(",").filter(Boolean) : undefined })),
-      });
-      await setChallenge("auth", opts.challenge);
-      return json({ ok: true, options: opts });
+    // ARMER le kill-switch (Face ID)
+    if (action === "auth-options") return json(await buildAuthOptions("auth"));
+    if (action === "auth-verify") {
+      const r = await verifyAuth("auth", body.response);
+      if (!r.ok) return json(r);
+      await setKillSwitch("ON");
+      return json({ ok: true, armed: true, kill_switch: "ON" });
     }
 
-    if (action === "auth-verify") {
-      const expectedChallenge = await getChallenge("auth");
-      if (!expectedChallenge) return json({ ok: false, error: "challenge expire, reessaie" });
-      const creds = await listCreds();
-      const cred = creds.find((c) => c.credential_id === body.response?.id || c.credential_id === body.response?.rawId);
-      if (!cred) return json({ ok: false, error: "passkey inconnue" });
-      const v = await verifyAuthenticationResponse({
-        response: body.response,
-        expectedChallenge,
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID,
-        requireUserVerification: false,
-        credential: {
-          id: cred.credential_id,
-          publicKey: isoBase64URL.toBuffer(cred.public_key),
-          counter: Number(cred.counter) || 0,
-          transports: cred.transports ? cred.transports.split(",").filter(Boolean) : undefined,
-        },
-      });
-      if (!v.verified) return json({ ok: false, error: "Face ID non verifie" });
-      await fetch(`${SUPABASE_URL}/rest/v1/killswitch_passkeys?credential_id=eq.${encodeURIComponent(cred.credential_id)}`, {
-        method: "PATCH", headers: { ...H, Prefer: "return=minimal" },
-        body: JSON.stringify({ counter: v.authenticationInfo.newCounter }),
-      });
-      await setKillSwitch("ON"); // Face ID valide -> on ARME
-      return json({ ok: true, armed: true, kill_switch: "ON" });
+    // DEVERROUILLER le menu technique (Face ID, sans armer)
+    if (action === "unlock-options") return json(await buildAuthOptions("unlock"));
+    if (action === "unlock-verify") return json(await verifyAuth("unlock", body.response));
+    if (action === "unlock-pin") {
+      const expected = await getPin();
+      return json({ ok: !!expected && String(body?.pin ?? "") === expected });
     }
 
     return json({ ok: false, error: `action invalide: ${action}` });
