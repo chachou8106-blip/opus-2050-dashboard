@@ -220,6 +220,18 @@
     </div>
     <div class="opcard"><h3>Signaler un problème</h3><textarea id="msg" placeholder="Décris ce que tu observes."></textarea><button id="send">Envoyer</button><div class="msg" id="sendMsg"></div></div>
     <div class="opcard"><h3>Problèmes en cours</h3><div id="pbs"><div class="empty">—</div></div></div>
+    <div class="opcard">
+      <h3>📅 Calendrier — résumés &amp; demandes</h3>
+      <div id="calBanner"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <button id="calPrev" style="padding:4px 12px;border:1px solid var(--line);border-radius:8px;font:700 16px inherit;color:var(--txt);background:var(--card2);cursor:pointer">‹</button>
+        <div id="calTitle" style="font-weight:800">—</div>
+        <button id="calNext" style="padding:4px 12px;border:1px solid var(--line);border-radius:8px;font:700 16px inherit;color:var(--txt);background:var(--card2);cursor:pointer">›</button>
+      </div>
+      <div id="calGrid"></div>
+      <div class="mini" style="margin-top:8px">🌅 matin · ☀️ midi · 🌙 soir · 💬 demande · 🔔 rappel — touche un jour pour le détail.</div>
+      <div id="calDetail" style="margin-top:10px"></div>
+    </div>
     <div class="opcard"><h3>Journal quotidien</h3><div id="journal"><div class="empty">—</div></div></div>
     <div class="opcard"><h3>Contexte système</h3><div id="ctx"><div class="empty">—</div></div></div>
     </div>
@@ -516,11 +528,80 @@ async function loadSuivi(){
     document.getElementById("ctx").innerHTML=ch||'<div class="empty">—</div>';
   }catch(e){document.getElementById("strats").innerHTML='<div class="empty">Connexion impossible.</div>';}
 }
+/* ===== Calendrier — suivi des résumés (matin/midi/soir), demandes & rappels ===== */
+let JOURNAL=[],PROBLEMES=[],RAPPELS=[],CAL_YM=null;
+const CAL_MOISFR=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+function calDkey(y,m,d){return y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");}
+function calLocalKey(iso){const dt=new Date(iso);return calDkey(dt.getFullYear(),dt.getMonth(),dt.getDate());}
+function calCreneau(e){
+  const r=(e.resume||"").toLowerCase();
+  if(/matin/.test(r))return"matin";
+  if(/midi/.test(r))return"midi";
+  if(/soir/.test(r))return"soir";
+  const h=new Date(e.created_at).getHours();
+  return h<11?"matin":(h<16?"midi":"soir");
+}
+function calIndex(){
+  const idx={};
+  const ens=k=>idx[k]||(idx[k]={matin:null,midi:null,soir:null,demandes:[],rappels:[]});
+  (JOURNAL||[]).forEach(e=>{if(!e.created_at)return;const o=ens(calLocalKey(e.created_at)),c=calCreneau(e);if(!o[c])o[c]=e;});
+  (PROBLEMES||[]).forEach(p=>{if(!p.created_at)return;ens(calLocalKey(p.created_at)).demandes.push(p);});
+  (RAPPELS||[]).forEach(r=>{if(!r.date_rappel)return;ens(String(r.date_rappel).slice(0,10)).rappels.push(r);});
+  return idx;
+}
+function renderCalendar(){
+  const grid=document.getElementById("calGrid");if(!grid)return;
+  if(!CAL_YM){const n=new Date();CAL_YM={y:n.getFullYear(),m:n.getMonth()};}
+  const y=CAL_YM.y,m=CAL_YM.m,idx=calIndex();
+  const startW=(new Date(y,m,1).getDay()+6)%7, ndays=new Date(y,m+1,0).getDate();
+  const t=new Date(),tk=calDkey(t.getFullYear(),t.getMonth(),t.getDate());
+  const ttl=document.getElementById("calTitle");if(ttl)ttl.textContent=CAL_MOISFR[m]+" "+y;
+  // Bannière : rappels dus (aujourd'hui ou en retard, non faits)
+  const ban=document.getElementById("calBanner");
+  if(ban){
+    const dus=(RAPPELS||[]).filter(r=>!r.done && String(r.date_rappel).slice(0,10)<=tk);
+    ban.innerHTML=dus.length?dus.map(r=>'<div style="background:rgba(160,107,255,.14);border:1px solid #a06bff;border-radius:10px;padding:8px 10px;margin-bottom:8px"><b>🔔 '+esc(r.titre||"Rappel")+'</b> <span style="opacity:.7">('+esc(String(r.date_rappel).slice(0,10))+')</span>'+(r.message?'<div style="font-size:13px;margin-top:3px;line-height:1.45">'+esc(r.message)+'</div>':'')+'</div>').join(""):"";
+  }
+  let html='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+  ["L","M","M","J","V","S","D"].forEach(d=>html+='<div style="text-align:center;font-size:11px;opacity:.55;font-weight:700">'+d+'</div>');
+  for(let i=0;i<startW;i++)html+='<div></div>';
+  for(let d=1;d<=ndays;d++){
+    const k=calDkey(y,m,d),c=idx[k],has=!!c,isT=(k===tk);
+    let b="";
+    if(c){if(c.matin)b+="🌅";if(c.midi)b+="☀️";if(c.soir)b+="🌙";if(c.demandes.length)b+="💬"+(c.demandes.length>1?c.demandes.length:"");if(c.rappels.length)b+="🔔";}
+    html+='<div data-k="'+k+'" class="calcell" style="min-height:48px;border:1px solid '+(isT?"#a06bff":"var(--line)")+';border-radius:8px;padding:3px 4px;background:'+(has?"var(--card2)":"transparent")+';cursor:'+(has?"pointer":"default")+'">'
+      +'<div style="font-size:11px;opacity:.65">'+d+'</div><div style="font-size:14px;line-height:1.25;word-break:break-word">'+b+'</div></div>';
+  }
+  html+='</div>';grid.innerHTML=html;
+  grid.querySelectorAll(".calcell[data-k]").forEach(el=>{const k=el.getAttribute("data-k");if(idx[k])el.onclick=()=>renderCalDetail(k,idx);});
+  if(idx[tk])renderCalDetail(tk,idx);
+  else { const det=document.getElementById("calDetail"); if(det) det.innerHTML='<div class="mini" style="opacity:.6">Aucune activité aujourd\'hui — touche un jour marqué.</div>'; }
+}
+function renderCalDetail(k,idx){
+  idx=idx||calIndex();const c=idx[k],box=document.getElementById("calDetail");if(!box)return;
+  if(!c){box.innerHTML="";return;}
+  const p=k.split("-");
+  let h='<div style="border-top:1px solid var(--line);padding-top:8px"><div style="font-weight:800;margin-bottom:6px">'+parseInt(p[2],10)+' '+CAL_MOISFR[parseInt(p[1],10)-1].toLowerCase()+' '+p[0]+'</div>';
+  [["matin","🌅 Matin"],["midi","☀️ Midi"],["soir","🌙 Soir"]].forEach(function(x){
+    if(c[x[0]])h+='<details style="margin:4px 0"><summary style="cursor:pointer;font-weight:700">'+x[1]+'</summary><div style="white-space:pre-wrap;line-height:1.5;font-size:13px;margin-top:4px">'+esc(c[x[0]].resume||"")+'</div></details>';
+  });
+  if(c.demandes.length){h+='<div style="margin-top:8px;font-weight:700">💬 Demandes</div>';c.demandes.forEach(function(x){h+='<div class="ctxr" style="margin:2px 0">'+esc(x.message||"")+(x.statut?' <span style="opacity:.55">('+esc(x.statut)+')</span>':'')+'</div>';});}
+  if(c.rappels.length){h+='<div style="margin-top:8px;font-weight:700">🔔 Rappels</div>';c.rappels.forEach(function(x){h+='<div class="ctxr" style="margin:2px 0">'+(x.done?'✅ ':'🔔 ')+'<b>'+esc(x.titre||"")+'</b>'+(x.message?' — '+esc(x.message):'')+'</div>';});}
+  h+='</div>';box.innerHTML=h;
+}
+(function(){
+  const pv=document.getElementById("calPrev"),nx=document.getElementById("calNext");
+  function shift(n){if(!CAL_YM){const t=new Date();CAL_YM={y:t.getFullYear(),m:t.getMonth()};}CAL_YM.m+=n;if(CAL_YM.m<0){CAL_YM.m=11;CAL_YM.y--;}if(CAL_YM.m>11){CAL_YM.m=0;CAL_YM.y++;}renderCalendar();}
+  if(pv)pv.onclick=()=>shift(-1);
+  if(nx)nx.onclick=()=>shift(1);
+})();
 async function load(){
   try{const d=await call({action:"journal"});
+    JOURNAL=d.journal||[];PROBLEMES=d.problemes||[];RAPPELS=d.rappels||[];
     const open=(d.problemes||[]).filter(p=>p.statut!=="resolu");
     document.getElementById("pbs").innerHTML=open.length?open.map(p=>'<div class="pb"><div class="st">'+esc(p.statut)+'</div><div>'+esc(p.message)+'</div></div>').join(""):'<div class="empty">Aucun.</div>';
     document.getElementById("journal").innerHTML=(d.journal&&d.journal.length)?d.journal.map(e=>'<div class="day"><div class="date">'+esc(e.jour)+'</div><div class="jrn" style="white-space:pre-wrap;line-height:1.5">'+esc(e.resume||"")+'</div></div>').join(""):'<div class="empty">—</div>';
+    renderCalendar();
   }catch(e){}
 }
 const sbtn=document.getElementById("send");if(sbtn)sbtn.onclick=async()=>{const t=document.getElementById("msg").value.trim(),m=document.getElementById("sendMsg");if(!t){m.className="msg err";m.textContent="Écris d'abord.";return;}m.className="msg";m.textContent="Envoi…";try{const r=await call({action:"report",message:t});if(r.enregistre){m.className="msg ok";m.textContent="✓ Envoyé.";document.getElementById("msg").value="";load();}else{m.className="msg err";m.textContent="Échec.";}}catch(e){m.className="msg err";m.textContent="Erreur réseau.";}};

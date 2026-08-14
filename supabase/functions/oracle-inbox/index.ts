@@ -1,6 +1,7 @@
-// oracle-inbox v13 — canal Chachou <-> robot.
+// oracle-inbox v14 — canal Chachou <-> robot.
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
 //         sharpe, contexte, fx (EUR-USD/GBP-USD live), gains (v_gains_traders), + alc_virtuel.
+// journal (défaut) : journal (historique étendu), problemes, rappels (pour le calendrier).
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -64,9 +65,10 @@ Deno.serve(async (req) => {
       return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel })
     }
 
-    const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=jour.desc&limit=10')
-    const prb = await sb('oracle_problemes?select=id,created_at,message,statut,diagnostic,recommandation&order=created_at.desc&limit=20')
-    return json({ ok: true, journal: arr(jrn.body), problemes: arr(prb.body) })
+    const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')
+    const prb = await sb('oracle_problemes?select=id,created_at,message,statut,diagnostic,recommandation&order=created_at.desc&limit=100')
+    const rpl = await sb('oracle_rappels?select=id,date_rappel,creneau,titre,message,done&order=date_rappel.asc')
+    return json({ ok: true, journal: arr(jrn.body), problemes: arr(prb.body), rappels: arr(rpl.body) })
   } catch (e) {
     return json({ ok: false, error: String(e) })
   }
