@@ -131,7 +131,7 @@
 
   <h2>Gains par trader <span style="font-size:14px;opacity:.7">(jour · semaine · mois · année)</span></h2>
   <div class="tblwrap"><table class="keys" id="gainsTable"><tbody><tr><td class="empty">Chargement…</td></tr></tbody></table></div>
-  <div class="mini" style="margin-top:8px">Gain <b>« si je soldais »</b> en <b>euros</b> — combien tu encaisserais en clôturant les positions sur la période. Ligne du haut : montant en <b>€</b> ; ligne du bas : équivalent en <b>$</b> (devise des comptes) et variation en %. Conversion au taux <b>EUR/USD live</b>. Horizons : <b>Jour</b> = aujourd'hui, <b>Semaine</b> = semaine en cours, <b>Mois</b> = mois en cours, <b>Année</b> = depuis le 1<sup>er</sup> janvier (ici depuis le lancement, juin 2026). Vert = gain, rouge = perte. <b>Alchimiste</b> = compte RÉEL Revolut&nbsp;X ; JU/SYL/GIL = simulation ; <b>AETHER</b> = indice d'ensemble (en % seulement). <b>Marées</b> en « — » : suivi de perf pas encore branché (forex en validation précoce).</div>
+  <div class="mini" style="margin-top:8px">Gain <b>« si je soldais »</b> en <b>euros</b> — combien tu encaisserais en clôturant les positions sur la période. Ligne du haut : montant en <b>€</b> ; ligne du bas : équivalent en <b>$</b> (devise des comptes) et variation en %. Conversion au taux <b>EUR/USD live</b>. Horizons : <b>Jour</b> = aujourd'hui, <b>Semaine</b> = semaine en cours, <b>Mois</b> = mois en cours, <b>Année</b> = depuis le 1<sup>er</sup> janvier (ici depuis le lancement, juin 2026). Vert = gain, rouge = perte. <b>Alchimiste réel</b> = ton compte RÉEL Revolut&nbsp;X ; <b>Alchimiste virtuel</b> = son apprentissage papier ; JU/SYL/GIL = simulation (capital de départ ~1 M) ; <b>AETHER</b> = ensemble des stratégies validées (somme JU+SYL+GIL). <b>Marées</b> reste en « — » tant qu'aucun trade virtuel forex n'est clôturé ; il se remplira automatiquement ensuite.</div>
 
   <h2>Comparatif marchés</h2>
   <div class="strat">
@@ -251,7 +251,7 @@ const BENCH=[
  {k:"BNB-USD",n:"BNB",c:"#f2b84b"},{k:"XRP-USD",n:"XRP",c:"#a99fc4"}];
 const STRAT_SERIES=[{k:"OPUS",n:"AETHER",c:"#a06bff"},{k:"SYL",n:"SYL",c:"#3ecf8e"},{k:"JU",n:"JU",c:"#6ea0ff"},{k:"GIL",n:"GIL",c:"#f2b84b"},{k:"ALCHIMISTE",n:"Alchimiste",c:"#e5709b"},{k:"MAREES",n:"Marées",c:"#2bb8a3"}];
 const SEL=new Set(["OPUS","SPY"]);
-let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={};
+let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[];
 function serieColor(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.c;const b=BENCH.find(x=>x.k===k);return b?b.c:"#a99fc4";}
 function serieName(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.n;const b=BENCH.find(x=>x.k===k);return b?b.n:k;}
 const ACC="#a06bff";
@@ -470,53 +470,40 @@ function renderBand(){
    +'<div class="bigstat"><div class="n">'+((sh!=null&&!isNaN(sh))?sh:'—')+'</div><div class="k">Ratio de Sharpe</div></div>';
   document.getElementById("bandnote").textContent="Simulation · juin–août 2026 · Sharpe ≈ celui du S&P 500, très au-dessus de Bitcoin";
 }
-// Gains par trader (jour/semaine/mois/année) — source: rendements par période (v_rendements_periodes),
-// robuste et non tronquée, cohérente avec le reste de la console. Montant affiché quand une équité
-// réelle est disponible (dérivé du rendement de la période et de la valeur actuelle du portefeuille).
-const GAIN_ROWS=[
- {k:"OPUS",n:"AETHER (ensemble)"},
- {k:"ALCHIMISTE",n:"Alchimiste — réel"},
- {k:"JU",n:"JU — Actions US"},
- {k:"SYL",n:"SYL — Macro internationale"},
- {k:"GIL",n:"GIL — Crypto tactique"},
- {k:"MAREES",n:"Marées — Devises"}
-];
+// Gains par trader (jour/semaine/mois/année) — source unique: vue serveur v_gains_traders
+// (payload d.gains). Chaque série (AETHER, Alchimiste réel & virtuel, JU, SYL, GIL, Marées)
+// est calculée côté serveur en % + USD + EUR depuis sa vraie source. Ici on affiche seulement.
 const GAIN_GRAN=[["Jour","jour"],["Semaine","semaine"],["Mois","mois"],["Année","annee"]];
-function latestRet(serie,gran){
-  let best=null,bestP="";
-  (RND||[]).forEach(r=>{ if(r.serie===serie&&r.granularite===gran){ const p=String(r.periode); if(p>=bestP){bestP=p;best=Number(r.rendement_pct);} } });
-  return (best==null||!isFinite(best))?null:best;
-}
-function curEquity(k){const s=EQ[k]||[];return s.length?Number(s[s.length-1].v):null;}
-// pct = rendement de la période ; eqUsd = valeur actuelle du portefeuille (USD) ; eurusd = taux EUR/USD.
-// Gain "si je soldais" = eqUsd * pct/(100+pct) ; converti en euros = /eurusd.
-function gainCell(pct,eqUsd,eurusd){
-  if(pct==null)return '<td style="text-align:right;color:#8f84ad">—</td>';
-  const col=pct>=0?"#3ecf8e":"#ff5d73",sg=pct>=0?"+":"";
-  const pctTxt=sg+(Math.round(pct*10)/10)+"%";
-  if(eqUsd!=null&&isFinite(eqUsd)&&eurusd&&(100+pct)!==0){
-    const usd=eqUsd*pct/(100+pct),eu=usd/eurusd;
-    return '<td style="text-align:right;color:'+col+';font-weight:700;white-space:nowrap"><b>'+(pct>=0?"+":"")+fmt(eu)+' €</b><br><span style="opacity:.72;font-weight:600;font-size:12px">'+(pct>=0?"+":"")+fmt(usd)+' $ · '+pctTxt+'</span></td>';
+function gainCell(row){
+  if(!row||(row.gain_eur==null&&row.gain_pct==null))return '<td style="text-align:right;color:#8f84ad">—</td>';
+  const eu=(row.gain_eur==null?null:Number(row.gain_eur));
+  const usd=(row.gain_usd==null?null:Number(row.gain_usd));
+  const pct=(row.gain_pct==null?null:Number(row.gain_pct));
+  const basis=(eu!=null?eu:pct);
+  const col=basis>=0?"#3ecf8e":"#ff5d73";
+  const pctTxt=(pct==null)?"":((pct>=0?"+":"")+pct+"%");
+  if(eu!=null){
+    const usdTxt=(usd==null)?"":((usd>=0?"+":"")+fmt(usd)+" $");
+    const sec=[usdTxt,pctTxt].filter(Boolean).join(" · ");
+    return '<td style="text-align:right;color:'+col+';font-weight:700;white-space:nowrap"><b>'+(eu>=0?"+":"")+fmt(eu)+' €</b>'+(sec?'<br><span style="opacity:.72;font-weight:600;font-size:12px">'+sec+'</span>':'')+'</td>';
   }
   return '<td style="text-align:right;color:'+col+';font-weight:700;white-space:nowrap">'+pctTxt+'</td>';
 }
 function renderGains(){
   const tb=document.getElementById("gainsTable");if(!tb)return;
-  const eurusd=Number(FX&&FX.EURUSD)||null;
-  const eqKeys={OPUS:null,ALCHIMISTE:"ALCHIMISTE",JU:"JU",SYL:"SYL",GIL:"GIL",MAREES:"MAREES"};
-  let body="",anyData=false;
-  GAIN_ROWS.forEach(r=>{
-    const eqUsd=eqKeys[r.k]?curEquity(eqKeys[r.k]):null;
-    const cells=GAIN_GRAN.map(g=>{const pct=latestRet(r.k,g[1]);if(pct!=null)anyData=true;return gainCell(pct,eqUsd,eurusd);});
-    body+='<tr><td><b>'+esc(r.n)+'</b></td>'+cells.join("")+'</tr>';
-  });
+  const bySerie={},order=[];
+  (GAINS||[]).forEach(r=>{ if(!bySerie[r.serie]){bySerie[r.serie]={label:r.label,ordre:Number(r.ordre)||99,cells:{}};order.push(r.serie);} bySerie[r.serie].cells[r.horizon]=r; });
+  if(!order.length){tb.innerHTML='<tbody><tr><td class="empty">Historique en cours de constitution.</td></tr></tbody>';return;}
+  order.sort((a,b)=>bySerie[a].ordre-bySerie[b].ordre);
+  let body="";
+  order.forEach(s=>{const g=bySerie[s];body+='<tr><td><b>'+esc(g.label)+'</b></td>'+GAIN_GRAN.map(h=>gainCell(g.cells[h[1]])).join("")+'</tr>';});
   const head='<thead><tr><th>Stratégie</th><th style="text-align:right">Jour</th><th style="text-align:right">Semaine</th><th style="text-align:right">Mois</th><th style="text-align:right">Année</th></tr></thead>';
-  tb.innerHTML= anyData ? head+'<tbody>'+body+'</tbody>' : '<tbody><tr><td class="empty">Historique en cours de constitution.</td></tr></tbody>';
+  tb.innerHTML=head+'<tbody>'+body+'</tbody>';
 }
 async function loadSuivi(){
   try{
     const d=await call({action:"suivi"});if(!d.ok){document.getElementById("strats").innerHTML='<div class="empty">Indisponible.</div>';return;}
-    PER=d.periodes||[];EQ=d.equity||{};PERF={};(d.perf||[]).forEach(p=>PERF[p.trader]=p);CMP=d.comparaison||{};SHARPE=d.sharpe||{};AVANCE=d.avance||{};STATS=d.stats||{};MENSUEL=d.mensuel||{};RND=d.rendements||[];FX=d.fx||{};
+    PER=d.periodes||[];EQ=d.equity||{};PERF={};(d.perf||[]).forEach(p=>PERF[p.trader]=p);CMP=d.comparaison||{};SHARPE=d.sharpe||{};AVANCE=d.avance||{};STATS=d.stats||{};MENSUEL=d.mensuel||{};RND=d.rendements||[];FX=d.fx||{};GAINS=d.gains||[];
     renderBand();renderKeys();renderChips();renderCompare();renderStats();renderMonthly();renderGains();
     const traders=(d.traders||[]);const order=["CRYPTE_JU","SYL","JU","GIL","MAREES"];traders.sort((a,b)=>order.indexOf(a.nom)-order.indexOf(b.nom));
     document.getElementById("strats").innerHTML=traders.map(x=>stratCard(x)).join("")||'<div class="empty">—</div>';

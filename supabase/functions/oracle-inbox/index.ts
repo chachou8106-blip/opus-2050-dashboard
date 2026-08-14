@@ -1,6 +1,6 @@
-// oracle-inbox v11 — canal Chachou <-> robot.
+// oracle-inbox v13 — canal Chachou <-> robot.
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
-//         sharpe, contexte, fx (EUR-USD/GBP-USD live), + alc_virtuel (portefeuille virtuel Alchimiste).
+//         sharpe, contexte, fx (EUR-USD/GBP-USD live), gains (v_gains_traders), + alc_virtuel.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -54,12 +54,14 @@ Deno.serve(async (req) => {
       const fxr = await sb('price_history?symbol=in.(EUR-USD,GBP-USD)&interval=eq.1h&select=symbol,close,ts&order=ts.desc&limit=60')
       const fx: Record<string, number> = {}
       for (const p of arr(fxr.body)) { const k = p.symbol === 'EUR-USD' ? 'EURUSD' : p.symbol === 'GBP-USD' ? 'GBPUSD' : null; if (k && !(k in fx)) fx[k] = Number(p.close) }
+      // Gains par trader (jour/semaine/mois/annee) en % + USD + EUR
+      const gns = await sb('v_gains_traders?select=serie,label,ordre,horizon,gain_pct,gain_usd,gain_eur&order=ordre.asc')
       // Portefeuille virtuel de l'Alchimiste
       const avr = await sb('v_alc_virtuel_resume?select=*')
       const avj = await sb('v_alc_virtuel_jour?select=jour,n_trades,gagnants,wr_pct,ret_pct,cumul_pct&order=jour.asc')
       const avp = await sb('v_alc_virtuel_positions?select=paire,side,prix_entree,montant,prix_actuel,unreal_pct&order=montant.desc')
       const alc_virtuel = { resume: (arr(avr.body)[0] || null), jours: arr(avj.body), positions: arr(avp.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, alc_virtuel })
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=jour.desc&limit=10')
