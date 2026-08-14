@@ -129,6 +129,10 @@
   <div class="tblwrap"><table class="keys"><thead><tr><th>Stratégie</th><th>Marché</th><th>Rendement</th><th>Drawdown</th><th>Réussite</th><th>Sharpe</th><th>Statut</th></tr></thead><tbody id="keys"></tbody></table></div>
   <div class="mini" style="margin-top:8px">Période juin–août 2026 · résultats en simulation sauf mention contraire · Sharpe recalculé chaque jour · &gt; 1 est considéré comme bon.</div>
 
+  <h2>Gains par trader <span style="font-size:14px;opacity:.7">(jour · semaine · mois · année)</span></h2>
+  <div class="tblwrap"><table class="keys" id="gainsTable"><tbody><tr><td class="empty">Chargement…</td></tr></tbody></table></div>
+  <div class="mini" style="margin-top:8px">Rendement de chaque stratégie sur la période en cours — <b>Jour</b> = aujourd'hui, <b>Semaine</b> = semaine en cours, <b>Mois</b> = mois en cours, <b>Année</b> = depuis le 1<sup>er</sup> janvier (ici : depuis le lancement en juin 2026). Montant affiché (en USD) quand une valeur de portefeuille réelle est disponible, suivi de la variation en %. Vert = gain, rouge = perte. <b>Alchimiste</b> = compte RÉEL Revolut&nbsp;X ; les autres = simulation. <b>Marées</b> apparaît en « — » : son suivi de performance n'est pas encore branché dans les vues (forex en validation précoce).</div>
+
   <h2>Comparatif marchés</h2>
   <div class="strat">
     <div class="clabel" style="margin:0 0 8px">Rendement cumulé — active/désactive les courbes (base 0 % au 5 juin)</div>
@@ -466,11 +470,48 @@ function renderBand(){
    +'<div class="bigstat"><div class="n">'+((sh!=null&&!isNaN(sh))?sh:'—')+'</div><div class="k">Ratio de Sharpe</div></div>';
   document.getElementById("bandnote").textContent="Simulation · juin–août 2026 · Sharpe ≈ celui du S&P 500, très au-dessus de Bitcoin";
 }
+// Gains par trader (jour/semaine/mois/année) — source: rendements par période (v_rendements_periodes),
+// robuste et non tronquée, cohérente avec le reste de la console. Montant affiché quand une équité
+// réelle est disponible (dérivé du rendement de la période et de la valeur actuelle du portefeuille).
+const GAIN_ROWS=[
+ {k:"OPUS",n:"AETHER (ensemble)"},
+ {k:"ALCHIMISTE",n:"Alchimiste — réel"},
+ {k:"JU",n:"JU — Actions US"},
+ {k:"SYL",n:"SYL — Macro internationale"},
+ {k:"GIL",n:"GIL — Crypto tactique"},
+ {k:"MAREES",n:"Marées — Devises"}
+];
+const GAIN_GRAN=[["Jour","jour"],["Semaine","semaine"],["Mois","mois"],["Année","annee"]];
+function latestRet(serie,gran){
+  let best=null,bestP="";
+  (RND||[]).forEach(r=>{ if(r.serie===serie&&r.granularite===gran){ const p=String(r.periode); if(p>=bestP){bestP=p;best=Number(r.rendement_pct);} } });
+  return (best==null||!isFinite(best))?null:best;
+}
+function curEquity(k){const s=EQ[k]||[];return s.length?Number(s[s.length-1].v):null;}
+function gainCell(pct,eq){
+  if(pct==null)return '<td style="text-align:right;color:#8f84ad">—</td>';
+  const col=pct>=0?"#3ecf8e":"#ff5d73",sg=pct>=0?"+":"";
+  let money="";
+  if(eq!=null&&isFinite(eq)&&(100+pct)!==0){const m=eq*pct/(100+pct);money='<b>'+sg+fmt(m)+'</b> ';}
+  return '<td style="text-align:right;color:'+col+';font-weight:700;white-space:nowrap">'+money+'<span style="opacity:.8">('+sg+(Math.round(pct*10)/10)+'%)</span></td>';
+}
+function renderGains(){
+  const tb=document.getElementById("gainsTable");if(!tb)return;
+  const eqKeys={OPUS:null,ALCHIMISTE:"ALCHIMISTE",JU:"JU",SYL:"SYL",GIL:"GIL",MAREES:"MAREES"};
+  let body="",anyData=false;
+  GAIN_ROWS.forEach(r=>{
+    const eq=eqKeys[r.k]?curEquity(eqKeys[r.k]):null;
+    const cells=GAIN_GRAN.map(g=>{const pct=latestRet(r.k,g[1]);if(pct!=null)anyData=true;return gainCell(pct,eq);});
+    body+='<tr><td><b>'+esc(r.n)+'</b></td>'+cells.join("")+'</tr>';
+  });
+  const head='<thead><tr><th>Stratégie</th><th style="text-align:right">Jour</th><th style="text-align:right">Semaine</th><th style="text-align:right">Mois</th><th style="text-align:right">Année</th></tr></thead>';
+  tb.innerHTML= anyData ? head+'<tbody>'+body+'</tbody>' : '<tbody><tr><td class="empty">Historique en cours de constitution.</td></tr></tbody>';
+}
 async function loadSuivi(){
   try{
     const d=await call({action:"suivi"});if(!d.ok){document.getElementById("strats").innerHTML='<div class="empty">Indisponible.</div>';return;}
     PER=d.periodes||[];EQ=d.equity||{};PERF={};(d.perf||[]).forEach(p=>PERF[p.trader]=p);CMP=d.comparaison||{};SHARPE=d.sharpe||{};AVANCE=d.avance||{};STATS=d.stats||{};MENSUEL=d.mensuel||{};RND=d.rendements||[];
-    renderBand();renderKeys();renderChips();renderCompare();renderStats();renderMonthly();
+    renderBand();renderKeys();renderChips();renderCompare();renderStats();renderMonthly();renderGains();
     const traders=(d.traders||[]);const order=["CRYPTE_JU","SYL","JU","GIL","MAREES"];traders.sort((a,b)=>order.indexOf(a.nom)-order.indexOf(b.nom));
     document.getElementById("strats").innerHTML=traders.map(x=>stratCard(x)).join("")||'<div class="empty">—</div>';
     document.querySelectorAll(".chart[data-ek]").forEach(box=>wireChart(box,EQ[box.getAttribute("data-ek")]||[]));
