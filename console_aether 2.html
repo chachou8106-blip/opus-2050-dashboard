@@ -197,6 +197,13 @@
 
   <details class="ops">
     <summary>⚙️ Espace opérationnel — usage interne</summary>
+    <div id="opsGate">
+      <div class="mini" style="margin:10px 0">🔒 Zone protégée (kill-switch, chat, sources, journal). Déverrouille avec <b>Face ID</b> (ou PIN).</div>
+      <button id="opsUnlock" style="padding:10px 16px;border:none;border-radius:10px;font:700 15px inherit;color:#0b0b12;cursor:pointer;background:#3ecf8e">🔓 Déverrouiller (Face ID)</button>
+      <div class="msg" id="opsMsg"></div>
+    </div>
+    <div id="opsContent" style="display:none">
+    <div style="text-align:right;margin-bottom:8px"><button id="opsLock" style="padding:6px 12px;border:1px solid var(--line);border-radius:8px;font:700 13px inherit;color:var(--txt);background:var(--card2);cursor:pointer">🔒 Verrouiller</button></div>
     <div class="opcard" id="ksCard">
       <h3>🛑 Kill-switch — trading réel de l'Alchimiste</h3>
       <div class="mini" style="margin-bottom:10px">ON = l'Alchimiste passe des ordres <b>RÉELS</b> sur Revolut&nbsp;X (ton argent). OFF = désarmé, aucun ordre réel n'est envoyé.</div>
@@ -211,6 +218,7 @@
     <div class="opcard"><h3>Problèmes en cours</h3><div id="pbs"><div class="empty">—</div></div></div>
     <div class="opcard"><h3>Journal quotidien</h3><div id="journal"><div class="empty">—</div></div></div>
     <div class="opcard"><h3>Contexte système</h3><div id="ctx"><div class="empty">—</div></div></div>
+    </div>
   </details>
 </div>
 
@@ -508,6 +516,22 @@ async function armFaceID(){const o=await pkCall("auth-options");if(!o.ok)return{
   });
 })();
 ksInit();
+/* ===== Verrouillage Face ID du menu technique ===== */
+function opsReveal(){var g=document.getElementById("opsGate"),c=document.getElementById("opsContent");if(g)g.style.display="none";if(c)c.style.display="block";try{ksInit();}catch(e){}}
+function opsHide(){var g=document.getElementById("opsGate"),c=document.getElementById("opsContent");if(c)c.style.display="none";if(g)g.style.display="block";}
+(function(){
+  var u=document.getElementById("opsUnlock"),l=document.getElementById("opsLock");
+  if(l)l.addEventListener("click",opsHide);
+  if(u)u.addEventListener("click",async function(){var m=document.getElementById("opsMsg");this.disabled=true;if(m){m.className="msg";m.textContent="Déverrouillage…";}
+    try{
+      var o=await pkCall("unlock-options");
+      if(o&&o.ok){try{var lib=await pkLib();var asr=await lib.startAuthentication({optionsJSON:o.options});var v=await pkCall("unlock-verify",{response:asr});if(v&&v.ok){opsReveal();if(m)m.textContent="";this.disabled=false;return;}}catch(e){}}
+      var pin=prompt("Code PIN pour déverrouiller le menu technique :");if(pin===null){if(m)m.textContent="";this.disabled=false;return;}
+      var p=await pkCall("unlock-pin",{pin:pin});if(p&&p.ok){opsReveal();if(m)m.textContent="";}else if(m){m.className="msg err";m.textContent="❌ PIN incorrect ou Face ID refusé";}
+    }catch(e){if(m){m.className="msg err";m.textContent="❌ Erreur réseau.";}}
+    this.disabled=false;
+  });
+})();
 </script>
 </body>
 </html>
