@@ -478,7 +478,7 @@ async function load(){
   try{const d=await call({action:"journal"});
     const open=(d.problemes||[]).filter(p=>p.statut!=="resolu");
     document.getElementById("pbs").innerHTML=open.length?open.map(p=>'<div class="pb"><div class="st">'+esc(p.statut)+'</div><div>'+esc(p.message)+'</div></div>').join(""):'<div class="empty">Aucun.</div>';
-    document.getElementById("journal").innerHTML=(d.journal&&d.journal.length)?d.journal.map(e=>'<div class="day"><div class="date">'+esc(e.jour)+'</div><div class="jrn">'+esc((e.resume||"").slice(0,400))+'</div></div>').join(""):'<div class="empty">—</div>';
+    document.getElementById("journal").innerHTML=(d.journal&&d.journal.length)?d.journal.map(e=>'<div class="day"><div class="date">'+esc(e.jour)+'</div><div class="jrn" style="white-space:pre-wrap;line-height:1.5">'+esc(e.resume||"")+'</div></div>').join(""):'<div class="empty">—</div>';
   }catch(e){}
 }
 const sbtn=document.getElementById("send");if(sbtn)sbtn.onclick=async()=>{const t=document.getElementById("msg").value.trim(),m=document.getElementById("sendMsg");if(!t){m.className="msg err";m.textContent="Écris d'abord.";return;}m.className="msg";m.textContent="Envoi…";try{const r=await call({action:"report",message:t});if(r.enregistre){m.className="msg ok";m.textContent="✓ Envoyé.";document.getElementById("msg").value="";load();}else{m.className="msg err";m.textContent="Échec.";}}catch(e){m.className="msg err";m.textContent="Erreur réseau.";}};
