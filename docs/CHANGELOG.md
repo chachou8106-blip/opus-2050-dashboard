@@ -10,6 +10,10 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-15
 
+- **Sauvegarde GitHub quotidienne automatique.** Workflow GitHub Actions `brain-backup.yml` (cron
+  23:15 Paris) : appelle la RPC `brain_snapshot()` (lecture seule, clé anon publique) et commite
+  `docs/brain/snapshots/lessons-AAAA-MM-JJ.json`. Indépendant de toute session ; aucun secret requis.
+
 - **Mémoire permanente des bots (« à vie »).** Constat : `learnings`/`mistakes_history` étaient rognés
   aux 30 dernières entrées (perte de la mémoire qualitative ancienne). Correctif : nouvelle table
   **`brain_lessons`** append-only (jamais rognée) + **trigger** `trg_archive_brain_lessons` qui archive

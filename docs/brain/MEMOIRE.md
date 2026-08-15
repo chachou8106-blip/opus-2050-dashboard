@@ -37,12 +37,13 @@ Le prompt lit `learnings[1].bias` comme MEMORY_CORRECTION. `update-brain` v16+ *
 entrées `pinned:true` en tête de `learnings` (jamais rognées) → une leçon manuelle reste lue en
 permanence. Procédure : `docs/RUNBOOK.md` §11.
 
-## Sauvegarde GitHub (versionnée, hors base)
+## Sauvegarde GitHub (versionnée, hors base) — AUTOMATIQUE, quotidienne
 La base est la mémoire **runtime** (rapide, ce que lisent les IA). GitHub sert de **sauvegarde
-versionnée** sur la durée. Snapshot périodique de `brain_lessons` + doctrines dans `docs/brain/` (voir
-`snapshots/`). L'export peut être relancé à la demande ou planifié (hebdo). Note : un push GitHub
-100 % automatisé depuis Supabase nécessiterait un token GitHub (secret) — en attendant, l'export est
-fait via l'outillage (à la demande / planifié).
+versionnée** sur la durée. Un **GitHub Actions** (`.github/workflows/brain-backup.yml`) tourne **chaque
+soir à 23:15 Paris** (21:15 UTC), appelle la fonction `brain_snapshot()` (RPC Supabase, lecture seule,
+clé anon publique) et commite `docs/brain/snapshots/lessons-AAAA-MM-JJ.json`. Indépendant de toute
+session/PC. Lancement manuel possible : onglet **Actions → Sauvegarde quotidienne → Run workflow**.
+Aucun secret à configurer (la clé anon est publique).
 
 ## Ce qui reste à faire (honnête)
 - Les leçons qualitatives **antérieures aux 30 dernières** (juin/juillet) étaient déjà perdues avant

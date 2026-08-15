@@ -1,0 +1,50 @@
+name: Sauvegarde quotidienne — mémoire des bots
+
+# Tourne sur l'infra GitHub tous les soirs (indépendant de toute session/PC).
+# Récupère le snapshot complet de la mémoire (RPC Supabase brain_snapshot) et le commite.
+on:
+  schedule:
+    - cron: '15 21 * * *'   # 21:15 UTC = 23:15 Paris (été) — fin de journée, après le point du soir
+  workflow_dispatch: {}       # permet un lancement manuel pour tester
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brain-backup
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Récupérer le snapshot de la mémoire
+        env:
+          # Clé anon Supabase (publique — déjà présente dans la console). RPC en lecture seule.
+          SUPABASE_ANON: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODk4NzksImV4cCI6MjA5NTQ2NTg3OX0.ppjgF79OokQ-2jE8UCp26U-E-YZPcmf6TNnYEKHGKSM
+        run: |
+          set -euo pipefail
+          DATE=$(date -u +%Y-%m-%d)
+          mkdir -p docs/brain/snapshots
+          curl -sS --fail -X POST \
+            "https://smddzybxebwhfnitxuyp.supabase.co/rest/v1/rpc/brain_snapshot" \
+            -H "apikey: ${SUPABASE_ANON}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON}" \
+            -H "Content-Type: application/json" \
+            -d '{}' | python3 -m json.tool > "docs/brain/snapshots/lessons-${DATE}.json"
+          echo "Snapshot écrit : docs/brain/snapshots/lessons-${DATE}.json ($(wc -l < docs/brain/snapshots/lessons-${DATE}.json) lignes)"
+
+      - name: Commit & push si nouveau
+        run: |
+          set -euo pipefail
+          git config user.name "aether-backup-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/brain/snapshots/
+          if git diff --cached --quiet; then
+            echo "Aucun changement — rien à committer."
+          else
+            git commit -m "chore(memoire): snapshot quotidien $(date -u +%Y-%m-%d)"
+            git push
+          fi
