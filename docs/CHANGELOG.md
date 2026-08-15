@@ -10,6 +10,13 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-15
 
+- **Marées — calibrage de la sortie + prompt Maia (mémoire, sorties, renommage).** (a) `marees_rebuild_virtual`
+  calibré pour le forex : planchers TP 3→**1,2 %** / SL 2→**0,8 %** (ratio 1,5:1), détention 240→**96 h**
+  → premières clôtures avancées (~17-19/08 au lieu du 23). (b) Vérif : le prompt de Marées ne lisait
+  QUE `latest_web_catalysts` (pas de doctrine) → prompt Maia rédigé pour ajouter une **fente MÉMOIRE**
+  lisant `brain_states.MAREES.current_bias`, aligner les consignes TP/SL, et **renommer** les modules
+  génériques restants (« Staking délais », « Staking APY ») dans l'univers alchimique.
+  → `docs/decisions/PROMPT-MAIA-MAREES-2026-08-15.md`.
 - **Panneau Marées (forex virtuel) dans la console.** Diagnostic : la console n'affichait rien pour
   Marées car elle ne montre que les trades **clôturés**, or 0 clôturé depuis le reset du 13/08
   (positions <49h ; sortie TP 3%/SL 2% ou 240h = trop lent pour du forex). Correctif d'affichage :
