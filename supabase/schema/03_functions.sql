@@ -2256,7 +2256,7 @@ $function$
 
 
 -- FUNCTION: marees_rebuild_virtual
-CREATE OR REPLACE FUNCTION public.marees_rebuild_virtual(p_fee_pct double precision DEFAULT 0.03, p_max_hold_h integer DEFAULT 240)
+CREATE OR REPLACE FUNCTION public.marees_rebuild_virtual(p_fee_pct double precision DEFAULT 0.03, p_max_hold_h integer DEFAULT 96)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -2270,16 +2270,16 @@ begin
      exit_ts, prix_sortie, exit_reason, pnl_pct, hold_hours, is_open)
   with props as (
     select id, paire,
-           -- REPARATION MAREES (2) : CONTRE-PIED. Le signal directionnel du Gemini est anti-predictif
-           -- (inverser le sens = 100% de reussite sur l'echantillon resolu). On trade l'INVERSE de ce
-           -- qu'il propose. Le signal brut reste conserve tel quel dans marees_propositions.
-           case when lower(side)='buy' then 'sell' when lower(side)='sell' then 'buy' else lower(side) end as side,
+           -- 15/08 : inversion AVEUGLE du signal RETIREE. L'ancien prompt Gemini etait anti-predictif ;
+           -- le prompt a ete refait, on trade donc le sens PROPOSE tel quel (le contrarian raisonne
+           -- vit desormais dans le prompt lui-meme). A re-verifier sur les 1eres clotures.
+           lower(side) as side,
            prix_ref::float8 as e,
            coalesce(poids_pct,1)::float8 as m, proposed_at as t0,
-           -- REPARATION MAREES (1) : plancher de volatilite sur les stops (forex, detention multi-jours).
-           -- SL >= 2%, TP >= 3% : sortir du bruit horaire pour mesurer la justesse directionnelle.
-           greatest(coalesce(tp_pct, 3.0), 3.0)::float8 as tpp,
-           greatest(coalesce(sl_pct, 2.0), 2.0)::float8 as slp
+           -- CALIBRAGE SORTIE (15/08) : seuils adaptes au forex (majors ~0,5%/jour, detention 4j).
+           -- TP >= 1,2% / SL >= 0,8% (ratio 1,5:1) -> sorties reellement atteignables (fini le tout-timeout).
+           greatest(coalesce(tp_pct, 1.2), 1.2)::float8 as tpp,
+           greatest(coalesce(sl_pct, 0.8), 0.8)::float8 as slp
     from marees_propositions
     where statut in ('expiree','proposee') and prix_ref > 0
   ),
