@@ -10,6 +10,16 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-15
 
+- **Marées — retrait du « contre-pied aveugle » côté base.** Il subsistait DEUX inversions distinctes :
+  (1) le « contre-pied raisonné » dans le prompt de Marées (contrarian vs consensus excessif, seulement
+  si espérance positive) = **légitime, conservé** ; (2) une inversion AVEUGLE du signal dans
+  `marees_rebuild_virtual` (`buy↔sell` systématique), vestige de l'ancien prompt Gemini anti-prédictif.
+  Comme le prompt de Marées a été **refait la session précédente**, cette 2ᵉ inversion faisait un
+  double contre-pied et n'avait plus lieu d'être → **ligne retirée** (`lower(side) as side`, on trade le
+  sens PROPOSÉ). Vérifié : les 25 positions ouvertes suivent désormais exactement le sens des
+  propositions (`concorde=true` sur tout l'échantillon). Migration `marees_retire_contre_pied_aveugle`
+  + `marees_rebuild_virtual` rejouée (28 trades, 0 clôturé — forex quasi plat, positions ≤49 h).
+  → `supabase/schema/03_functions.sql`.
 - **Marées — calibrage de la sortie + prompt Maia (mémoire, sorties, renommage).** (a) `marees_rebuild_virtual`
   calibré pour le forex : planchers TP 3→**1,2 %** / SL 2→**0,8 %** (ratio 1,5:1), détention 240→**96 h**
   → premières clôtures avancées (~17-19/08 au lieu du 23). (b) Vérif : le prompt de Marées ne lisait
