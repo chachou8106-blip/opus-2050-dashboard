@@ -44,7 +44,14 @@ jobs:
           git add docs/brain/snapshots/
           if git diff --cached --quiet; then
             echo "Aucun changement — rien à committer."
-          else
-            git commit -m "chore(memoire): snapshot quotidien $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "chore(memoire): snapshot quotidien $(date -u +%Y-%m-%d)"
+          # Push robuste : rebase sur main si un autre run a poussé entre-temps, avec petits retries.
+          for i in 1 2 3 4 5; do
+            if git push; then echo "push OK"; exit 0; fi
+            echo "push rejeté (tentative $i) — rebase puis nouvelle tentative"
+            git pull --rebase --autostash origin main || true
+            sleep 3
+          done
+          echo "échec du push après plusieurs tentatives"; exit 1
