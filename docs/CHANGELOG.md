@@ -8,6 +8,26 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-15
+
+- **Analyse SYL — short or/argent à contre-tendance.** SYL est short GLD (~150 k$ notionnel, entrée
+  moy. 372, cours ~401 → −12,7 k$ / −6,1 %) et SLV (−1,8 k$), tenus **181 runs** sans être coupés.
+  Causes : (a) doctrine apprise « GLD vs TLT rotation, prior wins on GLD » qui rejoue le short ;
+  (b) **stop-loss non appliqué** — les ordres portent `stop_loss_pct=5` mais `stop_loss_target` reste
+  null et la position dépasse −5 % sans coupe ; (c) la perte reste **latente** (jamais clôturée) donc
+  la boucle d'apprentissage ne la **book pas** comme erreur → SYL ne se corrige pas seule. NB : paper.
+
+- **Mécanisme « leçon épinglée » (pinned) + leçon anti-short-métaux pour SYL.** Découverte : le prompt
+  du Conseil lit `brain_states.<archimage>.learnings[1].bias` comme MEMORY_CORRECTION, mais
+  `update-brain` **rognait `learnings` aux 30 dernières** → une leçon manuelle disparaissait au cycle
+  suivant. **`update-brain` v16** : les entrées `learnings` marquées `pinned:true` sont **préservées en
+  tête** (jamais rognées) → une leçon manuelle reste lue en permanence. Leçon posée pour SYL
+  (`learnings[0]`, pinned) : « ne pas shorter or/argent en tendance haussière ; couper tout short
+  perdant au-delà de −5 % ; ne pas moyenner à la baisse ; un gain passé sur une rotation ne justifie
+  pas un short à contre-tendance ». Procédure de réutilisation : `docs/RUNBOOK.md` §11.
+  ⚠️ Reste ouvert : le **bug du stop non appliqué** (code `execute-trades`) — une leçon change les
+  décisions mais ne fait pas se déclencher le stop ; à traiter avant le réel.
+
 ## 2026-08-14
 
 - **Export & documentation complète du repo.** Dump de tout le schéma Supabase (tables, vues,

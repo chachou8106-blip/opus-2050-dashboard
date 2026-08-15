@@ -159,3 +159,30 @@ vivant**. Pour les rafraîchir après des changements :
 
 > Ces fichiers ne sont pas appliqués automatiquement : ils servent de **référence et de reconstruction**.
 > La source de vérité opérationnelle reste la base Supabase live.
+
+---
+
+## 11. Ajouter une « leçon » durable à un archimage (JU / SYL / GIL)
+
+Le prompt du Conseil lit `brain_states.<archimage>.learnings[1].bias` comme **MEMORY_CORRECTION**.
+`update-brain` (v16+) **préserve** les entrées marquées `pinned:true` en tête de `learnings` (jamais
+rognées). Pour poser une leçon lue en permanence :
+```sql
+update oracle_brain_state
+set learnings =
+      jsonb_build_array(jsonb_build_object(
+        'run','lecon-manuelle-YYYYMMDD','pinned',true,
+        'bias','<TEXTE DE LA LECON, ASCII, sans guillemets ni retour ligne, ~200 caracteres max>',
+        'pnl',0,'dd',0,'eval','lecon manuelle'))
+      || coalesce((select jsonb_agg(e) from jsonb_array_elements(learnings) e
+                   where coalesce(e->>'run','') not like 'lecon-manuelle-%'), '[]'::jsonb),
+    updated_at = now()
+where archimage='SYL';   -- ou JU / GIL
+```
+Notes :
+- Le `bias` est injecté après suppression des guillemets/retours ligne → écrire en une phrase ASCII.
+- Une seule leçon épinglée par archimage est lue (`learnings[1]`). Remplacer = relancer la requête.
+- Limite : une leçon oriente les **décisions** de l'archimage ; elle **ne remplace pas** un correctif
+  de code (ex. l'application réelle des stops dans `execute-trades`).
+- Retirer une leçon : `update oracle_brain_state set learnings = (select jsonb_agg(e) from
+  jsonb_array_elements(learnings) e where coalesce(e->>'run','') not like 'lecon-manuelle-%') where archimage='SYL';`

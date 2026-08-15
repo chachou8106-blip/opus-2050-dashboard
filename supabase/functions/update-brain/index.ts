@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v16 : lecons EPINGLEES (pinned:true) preservees en tete de learnings (jamais rognees) ->
+//        une lecon manuelle reste lue en permanence par le prompt via learnings[1].bias.
 // v15 : (SYL fige) current_drawdown = drawdown COURANT (pic -> derniere valeur, se repare) ;
 //        max_drawdown reste le pire creux historique (stat separee). La ponderation utilise
 //        desormais le drawdown COURANT -> un trader revenu pres de son pic n'est plus penalise
@@ -146,9 +148,13 @@ serve(async (req) => {
         if (win) { consecutive_wins = prevStreakType === 'win' ? prevConsecW + 1 : 1; consecutive_losses = 0; current_streak_type = 'win' }
         else { consecutive_losses = prevStreakType === 'loss' ? prevConsecL + 1 : 1; consecutive_wins = 0; current_streak_type = 'loss' }
       }
-      let learn = Array.isArray(s.prev.learnings) ? s.prev.learnings : []
-      learn.push({ run: run_id, pnl: s.pnl, dd: s.dd, eval: (s.evalTxt||'').toString().substring(0,120), bias: (s.bias||'').toString().substring(0,80) })
-      if (learn.length > 30) learn = learn.slice(-30)
+      // Lecons EPINGLEES (pinned:true) : jamais rognees, gardees en tete -> lues par le prompt via learnings[1].bias
+      const _all = Array.isArray(s.prev.learnings) ? s.prev.learnings : []
+      const _pinned = _all.filter((e:any) => e && e.pinned)
+      let _rolling = _all.filter((e:any) => !e || !e.pinned)
+      _rolling.push({ run: run_id, pnl: s.pnl, dd: s.dd, eval: (s.evalTxt||'').toString().substring(0,120), bias: (s.bias||'').toString().substring(0,80) })
+      if (_rolling.length > 30) _rolling = _rolling.slice(-30)
+      let learn = [..._pinned, ..._rolling]
       let mistakes = Array.isArray(s.prev.mistakes_history) ? s.prev.mistakes_history : []
       if (!s.isCapture && !win) {
         mistakes.push({ run: run_id, at: now, pnl_delta: r2(s.pnl - prevPnl), pnl: s.pnl, dd: s.dd, phase: market_phase, consec_losses: consecutive_losses, eval: (s.evalTxt||'').toString().substring(0,140) })
