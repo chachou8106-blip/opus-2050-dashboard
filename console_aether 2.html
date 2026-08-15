@@ -232,7 +232,7 @@
       <div class="mini" style="margin-top:8px">🌅 matin · ☀️ midi · 🌙 soir · 💬 demande · 🔔 rappel — touche un jour pour le détail.</div>
       <div id="calDetail" style="margin-top:10px"></div>
     </div>
-    <div class="opcard"><h3>Journal quotidien</h3><div id="journal"><div class="empty">—</div></div></div>
+    <div class="opcard"><h3>📨 Messages du jour <span style="font-size:13px;opacity:.7">(l'historique est dans le calendrier ci-dessus)</span></h3><div id="journal"><div class="empty">—</div></div></div>
     <div class="opcard"><h3>Contexte système</h3><div id="ctx"><div class="empty">—</div></div></div>
     </div>
   </details>
@@ -600,7 +600,14 @@ async function load(){
     JOURNAL=d.journal||[];PROBLEMES=d.problemes||[];RAPPELS=d.rappels||[];
     const open=(d.problemes||[]).filter(p=>p.statut!=="resolu");
     document.getElementById("pbs").innerHTML=open.length?open.map(p=>'<div class="pb"><div class="st">'+esc(p.statut)+'</div><div>'+esc(p.message)+'</div></div>').join(""):'<div class="empty">Aucun.</div>';
-    document.getElementById("journal").innerHTML=(d.journal&&d.journal.length)?d.journal.map(e=>'<div class="day"><div class="date">'+esc(e.jour)+'</div><div class="jrn" style="white-space:pre-wrap;line-height:1.5">'+esc(e.resume||"")+'</div></div>').join(""):'<div class="empty">—</div>';
+    // Journal du jour : on n'affiche QUE les messages d'aujourd'hui (l'historique complet est
+    // rangé dans le calendrier ci-dessus). Fini la longue file de tous les messages.
+    const _tk=(function(){const t=new Date();return calDkey(t.getFullYear(),t.getMonth(),t.getDate());})();
+    const _todays=(d.journal||[]).filter(e=>e.created_at && calLocalKey(e.created_at)===_tk);
+    const _cicon={matin:"🌅",midi:"☀️",soir:"🌙"};
+    document.getElementById("journal").innerHTML=_todays.length
+      ? _todays.map(e=>{const c=calCreneau(e);return '<div class="day"><div class="date">'+(_cicon[c]||"")+' '+esc(c.toUpperCase())+' · '+esc(e.jour)+'</div><div class="jrn" style="white-space:pre-wrap;line-height:1.5">'+esc(e.resume||"")+'</div></div>';}).join("")
+      : '<div class="empty">Aucun message aujourd\'hui pour l\'instant. Tout l\'historique est dans le calendrier ci-dessus (touche un jour).</div>';
     renderCalendar();
   }catch(e){}
 }
