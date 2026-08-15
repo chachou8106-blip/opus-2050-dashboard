@@ -1,6 +1,6 @@
-// oracle-inbox v14 — canal Chachou <-> robot.
+// oracle-inbox v15 — canal Chachou <-> robot.
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
-//         sharpe, contexte, fx (EUR-USD/GBP-USD live), gains (v_gains_traders), + alc_virtuel.
+//         sharpe, contexte, fx, gains (v_gains_traders), + alc_virtuel + marees_virtuel (positions forex).
 // journal (défaut) : journal (historique étendu), problemes, rappels (pour le calendrier).
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -62,7 +62,11 @@ Deno.serve(async (req) => {
       const avj = await sb('v_alc_virtuel_jour?select=jour,n_trades,gagnants,wr_pct,ret_pct,cumul_pct&order=jour.asc')
       const avp = await sb('v_alc_virtuel_positions?select=paire,side,prix_entree,montant,prix_actuel,unreal_pct&order=montant.desc')
       const alc_virtuel = { resume: (arr(avr.body)[0] || null), jours: arr(avj.body), positions: arr(avp.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel })
+      // Marées — portefeuille virtuel forex (positions ouvertes valorisées au dernier cours)
+      const mvr = await sb('v_marees_virtuel_resume?select=*')
+      const mvp = await sb('v_marees_virtuel_positions?select=paire,side,prix_entree,prix_actuel,unreal_pct,montant,tp_pct,sl_pct,age_h&order=unreal_pct.desc')
+      const marees_virtuel = { resume: (arr(mvr.body)[0] || null), positions: arr(mvp.body) }
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')

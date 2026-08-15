@@ -179,6 +179,15 @@
     <div class="mini" style="margin-top:8px">Virtuel = apprentissage. Le réel est plus dur (frais, slippage, blocages de staking). La valeur projetée applique le rendement net à ton portefeuille Revolut réel.</div>
   </div>
 
+  <h2>Marées — Devises <span style="font-size:14px;opacity:.7">(forex virtuel — positions ouvertes)</span></h2>
+  <div class="strat lead-strat">
+    <p class="lead" style="margin-top:0">Marées propose des positions sur les paires de devises et les tient plusieurs jours. Comme elles se clôturent lentement (sortie à ±3 %/2 % ou après 240 h), voici ses <b class="hl">positions ouvertes valorisées en direct</b> (P&amp;L latent au dernier cours) — pour la voir travailler avant les premières clôtures.</p>
+    <div id="marTiles" class="tiles"></div>
+    <div class="clabel" style="margin-top:16px">Positions ouvertes (mark-to-market)</div>
+    <div class="tblwrap"><table class="keys" id="marPos"></table></div>
+    <div class="mini" style="margin-top:8px">P&amp;L latent = variation depuis l'entrée au cours actuel (non réalisé). Les résultats réalisés apparaîtront dans les sections « stratégies » et « gains » dès que des positions se clôtureront.</div>
+  </div>
+
   <h2>Rendements mensuels</h2>
   <div class="tblwrap"><table class="keys" id="monthlyTable"></table></div>
   <div class="mini" style="margin-top:8px">Rendement par mois et par stratégie (points de %). Vert = positif, rouge = négatif.</div>
@@ -263,7 +272,7 @@ const BENCH=[
  {k:"BNB-USD",n:"BNB",c:"#f2b84b"},{k:"XRP-USD",n:"XRP",c:"#a99fc4"}];
 const STRAT_SERIES=[{k:"OPUS",n:"AETHER",c:"#a06bff"},{k:"SYL",n:"SYL",c:"#3ecf8e"},{k:"JU",n:"JU",c:"#6ea0ff"},{k:"GIL",n:"GIL",c:"#f2b84b"},{k:"ALCHIMISTE",n:"Alchimiste",c:"#e5709b"},{k:"MAREES",n:"Marées",c:"#2bb8a3"}];
 const SEL=new Set(["OPUS","SPY"]);
-let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[];
+let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[],MARV={};
 function serieColor(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.c;const b=BENCH.find(x=>x.k===k);return b?b.c:"#a99fc4";}
 function serieName(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.n;const b=BENCH.find(x=>x.k===k);return b?b.n:k;}
 const ACC="#a06bff";
@@ -416,6 +425,27 @@ function renderAlcVirt(){
       pt.innerHTML=h+"</tbody>";}
   }
 }
+function renderMareesVirt(){
+  const r=MARV.resume||{},pos=MARV.positions||[];
+  const tile=(v,k,cls)=>'<div class="tile"><div class="v'+(cls?(" "+cls):"")+'">'+v+'</div><div class="k">'+k+'</div></div>';
+  const sg=x=>x==null?"—":((x>0?"+":"")+Number(x).toFixed(2)+"%");
+  const cl=x=>x==null?"":(x>0?"pos":(x<0?"neg":""));
+  const el=document.getElementById("marTiles");
+  if(el)el.innerHTML=[
+    tile(r.positions_ouvertes!=null?r.positions_ouvertes:"—","Positions ouvertes"),
+    tile(sg(r.pnl_latent_pct),"P&L latent (moy.)",cl(r.pnl_latent_pct)),
+    tile(r.expo_poids!=null?r.expo_poids:"—","Exposition (poids)"),
+    tile(r.trades_clos!=null?r.trades_clos:"—","Trades clos")
+  ].join("");
+  const pt=document.getElementById("marPos");
+  if(pt){
+    if(!pos.length){pt.innerHTML='<tbody><tr><td class="empty">Aucune position ouverte.</td></tr></tbody>';}
+    else{let h='<thead><tr><th>Paire</th><th>Sens</th><th>Entrée</th><th>Actuel</th><th>Latent</th><th>TP/SL</th><th>Âge</th></tr></thead><tbody>';
+      pos.forEach(p=>{const u=p.unreal_pct;const c=u==null?"":(u>0?"color:var(--grn)":(u<0?"color:var(--red)":""));
+        h+='<tr><td class="name">'+esc(p.paire)+'</td><td>'+(p.side==="sell"?"Vente":"Achat")+'</td><td>'+(p.prix_entree!=null?Number(p.prix_entree).toFixed(4):"—")+'</td><td>'+(p.prix_actuel!=null?Number(p.prix_actuel).toFixed(4):"—")+'</td><td style="'+c+'">'+(u==null?"—":((u>0?"+":"")+u+"%"))+'</td><td class="mini">'+(p.tp_pct!=null?p.tp_pct:"—")+"/"+(p.sl_pct!=null?p.sl_pct:"—")+'</td><td class="mini">'+(p.age_h!=null?Math.round(p.age_h)+"h":"—")+'</td></tr>';});
+      pt.innerHTML=h+"</tbody>";}
+  }
+}
 function renderStats(){
   const a=AVANCE["OPUS"]||{},s=STATS["OPUS"]||{},sh=SHARPE["OPUS"];
   const cs=(CMP["OPUS"]||[]).slice().sort((x,y)=>x.j<y.j?-1:1);
@@ -522,6 +552,7 @@ async function loadSuivi(){
     document.querySelectorAll(".chart[data-ek]").forEach(box=>wireChart(box,EQ[box.getAttribute("data-ek")]||[]));
     document.querySelectorAll(".tg").forEach(b=>b.onclick=()=>renderReport(b.dataset.g));renderReport("mois");
     ALCV=d.alc_virtuel||{};renderAlcVirt();
+    MARV=d.marees_virtuel||{};renderMareesVirt();
     const fi=document.getElementById("alcFee");if(fi&&!fi._w){fi._w=1;fi.addEventListener("input",renderAlcVirt);}
     const bys={};(d.contexte||[]).forEach(r=>{(bys[r.section]=bys[r.section]||[]).push(r);});
     let ch="";Object.keys(bys).forEach(s=>{ch+='<div style="margin:8px 0"><div class="clabel" style="color:var(--blue)">'+esc(s)+'</div>'+bys[s].map(r=>'<div class="ctxr"><b>'+esc(r.cle)+'</b> — '+esc(r.valeur)+'</div>').join("")+'</div>';});

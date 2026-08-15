@@ -10,6 +10,13 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-15
 
+- **Panneau Marées (forex virtuel) dans la console.** Diagnostic : la console n'affichait rien pour
+  Marées car elle ne montre que les trades **clôturés**, or 0 clôturé depuis le reset du 13/08
+  (positions <49h ; sortie TP 3%/SL 2% ou 240h = trop lent pour du forex). Correctif d'affichage :
+  vues `v_marees_virtuel_positions` / `_resume` (positions ouvertes valorisées au dernier cours,
+  P&L latent), exposées par `oracle-inbox` v15 (`suivi.marees_virtuel`) + nouvelle section console
+  « Marées — Devises ». Marées n'est plus jamais vide ; les résultats réalisés apparaîtront dès les
+  premières clôtures (~23/08). DDL : `supabase/schema/07_marees_virtuel.sql`.
 - **Sauvegarde GitHub quotidienne automatique.** Workflow GitHub Actions `brain-backup.yml` (cron
   23:15 Paris) : appelle la RPC `brain_snapshot()` (lecture seule, clé anon publique) et commite
   `docs/brain/snapshots/lessons-AAAA-MM-JJ.json`. Indépendant de toute session ; aucun secret requis.
