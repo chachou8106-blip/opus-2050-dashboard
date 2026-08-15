@@ -10,6 +10,13 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-15
 
+- **Mémoire permanente des bots (« à vie »).** Constat : `learnings`/`mistakes_history` étaient rognés
+  aux 30 dernières entrées (perte de la mémoire qualitative ancienne). Correctif : nouvelle table
+  **`brain_lessons`** append-only (jamais rognée) + **trigger** `trg_archive_brain_lessons` qui archive
+  chaque leçon/erreur à chaque cycle. Le quantitatif (`oracle_performance`, 245 runs/bot depuis juin)
+  était déjà permanent. Sauvegarde GitHub versionnée : `docs/brain/snapshots/`. Architecture &
+  procédures : `docs/brain/MEMOIRE.md`. DDL : `supabase/schema/06_brain_memory.sql`.
+
 - **Analyse SYL — short or/argent à contre-tendance.** SYL est short GLD (~150 k$ notionnel, entrée
   moy. 372, cours ~401 → −12,7 k$ / −6,1 %) et SLV (−1,8 k$), tenus **181 runs** sans être coupés.
   Causes : (a) doctrine apprise « GLD vs TLT rotation, prior wins on GLD » qui rejoue le short ;
