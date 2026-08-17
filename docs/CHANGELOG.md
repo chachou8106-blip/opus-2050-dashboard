@@ -10,6 +10,19 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **Journal du verdict de l'Alchimiste (comble l'angle mort du raisonnement).** Constat : le `commentaire`
+  et la liste `destake_recommande` de l'Alchimiste n'étaient stockés nulle part → impossible de savoir
+  après coup POURQUOI il dé-stake ou non (ex. « aucune reco de dé-stake » ce soir = verdict légitime
+  « garder staké », mais invérifiable). Côté Supabase (fait, testé) : table `alchimiste_crypte_verdicts`,
+  RPC `log_alc_verdict(p_run_id, p_raw_b64)` qui reçoit la sortie BRUTE de l'Alchimiste en base64, la
+  décode + parse côté serveur (pas de `toString` cassant) et extrait commentaire / destake / nb propositions,
+  vue `v_alc_verdict_dernier`. Côté Make (prompt Maia, `docs/decisions/PROMPT-MAIA-LOG-VERDICT-ALCHIMISTE-2026-08-17.md`) :
+  ajouter 1 module HTTP POST après l'Alchimiste appelant la RPC avec
+  `base64(10012.data.choices[1].message.content)`. DDL : `supabase/schema/13_alc_verdict_log.sql`.
+  À suivre (optionnel) : affichage dans la zone privée console + intégration Vigie. NB diagnostic du soir :
+  le « plus aucune reco de dé-stake » est cohérent (APY TON/GRAM 17.67% déblocable en 2j + marché neutre +
+  2.52 USD de cash → garder staké est rationnel) ; ce log permettra de le CONFIRMER au prochain run.
+
 - **Alchimiste « ne voit ni prix ni staking » — bug de mapping Make (pas les données).** Chachou constate
   que l'Alchimiste écrit « faute de données de prix, d'APY et de délais (tables encodées vides) ». Vérifié
   (pas supposé) : les données EXISTENT — `revolut-x-prices` répond **HTTP 200** avec `prix_texte`
