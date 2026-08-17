@@ -59,6 +59,14 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   peut plus ACHETER d'ETF, **SYL** plus d'action individuelle ; **GIL EXEMPTÉ** (univers large). Ventes
   libres. NB : paper. `oracle_positions_live` sera nettoyé après exécution (réconciliation Make ou
   manuelle).
+- **`sync_alpaca_positions` : purge des positions fermées (fini les zombies).** Cause identifiée du
+  nettoyage manuel : la synchro des positions Alpaca (JU/SYL/GIL) ne **supprimait jamais** une position
+  fermée — elle la passait juste à `qty=0`+`is_stale` (et encore, après 1 h), laissant des lignes
+  « zombie » (d'où le compteur « 190 runs » de la crypto SYL). Correctif : elle **DELETE** désormais les
+  positions absentes du broker à chaque run, avec **garde anti-wipe** (ne purge que si le broker renvoie
+  ≥1 position, pour ne pas tout effacer sur une réponse vide/erreur). Vérifié : **Alchimiste** (snapshots
+  complets `revolut_portfolio_daily`) et **Marées/Alchimiste virtuel** (`TRUNCATE`+rebuild) étaient déjà
+  propres — le souci ne concernait que les 3 comptes Alpaca.
 - **Contrôle final du soldage + base nettoyée + fiches console corrigées.** À l'ouverture US, les 27
   ordres se sont exécutés : **JU = 100 % actions** (0 ETF), **SYL = 100 % ETF** (0 action, 0 crypto),
   **GIL** inchangé (rôle large). Bonus : annulé un **ordre XRP/USD (crypto) périmé** qui traînait sur

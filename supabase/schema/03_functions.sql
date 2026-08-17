@@ -2738,9 +2738,13 @@ BEGIN
         days_held = EXTRACT(DAY FROM (now() - oracle_positions_live.opened_at))::integer;
     END LOOP;
 
-    -- Marquer comme stale les positions non mises à jour (ont été vendues)
-    UPDATE oracle_positions_live SET qty = 0, is_stale = true
-    WHERE archimage = v_archimage AND is_stale = true AND last_synced < now() - interval '1 hour';
+    -- SUPPRIMER les positions fermées (marquées stale = absentes du broker ce run) au lieu de les
+    -- laisser en "zombie" (qty=0). Garde anti-wipe : on ne purge QUE si le broker a renvoyé >= 1
+    -- position (sinon une réponse vide/erreur effacerait tout le portefeuille à tort). [17/08]
+    IF COALESCE(jsonb_array_length(p_payload->'positions'), 0) > 0 THEN
+      DELETE FROM oracle_positions_live
+      WHERE archimage = v_archimage AND is_stale = true;
+    END IF;
   END IF;
 
   -- Mettre à jour brain_state avec données Alpaca live
