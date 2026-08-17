@@ -1,8 +1,9 @@
-// oracle-inbox v17 — canal Chachou <-> robot.
+// oracle-inbox v18 — canal Chachou <-> robot.
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
 //         sharpe, contexte, fx, gains (v_gains_traders), + alc_virtuel + marees_virtuel (positions forex)
 //         + live_crypto (crypto des Sages en direct 24/7) + alc_reel_live (Alchimiste RÉEL Revolut X
-//         valorisé en direct au dernier cours). Tout en 100% lecture.
+//         valorisé en direct au dernier cours) + vigie (santé du Collège : PANNE/FIGÉ par composant).
+//         Tout en 100% lecture.
 // journal (défaut) : journal (historique étendu), problemes, rappels (pour le calendrier).
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -78,7 +79,12 @@ Deno.serve(async (req) => {
       const alr = await sb('v_alc_reel_live_resume?select=*')
       const alrp = await sb('v_alc_reel_live_positions?select=devise,qty,en_stake,valeur_snapshot_usd,prix_live,est_live,valeur_live_usd&order=valeur_live_usd.desc&limit=20')
       const alc_reel_live = { resume: (arr(alr.body)[0] || null), positions: arr(alrp.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live })
+      // 🔭 LA VIGIE — santé du Collège : détecte un composant en PANNE (ne produit plus) ou FIGÉ
+      // (même valeur en boucle). Recalculé toutes les 15 min par pg_cron (fonction vigie_scan).
+      const vgr = await sb('v_vigie_resume?select=*')
+      const vgd = await sb('v_vigie_detail?select=composant,categorie,etat,detail,derniere_sortie,run_auditee')
+      const vigie = { resume: (arr(vgr.body)[0] || null), detail: arr(vgd.body) }
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')

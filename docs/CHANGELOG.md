@@ -10,6 +10,78 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **🔭 LA VIGIE — couche de surveillance santé du Collège (pour que la panne muette ne se reproduise plus).**
+  Constat de Chachou : aucun tableau de bord n'a signalé que 4 Sages étaient morts pendant 3 jours ni que
+  Risque tournait en boucle. Nouvelle couche **100 % Supabase** (`supabase/schema/11_vigie.sql`), sûre
+  (lecture seule sur les tables métier, aucun objet existant modifié, ne touche NI trading NI kill_switch
+  NI dry_run NI Make). Principe : on ne teste pas « l'API répond ? » mais **« le run a tourné — chaque
+  composant a-t-il produit sa sortie ? »** → un composant absent = anomalie certaine quelle qu'en soit la
+  cause (modèle décommissionné, **crédit API vide**, rate-limit, bug, réseau) : détection par ABSENCE =
+  filet universel. Objets : table `vigie_status`, fonction `vigie_scan()` (pg_cron toutes les 15 min,
+  job #27), vues `v_vigie_resume` (bannière) + `v_vigie_detail`. Surveille 11 composants : 5 Sages
+  (présence + **anti-stagnation** sur macro_regime/cycle_phase/risk_level/best_archimage/urgency_level),
+  3 Archimages (via claude/perplexity/mistral_confidence du run), 2 Traders (Alchimiste/Marées, fraîcheur
+  souple), + signal `market_phase`. États : OK / PANNE / FIGE / MUET / VEILLE. Garde-fous anti-faux-positif :
+  **VEILLE** si dernier run > 2h30 (week-end/scénario coupé → pas d'alarme) ; garde de **récence** (stagnation
+  jugée seulement si les 6 runs sont < 12h, pour ne pas cataloguer FIGÉ un Sage qui vient de ressusciter).
+  Exposé par `oracle-inbox` **v18** (bloc `vigie`) + **bannière console** en tête de page (verte/orange/rouge,
+  dépliable, liste les composants). Dès le 1er scan, LA VIGIE a correctement remonté la vraie stagnation
+  `market_phase=DEFENSIVE` (à investiguer côté GIL/synthèse). NB sur le « suivi des sous API » : la plupart
+  des API LLM n'exposent pas le solde ; la détection par absence couvre de toute façon l'épuisement de crédit.
+  Extensions possibles (non faites, sur décision) : capture des en-têtes rate-limit Groq, rappel hebdo de recharge.
+
+- **🔔 LA VIGIE — alerte Discord (activée).** À la demande de Chachou. Notification **côté Supabase**
+  (`pg_net`), donc **indépendante de Make** : une alerte part même si tout le scénario est mort. Webhook
+  Discord (canal Héraut, récupéré du module existant) stocké dans **Supabase Vault** (`vigie_discord_webhook`),
+  jamais en git. Fonction `vigie_alert()` (table `vigie_alert_state`), lancée par le cron après `vigie_scan`
+  (`select public.vigie_scan(); select public.vigie_alert();`). N'alerte que sur les **transitions** (pas en
+  boucle) : PANNE = urgent (alerte à la bascule + rappel toutes les 6h tant que non résolu), FIGE/MUET =
+  advisory (une alerte), rétablissement bad→OK = message vert ; VEILLE/OK silencieux. Amorçage sur l'état
+  courant pour ne notifier que les changements futurs (pas de blast sur le market_phase déjà connu). Plomberie
+  validée de bout en bout : `net.http_post` → Discord **HTTP 204** (message de test reçu).
+
+- **RÉSOLU & VÉRIFIÉ EN PROD (run 19:59) — les 5 Sages écrivent enfin tous ensemble.** Après le correctif #2
+  appliqué par Maia (Macro→json_schema+max_tokens 1500 ; Technique & Mémoire→reasoning_effort low+max_tokens
+  2000), le run de 19:59 a inscrit dans `oracle_sages_report` les **5 Sages** simultanément pour la 1re fois
+  depuis le 15/08 : Macro (Perplexity), Technique (Groq gpt-oss-120b), Mémoire (Groq gpt-oss-120b), Flash
+  (Perplexity), Risque (Mistral). Signaux **non figés** : Risque est passé de « VIX 18→MEDIUM » (19:33) à
+  « VIX sous 15→complaisant » (19:59) — il suit réellement le marché ; Mémoire ressort des win rates par
+  archimage (JU 49 / GIL 51 / SYL 54) ; Technique lit le cycle (TROUGH, tech_score 65). Diversification
+  fournisseurs actée : Perplexity ×2, Groq ×2, Mistral ×1 → plus de point de panne unique (cause racine du 15/08).
+
+- **Correctif #2 des Sages (run 19:33 en 400 silencieux).** Après le basculement de fournisseur (via Maia),
+  le transport était bon mais 2 Sages renvoyaient un **400 masqué par `stopOnHttpError=false`** (Maia a
+  faussement rapporté « success » en lisant le statut vert des modules, pas le body — même piège que le
+  bug d'origine). Diagnostic sur les bodies du run : (1) **Macro/Perplexity** → 400 `response_format.type
+  must be one of json_schema, text, got json_object` : Perplexity refuse `json_object` (Flash marche car
+  il utilise `json_schema`). (2) **Technique/Groq gpt-oss-120b** → 400 `max completion tokens reached` :
+  gpt-oss est un modèle de raisonnement, `max_tokens=800` (hérité de Llama) trop court. (3) **Mémoire/Groq**
+  → même config, même risque. Risque/Mistral et Flash/Perplexity : OK, on n'y touche pas. **Prompt de
+  correction préparé** (`docs/decisions/PROMPT-MAIA-SAGES-FIX2-2026-08-17.md`) : Macro → `response_format`
+  json_schema complet + max_tokens 1500 ; Technique & Mémoire → `reasoning_effort:"low"` + max_tokens 2000.
+  Rappel : valider par le BODY (status 200, `choices[0].message.content`) et `oracle_sages_report`, jamais
+  par le statut vert des modules Make.
+
+- **DIAGNOSTIC CRITIQUE — 4 Sages muets depuis le 15/08 (modèle Groq décommissionné).** Question de
+  Chachou : « Risque écrit-il ailleurs ? sinon prépare un prompt Maia et vérifie les autres sages. »
+  Traçage complet dans Make + Supabase : Risque n'écrit **nulle part ailleurs**. Il est censé écrire
+  dans `oracle_sages_report` via le module « 📜 LE SCEAU DES SAGES » (RPC `record_sages`, qui envoie
+  les 5 Sages en base64). Constat base : **depuis le 15/08 12h36, seul Flash y écrit** ; Macro,
+  Technique, Risque, Mémoire ont cessé. Cause racine : ces **4 Sages tournent sur Groq**
+  (`llama-3.3-70b-versatile`), modèle **décommissionné par Groq** (annonce 17/06/2026). Comme
+  `stopOnHttpError=False`, l'erreur passe en silence → réponse sans `choices[]` → contenu vide → le
+  SCEAU n'insère rien pour ces 4 Sages. **Aucun Archimage n'utilise Groq** (JU=Anthropic,
+  SYL=Perplexity, GIL=Mistral) ni Flash (Perplexity `sonar-pro`) — d'où le motif exact observé : ces
+  seuls 4 Sages éteints, tout le reste marche. Conséquence de fond : « Risque dit toujours la même
+  chose » = Risque ne dit **rien** (le Conseil retombe sur des défauts : `market_phase` figé DEFENSIVE,
+  `consensus_level` vide). Le correctif temp 0.3 posé plus tôt est réel mais **inopérant tant que le
+  modèle est mort**. **Fix préparé pour Maia** (`docs/decisions/PROMPT-MAIA-SAGES-GROQ-2026-08-17.md`) :
+  remplacer `"model": "llama-3.3-70b-versatile"` → `"model": "openai/gpt-oss-120b"` (remplacement
+  officiel Groq, compatible OpenAI → mapping `choices[].message.content` inchangé) dans les 4 modules
+  Groq (AURORA BOREALIS / STELLAR NAVIGATOR / IRON SENTINEL / DEEP MEMORY), sans rien toucher d'autre.
+  Leçon d'observabilité : `stopOnHttpError=False` masque les pannes LLM → surveiller les trous dans
+  `oracle_sages_report` comme signal d'alerte.
+
 - **Alchimiste RÉEL (Revolut X) valorisé en direct — même principe que le virtuel.** Le portefeuille
   réel n'était valorisé qu'une fois par jour (`revolut_portfolio_daily`, écrit à 8h par
   `revolut-portfolio-summary`). Deux vues **100 % lecture** `v_alc_reel_live_positions` /
