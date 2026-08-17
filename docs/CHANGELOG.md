@@ -59,6 +59,25 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   peut plus ACHETER d'ETF, **SYL** plus d'action individuelle ; **GIL EXEMPTÉ** (univers large). Ventes
   libres. NB : paper. `oracle_positions_live` sera nettoyé après exécution (réconciliation Make ou
   manuelle).
+- **Alchimiste virtuel : bug de simulation corrigé (le `sell` était shorté).** Constat de Chachou : le
+  virtuel affichait des résultats « pourris » (WR 33 %, cumul **−10,5 %**). Cause trouvée dans
+  `alc_rebuild_virtual` : il modélisait chaque **vente comme l'ouverture d'un SHORT** (tp=prix×0.95,
+  sl=prix×1.04, pnl=1−close/entrée). Or l'Alchimiste est **SPOT** (Revolut X, pas de short) : un `sell`
+  = vente d'un actif détenu pour prendre son profit. Conséquence : toute vente-profit correcte était
+  comptée en perte dès que le prix remontait. **~90 % du −10,5 % venait de 10 ventes de coins hérités
+  shortées à tort.** Correctif (A+B) : **modèle SPOT FIFO** — un BUY ouvre un lot long ; un SELL clôture
+  le lot d'achat le plus ancien (FIFO) et réalise le vrai gain spot ; une vente sans achat virtuel
+  correspondant (coin hérité) = `VENTE_LEGACY`, **hors P&L**. Vues `v_alc_virtuel_jour/_resume` mises à
+  jour (ne comptent que `pnl_pct IS NOT NULL`). Après rejeu : **3 trades scorables**, WR 33 %, cumul
+  −9,7 % — dominé par **UN** mauvais achat (TRU micro-cap **−13 %**, ce que son prompt déconseille
+  justement), AVAX +4,6 % gagnant, reste ~neutre. Le virtuel n'était donc pas « idiot » : c'était le
+  simulateur qui mesurait faux. DDL : `supabase/schema/10_alc_virtuel_spot_fix.sql`.
+- **Diagnostic Alchimiste réel : désarmé (kill_switch OFF), pas « catastrophe ».** Vérifié : le prompt
+  actuel (maj 16/08) est sain (déconseille micro-caps, exige poudre sèche, TP/SL corrects, spot only,
+  reçoit CTX+SAGES+AVIS_GIL). L'exécuteur `alc-auto` n'arme QUE si `kill_switch='on'` — il est à `OFF`
+  → **0 trade réel exécuté** (4 mini-ordres le 13/08, dont le TRU 25$ annulé pour illiquidité). Le
+  portefeuille de 49 coins est **hérité/manuel**, son érosion = marché, pas le bot. Armement = décision
+  de Chachou (jamais touché ici).
 - **`sync_alpaca_positions` : purge des positions fermées (fini les zombies).** Cause identifiée du
   nettoyage manuel : la synchro des positions Alpaca (JU/SYL/GIL) ne **supprimait jamais** une position
   fermée — elle la passait juste à `qty=0`+`is_stale` (et encore, après 1 h), laissant des lignes
