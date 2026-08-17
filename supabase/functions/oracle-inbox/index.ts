@@ -1,7 +1,8 @@
-// oracle-inbox v16 — canal Chachou <-> robot.
+// oracle-inbox v17 — canal Chachou <-> robot.
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
 //         sharpe, contexte, fx, gains (v_gains_traders), + alc_virtuel + marees_virtuel (positions forex)
-//         + live_crypto (valorisation crypto en direct 24/7, week-end compris — 100% lecture).
+//         + live_crypto (crypto des Sages en direct 24/7) + alc_reel_live (Alchimiste RÉEL Revolut X
+//         valorisé en direct au dernier cours). Tout en 100% lecture.
 // journal (défaut) : journal (historique étendu), problemes, rappels (pour le calendrier).
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -72,7 +73,12 @@ Deno.serve(async (req) => {
       const lcr = await sb('v_live_crypto_resume?select=archimage,n_crypto,tout_live,dernier_cours,valo_crypto_usd,valo_crypto_eur,pnl_latent_usd&order=valo_crypto_usd.desc')
       const lcp = await sb('v_live_crypto_positions?select=archimage,ticker,qty,prix_entree,prix_actuel,valo_usd,unreal_pct,unreal_usd,live_ts&order=valo_usd.desc')
       const live_crypto = { resume: arr(lcr.body), positions: arr(lcp.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto })
+      // Alchimiste RÉEL (Revolut X, argent réel) valorisé EN DIRECT au dernier cours — même principe que
+      // le virtuel. On revalorise le dernier snapshot revolut_portfolio_daily coin par coin (47/49 + cash).
+      const alr = await sb('v_alc_reel_live_resume?select=*')
+      const alrp = await sb('v_alc_reel_live_positions?select=devise,qty,en_stake,valeur_snapshot_usd,prix_live,est_live,valeur_live_usd&order=valeur_live_usd.desc&limit=20')
+      const alc_reel_live = { resume: (arr(alr.body)[0] || null), positions: arr(alrp.body) }
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')

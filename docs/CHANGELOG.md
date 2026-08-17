@@ -10,6 +10,28 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **Alchimiste RÉEL (Revolut X) valorisé en direct — même principe que le virtuel.** Le portefeuille
+  réel n'était valorisé qu'une fois par jour (`revolut_portfolio_daily`, écrit à 8h par
+  `revolut-portfolio-summary`). Deux vues **100 % lecture** `v_alc_reel_live_positions` /
+  `v_alc_reel_live_resume` reprennent le dernier snapshot (quantités par coin dans `detail`) et
+  revalorisent chaque ligne au dernier cours de `price_history` (alimenté 24/7). Couverture **47/49
+  coins + 2 cash ≈ 100 %**. Exposé par `oracle-inbox` **v17** (`suivi.alc_reel_live`) + sous-bloc
+  console « 🜍 Alchimiste réel — Revolut X » dans la section « Crypto en direct » (valeur live, en €,
+  écart depuis 8h, lignes live). Aucun ordre, aucune écriture, ne touche NI au kill-switch NI au
+  dry_run. NB : le virtuel était **déjà** live (`v_alc_virtuel_positions` via `v_dernier_prix`).
+  DDL : `supabase/schema/09_alc_reel_live.sql`.
+- **Analyse : SYL détient de la crypto hors de sa spécialité (à solder).** Constat de Chachou : SYL
+  (« Macro internationale / paniers ETF ») porte ~226 k$ de crypto spot (ETH/SOL/LINK/BTC/AVAX/DOGE),
+  qui relève de GIL. Diagnostic (lecture prompt + code) : **positions LEGACY** — tenues **190 runs**
+  sans être touchées, antérieures aux règles de spécialisation. Le prompt SYL **interdit déjà** la
+  crypto (`UNIVERS ASSIGNÉ — ALL_ETF_BASKETS … INTERDIT … Crypto … réservé à GIL`) et `execute-trades`
+  bloque tout **ACHAT** crypto hors GIL (`CRYPTO_EXCLUSIF_GIL`, garde `if(isBuy)`), mais **pas les
+  ventes** → rien ne les solde et le prompt (« ne trade pas hors univers ») dissuade SYL d'en proposer
+  la vente. Aucune validation d'univers côté base ; `is_liquidation`/`iron_sentinel` inertes ;
+  stop-loss réel = seuil live TP 35 % / SL 15 % dans `execute-trades` (le −5 % voulu n'est pas
+  appliqué). **Rappel : SYL est en paper** (pas d'argent réel). Décision de la méthode de soldage en
+  attente de Chachou. → voir plan de session.
+
 - **Console « Crypto en direct » (valorisation 24/7, week-end compris).** Constat de Chachou :
   le week-end, sans faire tourner le scénario Make, la console reste figée. Diagnostic : ce ne sont
   **pas les cours** qui gèlent — `price_history` est alimenté H24 par des crons serveur indépendants
