@@ -10,6 +10,21 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **Alchimiste — le dé-stake était DÉJÀ loggé (`alc_destake_reco`) ; diagnostic « aucune reco » = correct.**
+  En cherchant pourquoi le journal `alchimiste_crypte_verdicts` restait vide (module Make 20024 n'a pas
+  écrit — la RPC `log_alc_verdict` est pourtant OK, testée en REST 200), découverte que la RPC EXISTANTE
+  `alc_record_propositions` (appelée chaque run par « Le Registre de Cristal ») écrit déjà le dé-stake dans
+  **`alc_destake_reco`** (devise, apy, délai, verdict, raison). Preuve par les données : run 20:12 (pré-fix)
+  = raisons « tables encodées vides / données absentes » (aveugle) ; run 22:00 (post-fix) = 7 coins évalués,
+  **verdict GARDER pour tous**, plus aucune mention d'aveuglement → « aucune reco de dé-stake » = « tout
+  garder staké » = CORRECT. **Réserve** : les valeurs APY/délai de son raisonnement au 22:00 restent estimées
+  (TON 5% vs réel 17.67% ; TRX 3j vs réel 14j) → les CHIFFRES staking ne lui parviennent probablement pas
+  encore (mapping `[1]`), même s'il n'est plus totalement aveugle (prix OK). Pas urgent (APY réels plus élevés
+  → GARDER encore plus justifié), fix Make à préparer. **Vigie** : sonde « Alchimiste verdict » repointée sur
+  `alc_destake_reco` (fiable), test d'aveuglement scopé au **dernier batch** uniquement (un run pré-fix dans
+  la fenêtre donnait un faux positif PANNE, corrigé → OK). `alchimiste_crypte_verdicts`/`log_alc_verdict`
+  conservés (le module 20024 est redondant avec `alc_destake_reco` ; il peut être retiré).
+
 - **LA VIGIE — 2 sondes ajoutées pour « ce genre de problème » (aveuglement Alchimiste).** À la demande de
   Chachou, la Vigie surveille désormais 13 composants (au lieu de 11). (1) **Alchimiste verdict** : lit le
   dernier verdict loggué (`alchimiste_crypte_verdicts`) — PANNE si `parse_ok=false` (sortie illisible) ou si
