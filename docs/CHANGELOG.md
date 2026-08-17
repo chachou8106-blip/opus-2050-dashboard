@@ -36,6 +36,18 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   libres** (débouclage). **Rappel : SYL est en paper.** ⚠️ Reste ouvert (hors sujet ici) : le bug du
   stop DB −5 % non appliqué (seul le seuil live TP 35 % / SL 15 % agit).
 
+- **Audit spécialité du collège + correctif GIL (revert verrou).** Contrôle des 3 comptes Alpaca :
+  drift hors-univers **systémique**. **GIL** : ne détient quasi **aucune crypto** ($0,03) mais un gros
+  livre actions/ETF (~169 k$ net, brut >1 M$ : MSTR short 441 k$, XLU, TLT, TQQQ short…). Analyse
+  legacy-vs-prompt : **ce n'est PAS du legacy** — le **prompt actuel** de GIL est
+  `CRYPTO_TACTICAL_DERIVATIVES` et l'autorise explicitement (proxies MSTR/COIN/BITO, ETF tactiques
+  SQQQ/TQQQ/UPRO, vol VXX/UVXY, défensifs XLU/XLP, shorts contrarian vs JU/SYL) ; ses ordres récents
+  (10-14/08) sont MSTR/TQQQ/XLU, 0 crypto. **Décision de Chachou : garder ce rôle large.** →
+  **`execute-trades` v36 : REVERT du volet « GIL crypto-only » de v35** (qui bloquait à tort ses
+  instruments). On CONSERVE l'interdiction de crypto pour les non-GIL (déjà en v34). **JU/SYL** : leurs
+  prompts, eux, **interdisent** le hors-univers (SYL : pas de single stocks ; JU : pas d'ETF) → leurs
+  débordements (NVDA/AMD chez SYL, XLU short chez JU) sont à analyser séparément (legacy vs
+  désobéissance) avant tout soldage. Analyse en cours.
 - **Console « Crypto en direct » (valorisation 24/7, week-end compris).** Constat de Chachou :
   le week-end, sans faire tourner le scénario Make, la console reste figée. Diagnostic : ce ne sont
   **pas les cours** qui gèlent — `price_history` est alimenté H24 par des crons serveur indépendants
