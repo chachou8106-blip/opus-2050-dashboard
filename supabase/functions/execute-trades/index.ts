@@ -1,8 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-// v35 : VERROU UNIVERS — la crypto est le domaine EXCLUSIF de GIL, dans les deux sens (non-GIL ne peut
-//       pas ACHETER de crypto ; GIL ne peut ACHETER/shorter que de la crypto, plus aucune action/ETF).
-//       Les VENTES restent libres (débouclage d'un héritage). Empêche toute récidive du type "SYL crypto".
+// v36 : REVERT du volet "GIL crypto-only" de v35 — le prompt réel de GIL est CRYPTO_TACTICAL_DERIVATIVES
+//       (proxies MSTR/COIN, ETF tactiques SQQQ/TQQQ, défensifs XLU/XLP, shorts contrarian) : GIL DOIT
+//       pouvoir trader ces instruments. On CONSERVE l'interdiction de crypto pour les non-GIL (déjà en v34).
 // v34 : garde anti-double-vente — une vente est ignorée si un ordre est déjà ouvert sur le même ticker
 //       (JU revendait des positions déjà verrouillées par un ordre en attente -> rejets 'insufficient qty available')
 // v33 : (1) découpage des gros ordres en tranches <= 190k$ (2) garde anti-poussière (3) run_id fallback Paris
@@ -279,16 +279,14 @@ serve(async (req) => {
       if (!isBuy && pending.has(sym)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'sell_blocked_pending_order' }); continue }
 
       if (isBuy) {
-        // VERROU UNIVERS (17/08) : la crypto est le domaine EXCLUSIF de GIL, dans les DEUX sens.
-        const estCrypto = isCryptoT || CRYPTO_EXCLUSIF_GIL.includes(sym)
-        // (a) un archimage non-GIL ne peut PAS ouvrir de crypto (empêche que SYL/JU en rachequièrent).
-        if (archUpper !== 'GIL' && estCrypto) {
+        // Crypto = domaine EXCLUSIF de GIL : un non-GIL ne peut pas en ACHETER (empêche que SYL/JU en
+        // rachètent). GIL garde son univers LARGE (CRYPTO_TACTICAL_DERIVATIVES : proxies MSTR/COIN, ETF
+        // tactiques SQQQ/TQQQ, shorts contrarian) — on ne le restreint PAS (cf. son prompt réel).
+        if (archUpper !== 'GIL' && (isCryptoT || CRYPTO_EXCLUSIF_GIL.includes(sym))) {
           skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_crypto_reserve_gil' }); continue
         }
-        // (b) GIL ne trade QUE de la crypto : plus aucun achat d'action/ETF (remplace l'ancienne
-        //     restriction limitée à SPY/QQQ). Les VENTES restent libres (débouclage d'un héritage).
-        if (archUpper === 'GIL' && !estCrypto) {
-          skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_gil_crypto_seulement' }); continue
+        if (archUpper === 'GIL' && INTERDIT_GIL.includes(sym)) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_spy_qqq_interdit_gil' }); continue
         }
       }
 
@@ -301,10 +299,9 @@ serve(async (req) => {
       }
 
       if (!isBuy && t.intent === 'short') {
-        // VERROU UNIVERS (17/08) : GIL ne trade que de la crypto (qui ne se short pas) → aucun short
-        //     d'action/ETF pour GIL. (Débouclage d'une position détenue = branche vente ci-dessus.)
-        if (archUpper === 'GIL') {
-          skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_gil_crypto_seulement' }); continue
+        // GIL peut shorter (rôle contrarian), sauf SPY/QQQ en direct (garde historique).
+        if (archUpper === 'GIL' && INTERDIT_GIL.includes(sym)) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_spy_qqq_interdit_gil' }); continue
         }
       }
 
