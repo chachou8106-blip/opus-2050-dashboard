@@ -20,17 +20,21 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   écart depuis 8h, lignes live). Aucun ordre, aucune écriture, ne touche NI au kill-switch NI au
   dry_run. NB : le virtuel était **déjà** live (`v_alc_virtuel_positions` via `v_dernier_prix`).
   DDL : `supabase/schema/09_alc_reel_live.sql`.
-- **Analyse : SYL détient de la crypto hors de sa spécialité (à solder).** Constat de Chachou : SYL
-  (« Macro internationale / paniers ETF ») porte ~226 k$ de crypto spot (ETH/SOL/LINK/BTC/AVAX/DOGE),
+- **SYL — soldage de la crypto hors univers (FAIT) + verrou anti-récidive.** Constat de Chachou : SYL
+  (« Macro internationale / paniers ETF ») portait ~226 k$ de crypto spot (ETH/SOL/LINK/BTC/AVAX/DOGE),
   qui relève de GIL. Diagnostic (lecture prompt + code) : **positions LEGACY** — tenues **190 runs**
-  sans être touchées, antérieures aux règles de spécialisation. Le prompt SYL **interdit déjà** la
-  crypto (`UNIVERS ASSIGNÉ — ALL_ETF_BASKETS … INTERDIT … Crypto … réservé à GIL`) et `execute-trades`
-  bloque tout **ACHAT** crypto hors GIL (`CRYPTO_EXCLUSIF_GIL`, garde `if(isBuy)`), mais **pas les
-  ventes** → rien ne les solde et le prompt (« ne trade pas hors univers ») dissuade SYL d'en proposer
-  la vente. Aucune validation d'univers côté base ; `is_liquidation`/`iron_sentinel` inertes ;
-  stop-loss réel = seuil live TP 35 % / SL 15 % dans `execute-trades` (le −5 % voulu n'est pas
-  appliqué). **Rappel : SYL est en paper** (pas d'argent réel). Décision de la méthode de soldage en
-  attente de Chachou. → voir plan de session.
+  sans être touchées, antérieures aux règles de spécialisation. Le prompt SYL **interdisait déjà** la
+  crypto et `execute-trades` bloquait tout **ACHAT** crypto hors GIL (`CRYPTO_EXCLUSIF_GIL`, garde
+  `if(isBuy)`), mais **pas les ventes** → rien ne les soldait et le prompt (« ne trade pas hors
+  univers ») dissuadait SYL d'en proposer la vente. **Action (17/08, sur décision de Chachou) :**
+  **liquidation immédiate** des 6 lignes via l'API Alpaca (`DELETE /v2/positions/{symbol}` par pg_net,
+  chirurgical — n'a touché qu'elles, pas d'effet de bord de `execute-trades`). Résultat : **0 crypto
+  restante** chez SYL (31 positions ETF/actions), produit repassé en cash USD ; lignes mortes purgées
+  de `oracle_positions_live`. **Verrou durable** : `execute-trades` **v35** — la crypto est le domaine
+  **EXCLUSIF de GIL dans les deux sens** (non-GIL ne peut plus ACHETER de crypto ; GIL ne peut
+  ACHETER/shorter QUE de la crypto, remplace l'ancienne restriction SPY/QQQ). Les **ventes restent
+  libres** (débouclage). **Rappel : SYL est en paper.** ⚠️ Reste ouvert (hors sujet ici) : le bug du
+  stop DB −5 % non appliqué (seul le seuil live TP 35 % / SL 15 % agit).
 
 - **Console « Crypto en direct » (valorisation 24/7, week-end compris).** Constat de Chachou :
   le week-end, sans faire tourner le scénario Make, la console reste figée. Diagnostic : ce ne sont
