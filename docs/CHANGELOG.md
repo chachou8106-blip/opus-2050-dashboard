@@ -59,6 +59,16 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   peut plus ACHETER d'ETF, **SYL** plus d'action individuelle ; **GIL EXEMPTÉ** (univers large). Ventes
   libres. NB : paper. `oracle_positions_live` sera nettoyé après exécution (réconciliation Make ou
   manuelle).
+- **Contrôle final du soldage + base nettoyée + fiches console corrigées.** À l'ouverture US, les 27
+  ordres se sont exécutés : **JU = 100 % actions** (0 ETF), **SYL = 100 % ETF** (0 action, 0 crypto),
+  **GIL** inchangé (rôle large). Bonus : annulé un **ordre XRP/USD (crypto) périmé** qui traînait sur
+  SYL depuis le 07/06 (aurait pu réintroduire de la crypto). `oracle_positions_live` nettoyé (18 lignes
+  JU + 9 SYL + résidus périmés) → base alignée sur la réalité. **Console corrigée** (les descriptions
+  ne collaient plus) : SYL « Macro Internationale » → **« Paniers ETF »** ; GIL « Crypto Tactique » →
+  **« Tactique Contrarian »** (univers large : crypto + proxies + couvertures actions/ETF à contre-pied) ;
+  JU précisé « actions individuelles » ; Alchimiste précisé « au comptant, argent réel » ; « Le concept »
+  réécrit (4 spécialistes + 1 contrarian). Modèle final : **JU actions · SYL ETF · Alchimiste crypto
+  réelle · Marées forex · GIL polyvalent contrarian**.
 - **Console « Crypto en direct » (valorisation 24/7, week-end compris).** Constat de Chachou :
   le week-end, sans faire tourner le scénario Make, la console reste figée. Diagnostic : ce ne sont
   **pas les cours** qui gèlent — `price_history` est alimenté H24 par des crons serveur indépendants

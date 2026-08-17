@@ -119,7 +119,7 @@
   </div>
 
   <h2>Le concept</h2>
-  <p class="lead">AETHER ne mise pas sur une seule méthode. Il fait travailler ensemble <b class="hl">cinq stratégies spécialisées</b>, chacune experte d'un marché — crypto, actions, devises, macro-économie. Un <b class="hl">moteur central</b> mesure leurs résultats en continu et déplace le capital vers celles qui performent.</p>
+  <p class="lead">AETHER ne mise pas sur une seule méthode. Il fait travailler ensemble <b class="hl">cinq stratégies</b> : quatre <b class="hl">spécialistes</b> — actions US individuelles (JU), paniers ETF (SYL), crypto au comptant (l'Alchimiste, en argent réel) et devises/forex (Marées) — plus une stratégie <b class="hl">tactique contrarian</b> (GIL) à l'univers large qui prend le contre-pied pour couvrir l'ensemble. Un <b class="hl">moteur central</b> mesure leurs résultats en continu et déplace le capital vers celles qui performent.</p>
   <p>Chaque stratégie est pilotée par une IA qui analyse les marchés en temps réel, décide, puis <b class="hl">apprend de ses résultats</b> : elle archive ses erreurs et ajuste ses réglages sans intervention humaine. Chaque position est encadrée par des règles de risque strictes. Le système est <b class="hl">en validation depuis juin 2026</b> ; la stratégie crypto est la première à passer en capital réel.</p>
 
   <h2>Les stratégies</h2>
@@ -267,13 +267,13 @@ const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 const NAMES={CRYPTE_JU:"Alchimiste",ALCHIMISTE:"Alchimiste",JU:"JU",SYL:"SYL",GIL:"GIL",MAREES:"Marées"};
 const DESC={
  CRYPTE_JU:{titre:"Alchimiste",marche:"Cryptomonnaies — au comptant",badge:"reel",statut:"Réel imminent",curve:"Valeur RÉELLE de ton portefeuille Revolut X (argent réel — dates & montants réels)",
-   texte:"Analyse en continu des dizaines de cryptomonnaies et prend des positions de court terme. Première stratégie du système à engager du capital réel, sur un périmètre restreint et sous contrôles de risque stricts."},
- SYL:{titre:"Macro Internationale",marche:"Tendances économiques mondiales",badge:"sim",statut:"Simulation",curve:"Évolution du capital (simulation)",
-   texte:"Se positionne sur les grands mouvements de marché à partir de l'actualité économique et géopolitique mondiale. La stratégie la plus solide du portefeuille à ce jour."},
- JU:{titre:"Actions US",marche:"Grandes capitalisations américaines",badge:"sim",statut:"Simulation",curve:"Évolution du capital (simulation)",
-   texte:"Investit sur les grandes valeurs américaines à partir de signaux de marché. Approche disciplinée, orientée tendance, avec gestion systématique du risque."},
- GIL:{titre:"Crypto Tactique",marche:"Cryptomonnaies — approche tactique",badge:"sim",statut:"Simulation",curve:"Évolution du capital (simulation)",
-   texte:"Approche opportuniste sur le marché crypto, pensée pour diversifier les sources de performance. Le drawdown le plus faible du portefeuille."},
+   texte:"Analyse en continu des dizaines de cryptomonnaies et prend des positions de court terme, AU COMPTANT (pas de levier, pas de vente à découvert). Seule stratégie du système à engager de l'argent RÉEL (Revolut X), sur un périmètre restreint et sous contrôles de risque stricts."},
+ SYL:{titre:"Paniers ETF",marche:"ETF — secteurs, international, macro, obligations",badge:"sim",statut:"Simulation",curve:"Évolution du capital (simulation)",
+   texte:"Ne trade QUE des paniers (ETF) : secteurs US, zones internationales, matières premières, obligations et défensifs — jamais d'action individuelle ni de crypto. Joue les grands mouvements macro (à la hausse comme à la baisse). La stratégie la plus solide du portefeuille à ce jour."},
+ JU:{titre:"Actions US",marche:"Actions individuelles — grandes valeurs US",badge:"sim",statut:"Simulation",curve:"Évolution du capital (simulation)",
+   texte:"Sélectionne des ACTIONS individuelles américaines (grandes valeurs liquides) — pas d'ETF, pas de crypto. Approche disciplinée, orientée tendance, avec gestion systématique du risque."},
+ GIL:{titre:"Tactique Contrarian",marche:"Crypto, proxies & couvertures (à contre-pied)",badge:"sim",statut:"Simulation",curve:"Évolution du capital (simulation)",
+   texte:"Le franc-tireur du collège, à l'univers volontairement LARGE : crypto, proxies boursiers (MSTR, COIN), ETF tactiques/à levier et positions vendeuses d'indices — souvent à CONTRE-PIED de JU et SYL pour couvrir le portefeuille. C'est cette décorrélation qui lui donne le drawdown le plus faible."},
  MAREES:{titre:"Devises",marche:"Marché des changes (forex)",badge:"val",statut:"Validation précoce",curve:"Évolution (simulation)",
    texte:"Opère sur les principales paires de devises. Encore en validation précoce : peu de recul, résultats à confirmer dans la durée."}
 };
