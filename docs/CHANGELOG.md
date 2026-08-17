@@ -59,6 +59,15 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   peut plus ACHETER d'ETF, **SYL** plus d'action individuelle ; **GIL EXEMPTÉ** (univers large). Ventes
   libres. NB : paper. `oracle_positions_live` sera nettoyé après exécution (réconciliation Make ou
   manuelle).
+- **Prompt Maia rédigé — 3 correctifs (Alchimiste aveugle au Conseil + Sages Flash/Risque figés).**
+  Vérifié mot à mot dans le Blueprint : (1) l'Alchimiste reçoit **CTX / SAGES / avis de GIL en base64**
+  (le modèle ne les décode pas → aveugle au Conseil), alors que les 3 archimages les reçoivent en clair
+  (`CTX={{CTX}}|SAGES={{SAGES}}`) → correctif = passer l'Alchimiste en clair comme eux (zéro risque). (2)
+  **Sage Risque (IRON SENTINEL)** bloqué sur MEDIUM : seuils `risk_level` qui se chevauchent (LOW<1% /
+  MEDIUM 0,3-2% / HIGH≥0,8% / EXTREME≥1,5%) + `temperature=0.01` déterministe + VIX stable ~17. (3)
+  **Sage Flash (QUANTUM PULSE)** figé par `temperature=0.01`. Prompt Maia (bornes exclusives, prédiction
+  du move via momentum/catalyseurs, temp 0.01→0.3) : `docs/decisions/PROMPT-MAIA-CORRECTIFS-2026-08-17.md`.
+  À coller à Maia (aucune modif Make directe de notre côté).
 - **Alchimiste virtuel : bug de simulation corrigé (le `sell` était shorté).** Constat de Chachou : le
   virtuel affichait des résultats « pourris » (WR 33 %, cumul **−10,5 %**). Cause trouvée dans
   `alc_rebuild_virtual` : il modélisait chaque **vente comme l'ouverture d'un SHORT** (tp=prix×0.95,
