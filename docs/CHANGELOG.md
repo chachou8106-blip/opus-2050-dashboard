@@ -10,6 +10,19 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **Alchimiste « ne voit ni prix ni staking » — bug de mapping Make (pas les données).** Chachou constate
+  que l'Alchimiste écrit « faute de données de prix, d'APY et de délais (tables encodées vides) ». Vérifié
+  (pas supposé) : les données EXISTENT — `revolut-x-prices` répond **HTTP 200** avec `prix_texte`
+  (BTC/DOGE/XLM/TON/TRU…), et `alc_staking_apy` / `alc_staking_delais` ont **8 lignes** chacune. Cause :
+  les 3 feeds sont mappés `base64(toString(<module>.data))` où `.data` est un OBJET/ARRAY → `toString`
+  rend une chaîne vide → l'Alchimiste décode du vide. Correctif : lui donner les champs TEXTE prêts.
+  Côté Supabase (fait, additif, lecture seule) : 2 vues `v_alc_staking_apy_txt(apy_texte)` /
+  `v_alc_staking_delais_txt(delais_texte)` (chaînes « DEV:val | … »), testées via REST (200). Côté Make
+  (prompt Maia, `docs/decisions/PROMPT-MAIA-ALCHIMISTE-PRIX-2026-08-17.md`) : 3 fixes — prix
+  `base64(10011.data.prix_texte)`, staking APY/délais repointés sur les vues + mapping `.data[1].<txt>`.
+  `revx-staking-probe`/tables déjà OK ; le CTX/SAGES/AVIS_GIL (autre base64, corrigé le 16-17/08) n'était
+  PAS en cause ici. DDL : `supabase/schema/12_alc_staking_text.sql`.
+
 - **🔭 LA VIGIE — couche de surveillance santé du Collège (pour que la panne muette ne se reproduise plus).**
   Constat de Chachou : aucun tableau de bord n'a signalé que 4 Sages étaient morts pendant 3 jours ni que
   Risque tournait en boucle. Nouvelle couche **100 % Supabase** (`supabase/schema/11_vigie.sql`), sûre
