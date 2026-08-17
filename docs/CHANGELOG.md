@@ -10,6 +10,15 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **RÉSOLU & VÉRIFIÉ EN PROD (run 19:59) — les 5 Sages écrivent enfin tous ensemble.** Après le correctif #2
+  appliqué par Maia (Macro→json_schema+max_tokens 1500 ; Technique & Mémoire→reasoning_effort low+max_tokens
+  2000), le run de 19:59 a inscrit dans `oracle_sages_report` les **5 Sages** simultanément pour la 1re fois
+  depuis le 15/08 : Macro (Perplexity), Technique (Groq gpt-oss-120b), Mémoire (Groq gpt-oss-120b), Flash
+  (Perplexity), Risque (Mistral). Signaux **non figés** : Risque est passé de « VIX 18→MEDIUM » (19:33) à
+  « VIX sous 15→complaisant » (19:59) — il suit réellement le marché ; Mémoire ressort des win rates par
+  archimage (JU 49 / GIL 51 / SYL 54) ; Technique lit le cycle (TROUGH, tech_score 65). Diversification
+  fournisseurs actée : Perplexity ×2, Groq ×2, Mistral ×1 → plus de point de panne unique (cause racine du 15/08).
+
 - **Correctif #2 des Sages (run 19:33 en 400 silencieux).** Après le basculement de fournisseur (via Maia),
   le transport était bon mais 2 Sages renvoyaient un **400 masqué par `stopOnHttpError=false`** (Maia a
   faussement rapporté « success » en lisant le statut vert des modules, pas le body — même piège que le
