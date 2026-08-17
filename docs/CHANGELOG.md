@@ -10,6 +10,26 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **DIAGNOSTIC CRITIQUE — 4 Sages muets depuis le 15/08 (modèle Groq décommissionné).** Question de
+  Chachou : « Risque écrit-il ailleurs ? sinon prépare un prompt Maia et vérifie les autres sages. »
+  Traçage complet dans Make + Supabase : Risque n'écrit **nulle part ailleurs**. Il est censé écrire
+  dans `oracle_sages_report` via le module « 📜 LE SCEAU DES SAGES » (RPC `record_sages`, qui envoie
+  les 5 Sages en base64). Constat base : **depuis le 15/08 12h36, seul Flash y écrit** ; Macro,
+  Technique, Risque, Mémoire ont cessé. Cause racine : ces **4 Sages tournent sur Groq**
+  (`llama-3.3-70b-versatile`), modèle **décommissionné par Groq** (annonce 17/06/2026). Comme
+  `stopOnHttpError=False`, l'erreur passe en silence → réponse sans `choices[]` → contenu vide → le
+  SCEAU n'insère rien pour ces 4 Sages. **Aucun Archimage n'utilise Groq** (JU=Anthropic,
+  SYL=Perplexity, GIL=Mistral) ni Flash (Perplexity `sonar-pro`) — d'où le motif exact observé : ces
+  seuls 4 Sages éteints, tout le reste marche. Conséquence de fond : « Risque dit toujours la même
+  chose » = Risque ne dit **rien** (le Conseil retombe sur des défauts : `market_phase` figé DEFENSIVE,
+  `consensus_level` vide). Le correctif temp 0.3 posé plus tôt est réel mais **inopérant tant que le
+  modèle est mort**. **Fix préparé pour Maia** (`docs/decisions/PROMPT-MAIA-SAGES-GROQ-2026-08-17.md`) :
+  remplacer `"model": "llama-3.3-70b-versatile"` → `"model": "openai/gpt-oss-120b"` (remplacement
+  officiel Groq, compatible OpenAI → mapping `choices[].message.content` inchangé) dans les 4 modules
+  Groq (AURORA BOREALIS / STELLAR NAVIGATOR / IRON SENTINEL / DEEP MEMORY), sans rien toucher d'autre.
+  Leçon d'observabilité : `stopOnHttpError=False` masque les pannes LLM → surveiller les trous dans
+  `oracle_sages_report` comme signal d'alerte.
+
 - **Alchimiste RÉEL (Revolut X) valorisé en direct — même principe que le virtuel.** Le portefeuille
   réel n'était valorisé qu'une fois par jour (`revolut_portfolio_daily`, écrit à 8h par
   `revolut-portfolio-summary`). Deux vues **100 % lecture** `v_alc_reel_live_positions` /
