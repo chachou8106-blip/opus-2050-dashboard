@@ -10,6 +10,15 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **LA VIGIE — 2 sondes ajoutées pour « ce genre de problème » (aveuglement Alchimiste).** À la demande de
+  Chachou, la Vigie surveille désormais 13 composants (au lieu de 11). (1) **Alchimiste verdict** : lit le
+  dernier verdict loggué (`alchimiste_crypte_verdicts`) — PANNE si `parse_ok=false` (sortie illisible) ou si
+  le commentaire contient des marqueurs d'aveuglement (« faute de données », « encodées vides », « données
+  manquantes », « faute de prix/APY »…) ; VEILLE tant que le module Make de log n'est pas ajouté (pas de
+  fausse alerte). (2) **Données staking** (catégorie Source) : vérifie en direct que `v_alc_staking_apy_txt`
+  / `v_alc_staking_delais_txt` renvoient du contenu → PANNE immédiate si une table se vide. Ces PANNE
+  déclenchent aussi l'alerte Discord existante. `supabase/schema/11_vigie.sql` mis à jour.
+
 - **Journal du verdict de l'Alchimiste (comble l'angle mort du raisonnement).** Constat : le `commentaire`
   et la liste `destake_recommande` de l'Alchimiste n'étaient stockés nulle part → impossible de savoir
   après coup POURQUOI il dé-stake ou non (ex. « aucune reco de dé-stake » ce soir = verdict légitime

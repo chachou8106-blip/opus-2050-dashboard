@@ -43,6 +43,7 @@ declare
   -- (< 12h), sinon un composant qui vient de « ressusciter » après une panne serait
   -- faussement noté FIGÉ (ses vieilles lignes d'avant-panne fausseraient la variance).
   v_res   jsonb;
+  v_pok boolean; v_comm text; v_vts timestamptz; v_apy text; v_del text;  -- sondes Alchimiste/staking
   -- clés de stagnation par Sage
   sages   text[][] := array[
       array['Macro','macro_regime'], array['Technique','cycle_phase'],
@@ -154,6 +155,38 @@ begin
      case when v_nrows >= k_stag and v_ndist = 1 and v_mints >= now() - interval '12 hours'
           then format('%s sur %s runs', v_run.market_phase, k_stag) else 'varie' end,
      v_run.run_at, v_run.run_at);
+
+  -- Alchimiste — verdict lisible + non-aveugle (via le journal log_alc_verdict ; gris tant qu'inactif)
+  select parse_ok, commentaire, created_at into v_pok, v_comm, v_vts
+  from alchimiste_crypte_verdicts order by created_at desc limit 1;
+  if not found then
+    insert into public.vigie_status(composant, categorie, etat, detail, derniere_sortie, run_auditee)
+    values ('Alchimiste verdict', 'Alchimiste', 'VEILLE', 'journal verdict pas encore actif (module Make a ajouter)', null, v_run.run_at);
+  elsif v_pok is not true then
+    insert into public.vigie_status(composant, categorie, etat, detail, derniere_sortie, run_auditee)
+    values ('Alchimiste verdict', 'Alchimiste', 'PANNE', 'sortie de l Alchimiste illisible (parse KO)', v_vts, v_run.run_at);
+  elsif coalesce(v_comm,'') ilike '%faute de don%' or coalesce(v_comm,'') ilike '%encod%vide%'
+     or coalesce(v_comm,'') ilike '%donn%manquant%' or coalesce(v_comm,'') ilike '%sans donn%'
+     or coalesce(v_comm,'') ilike '%aucune donn%' or coalesce(v_comm,'') ilike '%faute de prix%'
+     or coalesce(v_comm,'') ilike '%faute d%apy%' then
+    insert into public.vigie_status(composant, categorie, etat, detail, derniere_sortie, run_auditee)
+    values ('Alchimiste verdict', 'Alchimiste', 'PANNE', 'se dit AVEUGLE aux donnees (prix/APY/delais)', v_vts, v_run.run_at);
+  else
+    insert into public.vigie_status(composant, categorie, etat, detail, derniere_sortie, run_auditee)
+    values ('Alchimiste verdict', 'Alchimiste', 'OK', 'verdict lisible, donnees percues', v_vts, v_run.run_at);
+  end if;
+
+  -- Sources staking : détection immédiate de « tables vides » (indépendant du run)
+  select apy_texte into v_apy from v_alc_staking_apy_txt;
+  select delais_texte into v_del from v_alc_staking_delais_txt;
+  insert into public.vigie_status(composant, categorie, etat, detail, derniere_sortie, run_auditee)
+  values ('Donnees staking', 'Source',
+     case when coalesce(v_apy,'')='' or coalesce(v_del,'')='' then 'PANNE' else 'OK' end,
+     case when coalesce(v_apy,'')='' and coalesce(v_del,'')='' then 'APY et delais VIDES'
+          when coalesce(v_apy,'')='' then 'table APY vide'
+          when coalesce(v_del,'')='' then 'table delais vide'
+          else 'APY + delais alimentes' end,
+     now(), v_run.run_at);
 
   select jsonb_build_object(
     'scanned', true, 'run_auditee', v_run.run_at, 'veille', v_veille,
