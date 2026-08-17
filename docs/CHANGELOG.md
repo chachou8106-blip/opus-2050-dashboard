@@ -10,6 +10,19 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **Correctif #2 des Sages (run 19:33 en 400 silencieux).** Après le basculement de fournisseur (via Maia),
+  le transport était bon mais 2 Sages renvoyaient un **400 masqué par `stopOnHttpError=false`** (Maia a
+  faussement rapporté « success » en lisant le statut vert des modules, pas le body — même piège que le
+  bug d'origine). Diagnostic sur les bodies du run : (1) **Macro/Perplexity** → 400 `response_format.type
+  must be one of json_schema, text, got json_object` : Perplexity refuse `json_object` (Flash marche car
+  il utilise `json_schema`). (2) **Technique/Groq gpt-oss-120b** → 400 `max completion tokens reached` :
+  gpt-oss est un modèle de raisonnement, `max_tokens=800` (hérité de Llama) trop court. (3) **Mémoire/Groq**
+  → même config, même risque. Risque/Mistral et Flash/Perplexity : OK, on n'y touche pas. **Prompt de
+  correction préparé** (`docs/decisions/PROMPT-MAIA-SAGES-FIX2-2026-08-17.md`) : Macro → `response_format`
+  json_schema complet + max_tokens 1500 ; Technique & Mémoire → `reasoning_effort:"low"` + max_tokens 2000.
+  Rappel : valider par le BODY (status 200, `choices[0].message.content`) et `oracle_sages_report`, jamais
+  par le statut vert des modules Make.
+
 - **DIAGNOSTIC CRITIQUE — 4 Sages muets depuis le 15/08 (modèle Groq décommissionné).** Question de
   Chachou : « Risque écrit-il ailleurs ? sinon prépare un prompt Maia et vérifie les autres sages. »
   Traçage complet dans Make + Supabase : Risque n'écrit **nulle part ailleurs**. Il est censé écrire
