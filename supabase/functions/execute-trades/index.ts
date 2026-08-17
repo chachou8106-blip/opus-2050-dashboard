@@ -1,5 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v37 : VERROU ACTIONS/ETF — chaque archimage reste dans sa voie à l'ACHAT. JU (actions individuelles)
+//       ne peut plus acheter d'ETF ; SYL (paniers ETF) ne peut plus acheter d'action individuelle.
+//       GIL est EXEMPTÉ (son univers CRYPTO_TACTICAL_DERIVATIVES est large : proxies, ETF tactiques,
+//       shorts). Les VENTES restent libres (débouclage). Complète le verrou crypto=GIL de v34.
 // v36 : REVERT du volet "GIL crypto-only" de v35 — le prompt réel de GIL est CRYPTO_TACTICAL_DERIVATIVES
 //       (proxies MSTR/COIN, ETF tactiques SQQQ/TQQQ, défensifs XLU/XLP, shorts contrarian) : GIL DOIT
 //       pouvoir trader ces instruments. On CONSERVE l'interdiction de crypto pour les non-GIL (déjà en v34).
@@ -37,6 +41,13 @@ const DUST_USD_MIN = 1
 
 const CRYPTO_EXCLUSIF_GIL = ['BTCUSD','ETHUSD','SOLUSD','AVAXUSD','LINKUSD','XRPUSD','DOGEUSD','LTCUSD']
 const INTERDIT_GIL = ['SPY','QQQ']
+// Liste ETF de référence (couvre l'univers de SYL + ETF sectoriels/levier/vol usuels). Sert au verrou
+// d'univers : JU ne peut pas ACHETER un de ces ETF ; SYL ne peut acheter QUE ceux-ci (ou crypto=jamais).
+// GIL est exempté du verrou. Un ticker hors de cette liste (et non-crypto) est considéré action individuelle.
+const ETF_REF = ['SPY','QQQ','IWM','DIA','VOO','VTI','XLK','XLF','XLV','XLU','XLE','XLP','XLY','XLI','XLC','XLB','XLRE',
+  'SMH','EEM','EWJ','EFA','VEA','VWO','EWZ','INDA','FXI','VGK','EWG','EWL','GLD','SLV','GDX','TLT','IEF','SHY','BND',
+  'AGG','TIP','PDBC','DBA','USO','UNG','BITO','SCHD','VYM','DVY','IWD','HYG','JNK','LQD','EMB','TQQQ','SQQQ','UPRO',
+  'SPXS','VXX','UVXY','ARKK','XBI','KRE','XRT','ITB']
 
 function normSym(s: string): string { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '') }
 
@@ -279,12 +290,22 @@ serve(async (req) => {
       if (!isBuy && pending.has(sym)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'sell_blocked_pending_order' }); continue }
 
       if (isBuy) {
-        // Crypto = domaine EXCLUSIF de GIL : un non-GIL ne peut pas en ACHETER (empêche que SYL/JU en
-        // rachètent). GIL garde son univers LARGE (CRYPTO_TACTICAL_DERIVATIVES : proxies MSTR/COIN, ETF
-        // tactiques SQQQ/TQQQ, shorts contrarian) — on ne le restreint PAS (cf. son prompt réel).
-        if (archUpper !== 'GIL' && (isCryptoT || CRYPTO_EXCLUSIF_GIL.includes(sym))) {
+        const estCrypto = isCryptoT || CRYPTO_EXCLUSIF_GIL.includes(sym)
+        const estETF = ETF_REF.includes(sym)
+        // Crypto = domaine EXCLUSIF de GIL : un non-GIL ne peut pas en ACHETER.
+        if (archUpper !== 'GIL' && estCrypto) {
           skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_crypto_reserve_gil' }); continue
         }
+        // VERROU ACTIONS/ETF (17/08) — GIL EXEMPTÉ (univers large). Les ventes ne passent pas ici.
+        // JU = actions individuelles : interdit d'ACHETER un ETF (domaine SYL).
+        if (archUpper === 'JU' && estETF) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_etf_reserve_syl' }); continue
+        }
+        // SYL = paniers ETF : interdit d'ACHETER une action individuelle (domaine JU).
+        if (archUpper === 'SYL' && !estETF && !estCrypto) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_action_reserve_ju' }); continue
+        }
+        // GIL : conserve seulement l'interdit historique SPY/QQQ en direct.
         if (archUpper === 'GIL' && INTERDIT_GIL.includes(sym)) {
           skipped.push({ ticker: t.ticker, side: t.side, reason: 'univers_spy_qqq_interdit_gil' }); continue
         }
