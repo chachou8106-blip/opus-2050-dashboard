@@ -1,6 +1,7 @@
-// oracle-inbox v15 — canal Chachou <-> robot.
+// oracle-inbox v16 — canal Chachou <-> robot.
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
-//         sharpe, contexte, fx, gains (v_gains_traders), + alc_virtuel + marees_virtuel (positions forex).
+//         sharpe, contexte, fx, gains (v_gains_traders), + alc_virtuel + marees_virtuel (positions forex)
+//         + live_crypto (valorisation crypto en direct 24/7, week-end compris — 100% lecture).
 // journal (défaut) : journal (historique étendu), problemes, rappels (pour le calendrier).
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
@@ -66,7 +67,12 @@ Deno.serve(async (req) => {
       const mvr = await sb('v_marees_virtuel_resume?select=*')
       const mvp = await sb('v_marees_virtuel_positions?select=paire,side,prix_entree,prix_actuel,unreal_pct,montant,tp_pct,sl_pct,age_h&order=unreal_pct.desc')
       const marees_virtuel = { resume: (arr(mvr.body)[0] || null), positions: arr(mvp.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel })
+      // Valorisation crypto EN DIRECT (24/7, week-end compris) — recalculée à la lecture depuis price_history.
+      // Seule la crypto bouge quand le scénario Make est éteint ; actions/ETF/forex restent au dernier close.
+      const lcr = await sb('v_live_crypto_resume?select=archimage,n_crypto,tout_live,dernier_cours,valo_crypto_usd,valo_crypto_eur,pnl_latent_usd&order=valo_crypto_usd.desc')
+      const lcp = await sb('v_live_crypto_positions?select=archimage,ticker,qty,prix_entree,prix_actuel,valo_usd,unreal_pct,unreal_usd,live_ts&order=valo_usd.desc')
+      const live_crypto = { resume: arr(lcr.body), positions: arr(lcp.body) }
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')

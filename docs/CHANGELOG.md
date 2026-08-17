@@ -8,6 +8,23 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-17
+
+- **Console « Crypto en direct » (valorisation 24/7, week-end compris).** Constat de Chachou :
+  le week-end, sans faire tourner le scénario Make, la console reste figée. Diagnostic : ce ne sont
+  **pas les cours** qui gèlent — `price_history` est alimenté H24 par des crons serveur indépendants
+  de Make (BTC/ETH : 24 bougies/jour samedi ET dimanche). Ce qui gèle, c'est la couche de
+  **valorisation** produite par Make (dashboard, `oracle_performance`), et surtout : les courbes des
+  Sages lisent `oracle_performance` (une écriture **par run**), pas un mark-to-market live. Forex et
+  actions sont, eux, **réellement fermés** le week-end (gel normal). Solution **100 % lecture, sans
+  cron ni écriture** : deux vues `v_live_crypto_positions` / `v_live_crypto_resume` recalculées **à la
+  lecture** depuis le dernier cours (comme le panneau Marées), exposées par `oracle-inbox` v16
+  (`suivi.live_crypto`) + nouvelle section console **« Crypto en direct »**. Aucun ordre, aucune
+  décision, ne touche NI au kill-switch NI au dry_run. Périmètre assumé : **seule la crypto** (la seule
+  classe 24/7) est affichée ; le total de `oracle_positions_live` n'étant pas fiable, il n'est pas
+  exposé. État actuel : SYL porte ~226 k$ de crypto (P&L latent live), GIL/JU = poussière.
+  DDL : `supabase/schema/08_live_crypto.sql`.
+
 ## 2026-08-15
 
 - **Marées — retrait du « contre-pied aveugle » côté base.** Il subsistait DEUX inversions distinctes :
