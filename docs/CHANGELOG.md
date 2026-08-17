@@ -10,6 +10,20 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-17
 
+- **NETTOYAGE des redondances + règle « vérifier avant d'ajouter » (demandée par Chachou).** Chachou signale
+  à juste titre que j'avais ajouté une table (`alchimiste_crypte_verdicts`) + un module Make (20024) + 2 vues
+  staking alors que TOUT existait déjà. Correctifs : (1) **règle inscrite** dans `CLAUDE.md` — toujours
+  vérifier l'existant (Supabase + blueprint Make) avant d'affirmer une absence ou de créer un objet ; ne pas
+  faire ajouter de module Make sans avoir confirmé qu'aucun existant ne fait le travail. (2) **Supprimé** :
+  table `alchimiste_crypte_verdicts`, fonction `log_alc_verdict`, vue `v_alc_verdict_dernier`, fichiers
+  `13_alc_verdict_log.sql` + prompt de log (le dé-stake est déjà journalisé dans `alc_destake_reco` par la
+  RPC existante `alc_record_propositions`). Module Make **20024 « LE VERDICT SCELLÉ » à retirer** (prompt Maia).
+  (3) **Staking reconnecté sur l'existant** : les 2 vues texte projettent désormais la vue EXISTANTE
+  `v_staking_point` (déjà apy_pct + unbonding_jours + coût, coins détenus). Fix mapping VÉRIFIÉ (REST 200) :
+  modules 20022/20023 avec en-tête `Accept: application/vnd.pgrst.object+json` → mapping Alchimiste
+  `20022.data.delais_texte` / `20023.data.apy_texte` (sans `[1]`, qui ne se résolvait pas). Objet renvoyé :
+  `{"delais_texte":"ATOM:21j | … | TON:2j | …"}`. `supabase/schema/12_alc_staking_text.sql` mis à jour.
+
 - **Alchimiste — le dé-stake était DÉJÀ loggé (`alc_destake_reco`) ; diagnostic « aucune reco » = correct.**
   En cherchant pourquoi le journal `alchimiste_crypte_verdicts` restait vide (module Make 20024 n'a pas
   écrit — la RPC `log_alc_verdict` est pourtant OK, testée en REST 200), découverte que la RPC EXISTANTE
