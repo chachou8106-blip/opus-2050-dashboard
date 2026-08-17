@@ -118,6 +118,8 @@
     <div class="note" id="bandnote"></div>
   </div>
 
+  <div id="vigieWrap" style="margin:6px 0 4px"></div>
+
   <h2>Le concept</h2>
   <p class="lead">AETHER ne mise pas sur une seule méthode. Il fait travailler ensemble <b class="hl">cinq stratégies</b> : quatre <b class="hl">spécialistes</b> — actions US individuelles (JU), paniers ETF (SYL), crypto au comptant (l'Alchimiste, en argent réel) et devises/forex (Marées) — plus une stratégie <b class="hl">tactique contrarian</b> (GIL) à l'univers large qui prend le contre-pied pour couvrir l'ensemble. Un <b class="hl">moteur central</b> mesure leurs résultats en continu et déplace le capital vers celles qui performent.</p>
   <p>Chaque stratégie est pilotée par une IA qui analyse les marchés en temps réel, décide, puis <b class="hl">apprend de ses résultats</b> : elle archive ses erreurs et ajuste ses réglages sans intervention humaine. Chaque position est encadrée par des règles de risque strictes. Le système est <b class="hl">en validation depuis juin 2026</b> ; la stratégie crypto est la première à passer en capital réel.</p>
@@ -286,7 +288,7 @@ const BENCH=[
  {k:"BNB-USD",n:"BNB",c:"#f2b84b"},{k:"XRP-USD",n:"XRP",c:"#a99fc4"}];
 const STRAT_SERIES=[{k:"OPUS",n:"AETHER",c:"#a06bff"},{k:"SYL",n:"SYL",c:"#3ecf8e"},{k:"JU",n:"JU",c:"#6ea0ff"},{k:"GIL",n:"GIL",c:"#f2b84b"},{k:"ALCHIMISTE",n:"Alchimiste",c:"#e5709b"},{k:"MAREES",n:"Marées",c:"#2bb8a3"}];
 const SEL=new Set(["OPUS","SPY"]);
-let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[],MARV={},LIVECRYPTO={},ALCREEL={};
+let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[],MARV={},LIVECRYPTO={},ALCREEL={},VIGIE={};
 function serieColor(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.c;const b=BENCH.find(x=>x.k===k);return b?b.c:"#a99fc4";}
 function serieName(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.n;const b=BENCH.find(x=>x.k===k);return b?b.n:k;}
 const ACC="#a06bff";
@@ -506,6 +508,30 @@ function renderAlcReel(){
       pt.innerHTML=h+"</tbody>";}
   }
 }
+/* 🔭 LA VIGIE — bannière santé du Collège (PANNE = ne produit plus ; FIGÉ = même valeur en boucle) */
+function renderVigie(){
+  const w=document.getElementById("vigieWrap");if(!w)return;
+  const r=VIGIE.resume||null,det=(VIGIE.detail||[]);
+  if(!r){w.innerHTML="";return;}
+  const NIV={VERT:["#12b76a","rgba(18,183,106,.10)","Collège opérationnel"],ORANGE:["#e08a00","rgba(224,138,0,.10)","À surveiller"],ROUGE:["#e5484d","rgba(229,72,77,.12)","Panne détectée"],VEILLE:["#7c8698","rgba(124,134,152,.10)","En veille (scénario coupé)"],INCONNU:["#7c8698","rgba(124,134,152,.10)","État inconnu"]};
+  const n=NIV[r.niveau]||NIV.INCONNU;
+  const badge=e=>{const m=({OK:["#12b76a","OK"],PANNE:["#e5484d","PANNE"],FIGE:["#e08a00","FIGÉ"],MUET:["#e08a00","MUET"],VEILLE:["#7c8698","VEILLE"]})[e]||["#7c8698",e];return '<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;color:#fff;background:'+m[0]+'">'+m[1]+'</span>';};
+  const run=r.run_auditee?new Date(r.run_auditee).toLocaleString("fr-FR",{weekday:"short",hour:"2-digit",minute:"2-digit"}):"—";
+  const openAttr=(r.niveau==="ROUGE"||r.niveau==="ORANGE")?" open":"";
+  let h='<details'+openAttr+' style="border:1px solid '+n[0]+'55;background:'+n[1]+';border-radius:12px;padding:10px 14px">';
+  h+='<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+  h+='<span style="width:10px;height:10px;border-radius:50%;background:'+n[0]+';display:inline-block;flex:0 0 auto"></span>';
+  h+='<b style="color:'+n[0]+'">🔭 La Vigie — '+n[2]+'</b>';
+  h+='<span class="mini" style="opacity:.85">'+r.nb_ok+'/'+r.nb_total+' OK'+(r.nb_panne?' · '+r.nb_panne+' panne':'')+(r.nb_alerte?' · '+r.nb_alerte+' à surveiller':'')+'</span>';
+  if(r.problemes)h+='<span class="mini" style="color:'+n[0]+'">— '+esc(r.problemes)+'</span>';
+  h+='<span class="mini" style="margin-left:auto;opacity:.6">dernier run '+run+'</span>';
+  h+='</summary>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;margin-top:10px">';
+  det.forEach(c=>{h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 9px;background:rgba(128,136,150,.07);border:1px solid rgba(128,136,150,.22);border-radius:8px">'+badge(c.etat)+'<span style="flex:1;min-width:0"><b style="font-size:13px">'+esc(c.composant)+'</b><div class="mini" style="opacity:.7">'+esc(c.detail||"")+'</div></span></div>';});
+  h+='</div><div class="mini" style="opacity:.6;margin-top:8px">Surveille les 5 Sages, 3 Archimages, 2 Traders spécialistes + le signal de phase. Rafraîchi toutes les 15 min. « Panne » = le composant n\'a rien produit au dernier run (modèle mort, crédit API vide, etc.). « Figé » = même valeur sur 6 runs.</div>';
+  h+='</details>';
+  w.innerHTML=h;
+}
 function renderStats(){
   const a=AVANCE["OPUS"]||{},s=STATS["OPUS"]||{},sh=SHARPE["OPUS"];
   const cs=(CMP["OPUS"]||[]).slice().sort((x,y)=>x.j<y.j?-1:1);
@@ -615,6 +641,7 @@ async function loadSuivi(){
     MARV=d.marees_virtuel||{};renderMareesVirt();
     LIVECRYPTO=d.live_crypto||{};renderLiveCrypto();
     ALCREEL=d.alc_reel_live||{};renderAlcReel();
+    VIGIE=d.vigie||{};renderVigie();
     const fi=document.getElementById("alcFee");if(fi&&!fi._w){fi._w=1;fi.addEventListener("input",renderAlcVirt);}
     const bys={};(d.contexte||[]).forEach(r=>{(bys[r.section]=bys[r.section]||[]).push(r);});
     let ch="";Object.keys(bys).forEach(s=>{ch+='<div style="margin:8px 0"><div class="clabel" style="color:var(--blue)">'+esc(s)+'</div>'+bys[s].map(r=>'<div class="ctxr"><b>'+esc(r.cle)+'</b> — '+esc(r.valeur)+'</div>').join("")+'</div>';});
