@@ -48,6 +48,17 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   prompts, eux, **interdisent** le hors-univers (SYL : pas de single stocks ; JU : pas d'ETF) → leurs
   débordements (NVDA/AMD chez SYL, XLU short chez JU) sont à analyser séparément (legacy vs
   désobéissance) avant tout soldage. Analyse en cours.
+- **Soldage du legacy hors-univers de JU et SYL + verrou actions/ETF (v37).** Suite à l'audit :
+  analyse legacy-vs-prompt confirmée — sur 10 jours, **JU ne propose que des actions**, **SYL que des
+  ETF** (leurs prompts interdisent le hors-univers). Leurs positions hors-voie sont donc du **legacy
+  inerte**. **Action (sur décision de Chachou, 17/08)** : liquidation chirurgicale via l'API Alpaca —
+  **JU : 18 ETF** (dont **XLU short 318 k$** racheté, TLT, IEF, HYG, GLD, XLV, XLP, SCHD, USO…),
+  **SYL : 9 actions** (NVDA 277 k$, AMD 123 k$, MSFT, LLY, COST, GS, META, V, UNH). Marché fermé au
+  moment de l'ordre → 27 `DELETE /v2/positions` **acceptés et mis en file**, exécution à l'ouverture
+  (13:30 UTC). **Verrou durable** : `execute-trades` **v37** — liste `ETF_REF` + règles : **JU** ne
+  peut plus ACHETER d'ETF, **SYL** plus d'action individuelle ; **GIL EXEMPTÉ** (univers large). Ventes
+  libres. NB : paper. `oracle_positions_live` sera nettoyé après exécution (réconciliation Make ou
+  manuelle).
 - **Console « Crypto en direct » (valorisation 24/7, week-end compris).** Constat de Chachou :
   le week-end, sans faire tourner le scénario Make, la console reste figée. Diagnostic : ce ne sont
   **pas les cours** qui gèlent — `price_history` est alimenté H24 par des crons serveur indépendants
