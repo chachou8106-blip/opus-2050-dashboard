@@ -188,6 +188,15 @@
     <div class="mini" style="margin-top:8px">P&amp;L latent = variation depuis l'entrée au cours actuel (non réalisé). Les résultats réalisés apparaîtront dans les sections « stratégies » et « gains » dès que des positions se clôtureront.</div>
   </div>
 
+  <h2>Crypto en direct <span style="font-size:14px;opacity:.7">(24/7 — week-end compris)</span></h2>
+  <div class="strat lead-strat">
+    <p class="lead" style="margin-top:0">La crypto se négocie <b class="hl">en continu</b>, même quand le scénario est éteint (nuit, week-end). Ces chiffres sont <b class="hl">recalculés en direct</b> au dernier cours — c'est ce qui bouge quand le reste dort. Les actions/ETF (bourses fermées) et le forex (fermé le week-end) restent à leur dernier cours de clôture, c'est normal.</p>
+    <div id="liveCryptoTiles" class="tiles"></div>
+    <div class="clabel" style="margin-top:16px">Positions crypto valorisées au cours actuel</div>
+    <div class="tblwrap"><table class="keys" id="liveCryptoPos"></table></div>
+    <div class="mini" style="margin-top:8px">Valorisation = quantité × dernier cours (source <code>price_history</code>, alimenté 24/7 indépendamment du scénario). P&amp;L latent = écart depuis le prix d'entrée moyen (non réalisé). Ne montre que la crypto : le total du portefeuille (actions comprises) reste piloté par le scénario.</div>
+  </div>
+
   <h2>Rendements mensuels</h2>
   <div class="tblwrap"><table class="keys" id="monthlyTable"></table></div>
   <div class="mini" style="margin-top:8px">Rendement par mois et par stratégie (points de %). Vert = positif, rouge = négatif.</div>
@@ -272,7 +281,7 @@ const BENCH=[
  {k:"BNB-USD",n:"BNB",c:"#f2b84b"},{k:"XRP-USD",n:"XRP",c:"#a99fc4"}];
 const STRAT_SERIES=[{k:"OPUS",n:"AETHER",c:"#a06bff"},{k:"SYL",n:"SYL",c:"#3ecf8e"},{k:"JU",n:"JU",c:"#6ea0ff"},{k:"GIL",n:"GIL",c:"#f2b84b"},{k:"ALCHIMISTE",n:"Alchimiste",c:"#e5709b"},{k:"MAREES",n:"Marées",c:"#2bb8a3"}];
 const SEL=new Set(["OPUS","SPY"]);
-let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[],MARV={};
+let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[],MARV={},LIVECRYPTO={};
 function serieColor(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.c;const b=BENCH.find(x=>x.k===k);return b?b.c:"#a99fc4";}
 function serieName(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.n;const b=BENCH.find(x=>x.k===k);return b?b.n:k;}
 const ACC="#a06bff";
@@ -446,6 +455,30 @@ function renderMareesVirt(){
       pt.innerHTML=h+"</tbody>";}
   }
 }
+function renderLiveCrypto(){
+  const res=(LIVECRYPTO.resume||[]),pos=(LIVECRYPTO.positions||[]).filter(p=>Number(p.valo_usd)>=1);
+  const totUsd=res.reduce((s,r)=>s+(Number(r.valo_crypto_usd)||0),0);
+  const totEur=res.reduce((s,r)=>s+(Number(r.valo_crypto_eur)||0),0);
+  const totPnl=res.reduce((s,r)=>s+(Number(r.pnl_latent_usd)||0),0);
+  let dc=null;res.forEach(r=>{if(r.dernier_cours&&(!dc||r.dernier_cours>dc))dc=r.dernier_cours;});
+  const hh=dc?new Date(dc).toLocaleString("fr-FR",{weekday:"short",hour:"2-digit",minute:"2-digit"}):"—";
+  const tile=(v,k,cls)=>'<div class="tile"><div class="v'+(cls?(" "+cls):"")+'">'+v+'</div><div class="k">'+k+'</div></div>';
+  const el=document.getElementById("liveCryptoTiles");
+  if(el)el.innerHTML=[
+    tile("$"+Math.round(totUsd).toLocaleString("fr-FR"),"Valeur crypto (live)"),
+    tile("€"+Math.round(totEur).toLocaleString("fr-FR"),"En euros"),
+    tile((totPnl>0?"+":"")+"$"+Math.round(totPnl).toLocaleString("fr-FR"),"P&L latent",totPnl>0?"pos":(totPnl<0?"neg":"")),
+    tile(hh,"Dernier cours")
+  ].join("");
+  const pt=document.getElementById("liveCryptoPos");
+  if(pt){
+    if(!pos.length){pt.innerHTML='<tbody><tr><td class="empty">Aucune position crypto significative.</td></tr></tbody>';}
+    else{let h='<thead><tr><th>Trader</th><th>Actif</th><th>Qté</th><th>Entrée</th><th>Actuel</th><th>Valeur</th><th>Latent</th></tr></thead><tbody>';
+      pos.forEach(p=>{const u=p.unreal_pct;const c=u==null?"":(u>0?"color:var(--grn)":(u<0?"color:var(--red)":""));
+        h+='<tr><td class="name">'+esc(p.archimage)+'</td><td>'+esc((p.ticker||"").replace(/USD$/,""))+'</td><td class="mini">'+(p.qty!=null?Number(p.qty).toLocaleString("fr-FR",{maximumFractionDigits:4}):"—")+'</td><td>'+(p.prix_entree!=null?Number(p.prix_entree).toLocaleString("fr-FR",{maximumFractionDigits:4}):"—")+'</td><td>'+(p.prix_actuel!=null?Number(p.prix_actuel).toLocaleString("fr-FR",{maximumFractionDigits:4}):"—")+'</td><td>$'+(p.valo_usd!=null?Number(p.valo_usd).toLocaleString("fr-FR",{maximumFractionDigits:0}):"—")+'</td><td style="'+c+'">'+(u==null?"—":((u>0?"+":"")+u+"%"))+'</td></tr>';});
+      pt.innerHTML=h+"</tbody>";}
+  }
+}
 function renderStats(){
   const a=AVANCE["OPUS"]||{},s=STATS["OPUS"]||{},sh=SHARPE["OPUS"];
   const cs=(CMP["OPUS"]||[]).slice().sort((x,y)=>x.j<y.j?-1:1);
@@ -553,6 +586,7 @@ async function loadSuivi(){
     document.querySelectorAll(".tg").forEach(b=>b.onclick=()=>renderReport(b.dataset.g));renderReport("mois");
     ALCV=d.alc_virtuel||{};renderAlcVirt();
     MARV=d.marees_virtuel||{};renderMareesVirt();
+    LIVECRYPTO=d.live_crypto||{};renderLiveCrypto();
     const fi=document.getElementById("alcFee");if(fi&&!fi._w){fi._w=1;fi.addEventListener("input",renderAlcVirt);}
     const bys={};(d.contexte||[]).forEach(r=>{(bys[r.section]=bys[r.section]||[]).push(r);});
     let ch="";Object.keys(bys).forEach(s=>{ch+='<div style="margin:8px 0"><div class="clabel" style="color:var(--blue)">'+esc(s)+'</div>'+bys[s].map(r=>'<div class="ctxr"><b>'+esc(r.cle)+'</b> — '+esc(r.valeur)+'</div>').join("")+'</div>';});
