@@ -190,3 +190,69 @@ from vigie_status
 order by
   case etat when 'PANNE' then 0 when 'MUET' then 1 when 'FIGE' then 2 when 'OK' then 3 else 4 end,
   categorie, composant;
+
+-- ============================================================================
+-- ALERTE DISCORD (indépendante de Make — pg_net côté Supabase)
+-- ----------------------------------------------------------------------------
+-- Le webhook Discord est stocké dans Supabase Vault (secret 'vigie_discord_webhook'),
+-- JAMAIS en git. On n'alerte que sur les TRANSITIONS (pas en boucle) :
+--   PANNE  = urgent  -> alerte à la bascule + rappel toutes les 6h tant que non résolu.
+--   FIGE/MUET = advisory -> une alerte à la bascule.
+--   bad -> OK -> message de rétablissement (vert). VEILLE et OK n'alertent pas.
+-- Cron (job vigie_scan_15min) : 'select public.vigie_scan(); select public.vigie_alert();'
+-- Après création : amorcer vigie_alert_state depuis vigie_status pour ne notifier que
+-- les changements FUTURS (voir migration vigie_discord_alert).
+-- ============================================================================
+create table if not exists public.vigie_alert_state (
+  composant  text primary key,
+  last_etat  text,
+  alerted_at timestamptz
+);
+
+create or replace function public.vigie_alert()
+returns jsonb language plpgsql security definer set search_path to 'public'
+as $function$
+declare
+  v_url text; v_lines text := ''; v_recover text := ''; v_msg text := '';
+  r record; v_bad text[] := array['PANNE','MUET','FIGE']; v_should boolean;
+begin
+  for r in
+    select s.composant, s.etat, s.detail, a.last_etat, a.alerted_at
+    from vigie_status s left join vigie_alert_state a using (composant)
+  loop
+    if r.etat = any(v_bad) then
+      v_should := (r.last_etat is distinct from r.etat)
+               or (r.etat = 'PANNE' and (r.alerted_at is null or r.alerted_at < now() - interval '6 hours'));
+      if v_should then
+        v_lines := v_lines || format(E'🔴 %s : %s — %s\n', r.composant, r.etat, coalesce(r.detail,''));
+        insert into vigie_alert_state(composant, last_etat, alerted_at) values (r.composant, r.etat, now())
+          on conflict (composant) do update set last_etat = excluded.last_etat, alerted_at = now();
+      else
+        insert into vigie_alert_state(composant, last_etat, alerted_at) values (r.composant, r.etat, r.alerted_at)
+          on conflict (composant) do update set last_etat = excluded.last_etat;
+      end if;
+    else
+      if r.last_etat = any(v_bad) then
+        v_recover := v_recover || format(E'🟢 %s : rétabli (%s)\n', r.composant, r.etat);
+      end if;
+      insert into vigie_alert_state(composant, last_etat, alerted_at) values (r.composant, r.etat, null)
+        on conflict (composant) do update set last_etat = excluded.last_etat, alerted_at = null;
+    end if;
+  end loop;
+
+  if v_lines <> '' then v_msg := '**🔭 La Vigie — anomalie détectée**' || E'\n' || v_lines; end if;
+  if v_recover <> '' then
+    v_msg := v_msg || (case when v_msg <> '' then E'\n' else '**🔭 La Vigie**' || E'\n' end) || v_recover;
+  end if;
+  if v_msg = '' then return jsonb_build_object('sent', false, 'raison', 'aucune transition'); end if;
+
+  select decrypted_secret into v_url from vault.decrypted_secrets where name = 'vigie_discord_webhook' limit 1;
+  if v_url is null then return jsonb_build_object('sent', false, 'raison', 'webhook absent'); end if;
+
+  perform net.http_post(
+    url := v_url,
+    body := jsonb_build_object('content', left(v_msg, 1900)),
+    headers := jsonb_build_object('Content-Type', 'application/json')
+  );
+  return jsonb_build_object('sent', true, 'msg', v_msg);
+end $function$;

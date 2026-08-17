@@ -28,8 +28,17 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   dépliable, liste les composants). Dès le 1er scan, LA VIGIE a correctement remonté la vraie stagnation
   `market_phase=DEFENSIVE` (à investiguer côté GIL/synthèse). NB sur le « suivi des sous API » : la plupart
   des API LLM n'exposent pas le solde ; la détection par absence couvre de toute façon l'épuisement de crédit.
-  Extensions possibles (non faites, sur décision) : alertes Discord auto via pg_net, capture des en-têtes
-  rate-limit Groq, rappel hebdo de recharge.
+  Extensions possibles (non faites, sur décision) : capture des en-têtes rate-limit Groq, rappel hebdo de recharge.
+
+- **🔔 LA VIGIE — alerte Discord (activée).** À la demande de Chachou. Notification **côté Supabase**
+  (`pg_net`), donc **indépendante de Make** : une alerte part même si tout le scénario est mort. Webhook
+  Discord (canal Héraut, récupéré du module existant) stocké dans **Supabase Vault** (`vigie_discord_webhook`),
+  jamais en git. Fonction `vigie_alert()` (table `vigie_alert_state`), lancée par le cron après `vigie_scan`
+  (`select public.vigie_scan(); select public.vigie_alert();`). N'alerte que sur les **transitions** (pas en
+  boucle) : PANNE = urgent (alerte à la bascule + rappel toutes les 6h tant que non résolu), FIGE/MUET =
+  advisory (une alerte), rétablissement bad→OK = message vert ; VEILLE/OK silencieux. Amorçage sur l'état
+  courant pour ne notifier que les changements futurs (pas de blast sur le market_phase déjà connu). Plomberie
+  validée de bout en bout : `net.http_post` → Discord **HTTP 204** (message de test reçu).
 
 - **RÉSOLU & VÉRIFIÉ EN PROD (run 19:59) — les 5 Sages écrivent enfin tous ensemble.** Après le correctif #2
   appliqué par Maia (Macro→json_schema+max_tokens 1500 ; Technique & Mémoire→reasoning_effort low+max_tokens
