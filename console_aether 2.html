@@ -195,6 +195,11 @@
     <div class="clabel" style="margin-top:16px">Positions crypto valorisées au cours actuel</div>
     <div class="tblwrap"><table class="keys" id="liveCryptoPos"></table></div>
     <div class="mini" style="margin-top:8px">Valorisation = quantité × dernier cours (source <code>price_history</code>, alimenté 24/7 indépendamment du scénario). P&amp;L latent = écart depuis le prix d'entrée moyen (non réalisé). Ne montre que la crypto : le total du portefeuille (actions comprises) reste piloté par le scénario.</div>
+
+    <div class="clabel" style="margin-top:22px">🜍 Alchimiste réel — Revolut X <span style="opacity:.7">(argent réel), valorisé en direct</span></div>
+    <div id="alcReelTiles" class="tiles"></div>
+    <div class="tblwrap" style="margin-top:12px"><table class="keys" id="alcReelPos"></table></div>
+    <div class="mini" style="margin-top:8px">Même principe que le virtuel : on reprend le dernier inventaire Revolut (quantités par coin) et on le revalorise au dernier cours. « Écart » = différence depuis le point quotidien de 8h. C'est ton <b class="hl">seul argent réel</b> — au comptant, sans levier.</div>
   </div>
 
   <h2>Rendements mensuels</h2>
@@ -281,7 +286,7 @@ const BENCH=[
  {k:"BNB-USD",n:"BNB",c:"#f2b84b"},{k:"XRP-USD",n:"XRP",c:"#a99fc4"}];
 const STRAT_SERIES=[{k:"OPUS",n:"AETHER",c:"#a06bff"},{k:"SYL",n:"SYL",c:"#3ecf8e"},{k:"JU",n:"JU",c:"#6ea0ff"},{k:"GIL",n:"GIL",c:"#f2b84b"},{k:"ALCHIMISTE",n:"Alchimiste",c:"#e5709b"},{k:"MAREES",n:"Marées",c:"#2bb8a3"}];
 const SEL=new Set(["OPUS","SPY"]);
-let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[],MARV={},LIVECRYPTO={};
+let AVANCE={},STATS={},MENSUEL={},RND=[],ALCV={},FX={},GAINS=[],MARV={},LIVECRYPTO={},ALCREEL={};
 function serieColor(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.c;const b=BENCH.find(x=>x.k===k);return b?b.c:"#a99fc4";}
 function serieName(k){const s=STRAT_SERIES.find(x=>x.k===k);if(s)return s.n;const b=BENCH.find(x=>x.k===k);return b?b.n:k;}
 const ACC="#a06bff";
@@ -479,6 +484,28 @@ function renderLiveCrypto(){
       pt.innerHTML=h+"</tbody>";}
   }
 }
+function renderAlcReel(){
+  const r=ALCREEL.resume||{},pos=(ALCREEL.positions||[]);
+  const tile=(v,k,cls)=>'<div class="tile"><div class="v'+(cls?(" "+cls):"")+'">'+v+'</div><div class="k">'+k+'</div></div>';
+  const ec=Number(r.ecart_depuis_snapshot_usd);
+  const dc=r.dernier_cours?new Date(r.dernier_cours).toLocaleString("fr-FR",{weekday:"short",hour:"2-digit",minute:"2-digit"}):"—";
+  const el=document.getElementById("alcReelTiles");
+  if(el)el.innerHTML=[
+    tile(r.total_live_usd!=null?("$"+Number(r.total_live_usd).toLocaleString("fr-FR",{maximumFractionDigits:2})):"—","Valeur réelle (live)"),
+    tile(r.total_live_eur!=null?("€"+Number(r.total_live_eur).toLocaleString("fr-FR",{maximumFractionDigits:2})):"—","En euros"),
+    tile(isNaN(ec)?"—":((ec>0?"+":"")+"$"+ec.toFixed(2)),"Écart depuis 8h",isNaN(ec)?"":(ec>0?"pos":(ec<0?"neg":""))),
+    tile((r.n_live!=null?r.n_live:"—")+"/"+(r.n_lignes!=null?r.n_lignes:"—"),"Lignes en direct"),
+    tile(dc,"Dernier cours")
+  ].join("");
+  const pt=document.getElementById("alcReelPos");
+  if(pt){
+    if(!pos.length){pt.innerHTML='<tbody><tr><td class="empty">Aucune ligne.</td></tr></tbody>';}
+    else{let h='<thead><tr><th>Coin</th><th>Qté</th><th>Valeur live</th><th>Snapshot 8h</th><th>Live ?</th></tr></thead><tbody>';
+      pos.forEach(p=>{
+        h+='<tr><td class="name">'+esc(p.devise)+(p.en_stake?' <span class="mini" style="opacity:.7">stake</span>':'')+'</td><td class="mini">'+(p.qty!=null?Number(p.qty).toLocaleString("fr-FR",{maximumFractionDigits:6}):"—")+'</td><td>$'+(p.valeur_live_usd!=null?Number(p.valeur_live_usd).toLocaleString("fr-FR",{maximumFractionDigits:2}):"—")+'</td><td class="mini">$'+(p.valeur_snapshot_usd!=null?Number(p.valeur_snapshot_usd).toLocaleString("fr-FR",{maximumFractionDigits:2}):"—")+'</td><td>'+(p.est_live?'✅':'⏸️')+'</td></tr>';});
+      pt.innerHTML=h+"</tbody>";}
+  }
+}
 function renderStats(){
   const a=AVANCE["OPUS"]||{},s=STATS["OPUS"]||{},sh=SHARPE["OPUS"];
   const cs=(CMP["OPUS"]||[]).slice().sort((x,y)=>x.j<y.j?-1:1);
@@ -587,6 +614,7 @@ async function loadSuivi(){
     ALCV=d.alc_virtuel||{};renderAlcVirt();
     MARV=d.marees_virtuel||{};renderMareesVirt();
     LIVECRYPTO=d.live_crypto||{};renderLiveCrypto();
+    ALCREEL=d.alc_reel_live||{};renderAlcReel();
     const fi=document.getElementById("alcFee");if(fi&&!fi._w){fi._w=1;fi.addEventListener("input",renderAlcVirt);}
     const bys={};(d.contexte||[]).forEach(r=>{(bys[r.section]=bys[r.section]||[]).push(r);});
     let ch="";Object.keys(bys).forEach(s=>{ch+='<div style="margin:8px 0"><div class="clabel" style="color:var(--blue)">'+esc(s)+'</div>'+bys[s].map(r=>'<div class="ctxr"><b>'+esc(r.cle)+'</b> — '+esc(r.valeur)+'</div>').join("")+'</div>';});
