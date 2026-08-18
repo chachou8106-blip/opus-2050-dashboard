@@ -755,7 +755,7 @@ function scenRender(e){const st=document.getElementById("scenState"),d=document.
   if(!e){st.textContent="⚠️ État indisponible";st.style.color="#f2b84b";if(d)d.textContent="";return;}
   if(e.maitre_on){st.textContent="🟢 PLANNING ACTIF — "+(e.nb_runs_jour||0)+" runs/jour";st.style.color="#3ecf8e";}
   else{st.textContent="⚪ COUPÉ — aucun run automatique";st.style.color="#9aa4b2";}
-  if(d){let t="Heures (Lun-Ven, Paris) : "+(e.heures||"—")+".";if(!e.api_configuree)t+=" ⚠️ API Make non configurée (jeton manquant) — l'état est mémorisé mais Make n'est pas encore piloté.";if(e.dernier_run)t+=" Dernier run : "+new Date(e.dernier_run).toLocaleString("fr-FR");d.textContent=t;}}
+  if(d){let t="Heures (Lun-Ven, Paris) : "+(e.heures||"—")+".";if(!e.api_configuree)t+=" ⚠️ API Make non configurée (jeton manquant) — l'état est mémorisé mais Make n'est pas encore piloté.";if(e.pending_stop_at)t+=" ⏳ Run déclenché — coupure auto à "+new Date(e.pending_stop_at).toLocaleTimeString("fr-FR");if(e.dernier_run)t+=" · Dernier run : "+new Date(e.dernier_run).toLocaleString("fr-FR");d.textContent=t;}}
 async function scenLoad(){const j=await scenCall("status");scenRender(j&&j.ok?j.etat:null);}
 function scenInit(){scenLoad();const on=document.getElementById("scenOn"),off=document.getElementById("scenOff"),run=document.getElementById("scenRun"),m=document.getElementById("scenMsg");
   const act=async(action,label)=>{const pin=prompt("PIN pour "+label+" :");if(pin===null)return;if(m){m.className="msg";m.textContent="…";}const j=await scenCall(action,pin);if(j&&j.ok){scenRender(j.etat);if(m){m.className="msg ok";m.textContent="✅ "+label+" — OK.";}}else if(m){m.className="msg err";m.textContent="❌ "+((j&&j.error)||"erreur");}};

@@ -10,6 +10,20 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-18
 
+- **FIX modèle de déclenchement : `/run` → `/start` + `/stop` différé (jeton Aether posé, testé bout-en-bout).**
+  Le jeton API Make (clé **Aether**) a été mis en Vault par Chachou + zone `eu1` en base. Test : `POST
+  /scenarios/{id}/run` renvoie **422 « Scenario is not activated » (IM325)** — l'endpoint « run once » exige
+  un scénario ACTIF. Découverte (vérifiée via `executions_list`) : `POST /scenarios/{id}/start` **active ET
+  déclenche 1 exécution immédiate** (~3 s après). Et `POST …/stop` **pendant** une exécution **ne la tue pas**
+  (le run 07:50→07:53 a fini `status:1` malgré un /stop à 07:51). **Nouveau modèle** : à chaque slot (et pour
+  « Lancer maintenant ») → `/start` (= 1 run), puis `/stop` **3 min après** (avant le +3600s interne) pour
+  qu'il ne reste **qu'un seul run**. Implémenté dans `scenario_fire()` (colonne `scenario_control.pending_stop_at`,
+  le cron 5 min applique le /stop en attente même maître OFF) + `scenario_stop_now()` (coupe immédiate de
+  sécurité, appelée par le bouton **Couper**). `v_scenario_etat` détecte le jeton sous `make_api_token` **ou**
+  `Aether` (`api_configuree=true`). Edge `scenario-switch` **v3**. Testé bout-en-bout : `scenario_fire(true)`
+  → `/start` HTTP 200 `isActive:true`, run déclenché, `pending_stop_at` posé (+3 min). Cron `scenario_fire_5min`
+  actif (`*/5`). **Maître toujours OFF par défaut** (aucun run tant que Chachou n'a pas cliqué « Activer »).
+
 - **Planning multi-marchés + bouton ON/OFF console — 100% Supabase, AUCUNE modif Make.** Constat (vérifié) :
   le scénario a déjà un planning interne horaire (`interval:3600`) mais reste `isActive:false` → activé à la
   main = runs irréguliers, données polluées. Sur demande de Chachou (« rien sur Make, un bouton par sécurité,
