@@ -10,6 +10,28 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-18
 
+- **« Alchimiste verdict MUET » : cause racine = clé anon corrompue dans les modules staking 20022/20023.**
+  Depuis la modif Maia du 17/08 ~20:50, les 2 modules HTTP staking portent un JWT mutilé
+  (`smddzbxebwfnitxuyuyp` au lieu de `smddzybxebwhfnitxuyp`) → **401 Invalid API key** à chaque run
+  (prouvé dans les données de run stockées du blueprint, 17/08 21:28) → staking VIDES → l'Alchimiste rend
+  `"destake_recommande": []` (prouvé dans la sortie 10014 stockée) → 0 ligne `alc_destake_reco` depuis 20:00,
+  section DE-STAKING absente du rapport Discord, Vigie MUET. Les propositions trading marchent (10023 a la
+  bonne clé) : le pipeline (10012 → 10014 → RPC `alc_record_propositions`, champ `destake_recommande`) est sain.
+  **Correctif** : `docs/decisions/PROMPT-MAIA-FIX-CLE-STAKING-2026-08-18.md` (remettre la bonne clé anon dans
+  apikey + Authorization des modules 20022/20023, rien d'autre). Le fix base64 reste en option derrière.
+
+- **JU +22,6 % : FAUSSE ALERTE — c'était une vraie performance, pas un bug.** Ce matin JU affichait +22,6 %
+  (`v_perf_resume` = `cumulative_pnl ÷ baseline` = 225 985 ÷ 999 789). D'abord pris pour une lecture d'equity
+  Alpaca aberrante (seul JU touché) → un garde-fou a été posé dans `update-brain` (v17) et les données
+  « nettoyées ». **Mais Chachou a confirmé que le compte Alpaca de JU a RÉELLEMENT 1,226 M$** : c'est le produit
+  de la clôture des positions bloquées des archimages pendant le reset volontaire (changement de prompts + purge
+  Cerveau/Méta-Cerveau, pour observer le trading de la semaine et faire le point le 28). **Corrections annulées** :
+  garde-fou retiré (`update-brain` revenu à la logique v16, redéployé v18), `oracle_brain_state.JU.cumulative_pnl`
+  restauré à sa vraie valeur **225 985** (JU +22,6 %, SYL +8,6 %, GIL +5,0 % = perf cumulée réelle, baselines
+  conservées à ~1 M). Les clés Alpaca hardcodées ont été retirées du fichier source committé (placeholders ;
+  la fonction déployée garde les vraies clés — à migrer vers les secrets Supabase). Leçon : **vérifier auprès de
+  Chachou si une valeur « aberrante » n'est pas simplement réelle avant de la corriger.**
+
 - **Bouton scénario déverrouillé par Face ID (repli PIN), comme le kill-switch.** Chachou : « pour activer/
   désactiver le scénario, rajoute le Face ID ». `ju-passkey` v3 : nouvelle action `scen-options`/`scen-verify`
   — vérifie l'empreinte WebAuthn **côté serveur** (purpose `scen`) puis relaie l'action à `scenario-switch`

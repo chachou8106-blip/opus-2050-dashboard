@@ -16,9 +16,9 @@ const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const ALPACA = 'https://paper-api.alpaca.markets'
 
 const KEYS: Record<string,{key:string,sec:string}> = {
-  JU:  { key: 'PK_REDACTED', sec: 'REDACTED' },
-  SYL: { key: 'PK_REDACTED', sec: 'REDACTED' },
-  GIL: { key: 'PK_REDACTED', sec: 'REDACTED' },
+  JU:  { key: 'PK_ALPACA_JU', sec: 'SECRET_ALPACA_JU' },
+  SYL: { key: 'PK_ALPACA_SYL', sec: 'SECRET_ALPACA_SYL' },
+  GIL: { key: 'PK_ALPACA_GIL', sec: 'SECRET_ALPACA_GIL' },
 }
 
 function parisRunId(): string {
