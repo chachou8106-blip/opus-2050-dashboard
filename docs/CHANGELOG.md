@@ -10,6 +10,16 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-18
 
+- **« Alchimiste verdict MUET » : cause racine = clé anon corrompue dans les modules staking 20022/20023.**
+  Depuis la modif Maia du 17/08 ~20:50, les 2 modules HTTP staking portent un JWT mutilé
+  (`smddzbxebwfnitxuyuyp` au lieu de `smddzybxebwhfnitxuyp`) → **401 Invalid API key** à chaque run
+  (prouvé dans les données de run stockées du blueprint, 17/08 21:28) → staking VIDES → l'Alchimiste rend
+  `"destake_recommande": []` (prouvé dans la sortie 10014 stockée) → 0 ligne `alc_destake_reco` depuis 20:00,
+  section DE-STAKING absente du rapport Discord, Vigie MUET. Les propositions trading marchent (10023 a la
+  bonne clé) : le pipeline (10012 → 10014 → RPC `alc_record_propositions`, champ `destake_recommande`) est sain.
+  **Correctif** : `docs/decisions/PROMPT-MAIA-FIX-CLE-STAKING-2026-08-18.md` (remettre la bonne clé anon dans
+  apikey + Authorization des modules 20022/20023, rien d'autre). Le fix base64 reste en option derrière.
+
 - **JU +22,6 % : FAUSSE ALERTE — c'était une vraie performance, pas un bug.** Ce matin JU affichait +22,6 %
   (`v_perf_resume` = `cumulative_pnl ÷ baseline` = 225 985 ÷ 999 789). D'abord pris pour une lecture d'equity
   Alpaca aberrante (seul JU touché) → un garde-fou a été posé dans `update-brain` (v17) et les données
