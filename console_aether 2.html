@@ -231,6 +231,20 @@
     </div>
     <div id="opsContent" style="display:none">
     <div style="text-align:right;margin-bottom:8px"><button id="opsLock" style="padding:6px 12px;border:1px solid var(--line);border-radius:8px;font:700 13px inherit;color:var(--txt);background:var(--card2);cursor:pointer">🔒 Verrouiller</button></div>
+    <div class="opcard" id="scenCard">
+      <h3>⏯️ Scénario — marche / arrêt <span style="font-size:13px;opacity:.7">(planning automatique)</span></h3>
+      <div class="mini" style="margin-bottom:10px">Interrupteur maître. Sur <b>ON</b>, le robot tourne <b>automatiquement à heures fixes</b> (4 runs/jour en semaine : matin, ouverture US, mi-séance, avant clôture). <b>Couper</b> = plus aucun run planifié. <b>Lancer maintenant</b> = un run ponctuel. Piloté 100% depuis Supabase, sans toucher à Make.</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px">
+        <span id="scenState" style="font-weight:800;font-size:16px">Chargement…</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button id="scenOn" style="padding:10px 16px;border:none;border-radius:10px;font:700 15px inherit;color:#0b0b12;cursor:pointer;background:#3ecf8e">▶️ Activer le planning</button>
+        <button id="scenOff" style="padding:10px 16px;border:none;border-radius:10px;font:700 15px inherit;color:#fff;cursor:pointer;background:#e5484d">⏸️ Couper</button>
+        <button id="scenRun" style="padding:10px 16px;border:1px solid var(--line);border-radius:10px;font:700 15px inherit;color:var(--txt);background:var(--card2);cursor:pointer">⚡ Lancer maintenant</button>
+      </div>
+      <div id="scenDetail" class="mini" style="margin-top:8px;opacity:.75"></div>
+      <div class="msg" id="scenMsg"></div>
+    </div>
     <div class="opcard"><h3>🔭 La Vigie — santé du Collège</h3><div class="mini" style="margin-bottom:10px">Surveillance technique interne (Sages, Archimages, Traders). Une alerte Discord part aussi automatiquement en cas de panne.</div><div id="vigieWrap"></div></div>
     <div class="opcard" id="ksCard">
       <h3>🛑 Kill-switch — trading réel de l'Alchimiste</h3>
@@ -734,6 +748,20 @@ const sbtn=document.getElementById("send");if(sbtn)sbtn.onclick=async()=>{const 
 loadSuivi();load();
 /* ===== Kill-switch Alchimiste (bascule le trading réel Revolut X) ===== */
 const KS_FN="https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/ju-killswitch";
+/* ===== Scénario — interrupteur maître (marche/arrêt planifié) ===== */
+const SCEN_FN="https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/scenario-switch";
+async function scenCall(action,pin){try{const r=await fetch(SCEN_FN,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,pin})});return await r.json();}catch(e){return{ok:false,error:"réseau"};}}
+function scenRender(e){const st=document.getElementById("scenState"),d=document.getElementById("scenDetail");if(!st)return;
+  if(!e){st.textContent="⚠️ État indisponible";st.style.color="#f2b84b";if(d)d.textContent="";return;}
+  if(e.maitre_on){st.textContent="🟢 PLANNING ACTIF — "+(e.nb_runs_jour||0)+" runs/jour";st.style.color="#3ecf8e";}
+  else{st.textContent="⚪ COUPÉ — aucun run automatique";st.style.color="#9aa4b2";}
+  if(d){let t="Heures (Lun-Ven, Paris) : "+(e.heures||"—")+".";if(!e.api_configuree)t+=" ⚠️ API Make non configurée (jeton manquant) — l'état est mémorisé mais Make n'est pas encore piloté.";if(e.pending_stop_at)t+=" ⏳ Run déclenché — coupure auto à "+new Date(e.pending_stop_at).toLocaleTimeString("fr-FR");if(e.dernier_run)t+=" · Dernier run : "+new Date(e.dernier_run).toLocaleString("fr-FR");d.textContent=t;}}
+async function scenLoad(){const j=await scenCall("status");scenRender(j&&j.ok?j.etat:null);}
+function scenInit(){scenLoad();const on=document.getElementById("scenOn"),off=document.getElementById("scenOff"),run=document.getElementById("scenRun"),m=document.getElementById("scenMsg");
+  const act=async(action,label)=>{const pin=prompt("PIN pour "+label+" :");if(pin===null)return;if(m){m.className="msg";m.textContent="…";}const j=await scenCall(action,pin);if(j&&j.ok){scenRender(j.etat);if(m){m.className="msg ok";m.textContent="✅ "+label+" — OK.";}}else if(m){m.className="msg err";m.textContent="❌ "+((j&&j.error)||"erreur");}};
+  if(on&&!on._w){on._w=1;on.addEventListener("click",()=>act("on","ACTIVER le planning"));}
+  if(off&&!off._w){off._w=1;off.addEventListener("click",()=>act("off","COUPER"));}
+  if(run&&!run._w){run._w=1;run.addEventListener("click",()=>act("run-now","LANCER un run maintenant"));}}
 async function ksCall(action,pin){const r=await fetch(KS_FN,{method:"POST",headers:{"Content-Type":"application/json","apikey":ANON,"Authorization":"Bearer "+ANON},body:JSON.stringify({action:action,pin:pin||""})});return r.json();}
 function ksRender(on){const st=document.getElementById("ksState"),btn=document.getElementById("ksBtn");if(!st||!btn)return;if(on===null){st.textContent="⚠️ État inconnu";st.style.color="#f2b84b";btn.textContent="Réessayer";btn.style.background="#f2b84b";btn.style.color="#0b0b12";btn.dataset.next="status";return;}if(on){st.textContent="🟢 ARMÉ (ON) — ordres réels ACTIFS";st.style.color="#ff5d73";btn.textContent="DÉSARMER (OFF)";btn.style.background="#ff5d73";btn.style.color="#fff";btn.dataset.next="off";}else{st.textContent="⚪ DÉSARMÉ (OFF) — aucun ordre réel";st.style.color="#3ecf8e";btn.textContent="ARMER (ON) — argent réel";btn.style.background="#3ecf8e";btn.style.color="#0b0b12";btn.dataset.next="on";}}
 async function ksInit(){const m=document.getElementById("ksMsg");try{const j=await ksCall("status");ksRender(j&&j.ok?j.arme:null);if(m)m.textContent="";}catch(e){ksRender(null);}}
@@ -758,7 +786,7 @@ async function armFaceID(){const o=await pkCall("auth-options");if(!o.ok)return{
 })();
 ksInit();
 /* ===== Verrouillage Face ID du menu technique ===== */
-function opsReveal(){var g=document.getElementById("opsGate"),c=document.getElementById("opsContent");if(g)g.style.display="none";if(c)c.style.display="block";try{ksInit();}catch(e){}}
+function opsReveal(){var g=document.getElementById("opsGate"),c=document.getElementById("opsContent");if(g)g.style.display="none";if(c)c.style.display="block";try{ksInit();}catch(e){}try{scenInit();}catch(e){}}
 function opsHide(){var g=document.getElementById("opsGate"),c=document.getElementById("opsContent");if(c)c.style.display="none";if(g)g.style.display="block";}
 (function(){
   var u=document.getElementById("opsUnlock"),l=document.getElementById("opsLock");

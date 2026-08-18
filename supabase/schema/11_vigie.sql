@@ -43,6 +43,7 @@ declare
   -- (< 12h), sinon un composant qui vient de « ressusciter » après une panne serait
   -- faussement noté FIGÉ (ses vieilles lignes d'avant-panne fausseraient la variance).
   v_res   jsonb;
+  v_pok boolean; v_vts timestamptz; v_apy text; v_del text;  -- sondes Alchimiste/staking
   -- clés de stagnation par Sage
   sages   text[][] := array[
       array['Macro','macro_regime'], array['Technique','cycle_phase'],
@@ -154,6 +155,37 @@ begin
      case when v_nrows >= k_stag and v_ndist = 1 and v_mints >= now() - interval '12 hours'
           then format('%s sur %s runs', v_run.market_phase, k_stag) else 'varie' end,
      v_run.run_at, v_run.run_at);
+
+  -- Alchimiste — verdict de dé-stake, via alc_destake_reco (alimenté chaque run par alc_record_propositions).
+  -- Aveuglement testé UNIQUEMENT sur le dernier batch de dé-stake (sinon un vieux run pré-fix fausse le test).
+  select max(created_at) into v_vts from alc_destake_reco;
+  select bool_or(coalesce(raison,'') ilike '%faute de don%' or coalesce(raison,'') ilike '%encod%vide%'
+              or coalesce(raison,'') ilike '%donn%manquant%' or coalesce(raison,'') ilike '%sans donn%'
+              or coalesce(raison,'') ilike '%aucune donn%' or coalesce(raison,'') ilike '%donnees%absent%'
+              or coalesce(raison,'') ilike '%donnees%vides%')
+    into v_pok from alc_destake_reco where v_vts is not null and created_at >= v_vts - interval '5 minutes';
+  insert into public.vigie_status(composant, categorie, etat, detail, derniere_sortie, run_auditee)
+  values ('Alchimiste verdict', 'Alchimiste',
+     case when v_vts is null then 'VEILLE' when v_veille then 'VEILLE'
+          when coalesce(v_pok,false) then 'PANNE'
+          when v_vts < now() - interval '6 hours' then 'MUET' else 'OK' end,
+     case when v_vts is null then 'aucun de-stake logue'
+          when coalesce(v_pok,false) then 'se dit AVEUGLE aux donnees (dernier run)'
+          when v_vts < now() - interval '6 hours' then 'pas de de-stake evalue depuis >6h'
+          else 'de-stake evalue, raisons lisibles' end,
+     v_vts, v_run.run_at);
+
+  -- Sources staking : détection immédiate de « tables vides » (indépendant du run)
+  select apy_texte into v_apy from v_alc_staking_apy_txt;
+  select delais_texte into v_del from v_alc_staking_delais_txt;
+  insert into public.vigie_status(composant, categorie, etat, detail, derniere_sortie, run_auditee)
+  values ('Donnees staking', 'Source',
+     case when coalesce(v_apy,'')='' or coalesce(v_del,'')='' then 'PANNE' else 'OK' end,
+     case when coalesce(v_apy,'')='' and coalesce(v_del,'')='' then 'APY et delais VIDES'
+          when coalesce(v_apy,'')='' then 'table APY vide'
+          when coalesce(v_del,'')='' then 'table delais vide'
+          else 'APY + delais alimentes' end,
+     now(), v_run.run_at);
 
   select jsonb_build_object(
     'scanned', true, 'run_auditee', v_run.run_at, 'veille', v_veille,

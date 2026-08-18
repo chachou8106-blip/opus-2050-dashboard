@@ -8,7 +8,96 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-18
+
+- **FIX modèle de déclenchement : `/run` → `/start` + `/stop` différé (jeton Aether posé, testé bout-en-bout).**
+  Le jeton API Make (clé **Aether**) a été mis en Vault par Chachou + zone `eu1` en base. Test : `POST
+  /scenarios/{id}/run` renvoie **422 « Scenario is not activated » (IM325)** — l'endpoint « run once » exige
+  un scénario ACTIF. Découverte (vérifiée via `executions_list`) : `POST /scenarios/{id}/start` **active ET
+  déclenche 1 exécution immédiate** (~3 s après). Et `POST …/stop` **pendant** une exécution **ne la tue pas**
+  (le run 07:50→07:53 a fini `status:1` malgré un /stop à 07:51). **Nouveau modèle** : à chaque slot (et pour
+  « Lancer maintenant ») → `/start` (= 1 run), puis `/stop` **3 min après** (avant le +3600s interne) pour
+  qu'il ne reste **qu'un seul run**. Implémenté dans `scenario_fire()` (colonne `scenario_control.pending_stop_at`,
+  le cron 5 min applique le /stop en attente même maître OFF) + `scenario_stop_now()` (coupe immédiate de
+  sécurité, appelée par le bouton **Couper**). `v_scenario_etat` détecte le jeton sous `make_api_token` **ou**
+  `Aether` (`api_configuree=true`). Edge `scenario-switch` **v3**. Testé bout-en-bout : `scenario_fire(true)`
+  → `/start` HTTP 200 `isActive:true`, run déclenché, `pending_stop_at` posé (+3 min). Cron `scenario_fire_5min`
+  actif (`*/5`). **Maître toujours OFF par défaut** (aucun run tant que Chachou n'a pas cliqué « Activer »).
+
+- **Planning multi-marchés + bouton ON/OFF console — 100% Supabase, AUCUNE modif Make.** Constat (vérifié) :
+  le scénario a déjà un planning interne horaire (`interval:3600`) mais reste `isActive:false` → activé à la
+  main = runs irréguliers, données polluées. Sur demande de Chachou (« rien sur Make, un bouton par sécurité,
+  décide le planning ») : Supabase **active/désactive** le scénario aux heures de marché via l'**API Make**
+  (start/stop = même effet que le toggle Make, sans toucher interval ni modules). DDL
+  `supabase/schema/14_scenario_scheduler.sql` : `scenario_control` (interrupteur maître), `scenario_schedule`
+  (fenêtres data-driven, seed **Lun-Ven 8h→22h Paris** = forex Londres + session US + crypto ; extensible
+  Darwinex 24/5 + crypto week-end en 1 INSERT), `scenario_reconcile()` (appelle l'API Make au changement
+  d'état), vue `v_scenario_etat`. Edge function **`scenario-switch`** (PIN `arm_pin`) + **bouton dans la zone
+  Face ID de la console** (Activer / Couper, état live). Testé : `status` → HTTP 200. **Défaut OFF** (rien ne
+  tourne). **Reste à fournir** : un **jeton API Make** (Vault `make_api_token`) + la **zone** (`make_zone`,
+  ex eu2) pour que le pilotage agisse réellement — d'ici là le bouton mémorise l'état sans toucher Make
+  (`api_configuree=false` affiché). Le cron 10 min de réconciliation est prêt (à activer une fois le jeton posé).
+
+- **RÉVISION planning : 4 runs/jour à heures fixes (coût), au lieu d'horaire.** Chachou (à raison, coût) : pas
+  toutes les heures — régulier, 3-4×/jour. **Nouveau modèle** : le scénario reste DÉSACTIVÉ ; Supabase
+  déclenche **exactement N runs via l'API Make « run once »** (`POST /scenarios/{id}/run`) aux heures prévues.
+  Remplace le modèle fenêtre+start/stop. Table `scenario_runs_planifies` (seed **Lun-Ven 09h00 · 15h45 ·
+  18h30 · 21h15 Paris**), fonction `scenario_fire(force)`, cron **5 min** (grâce 30 min). Bouton console :
+  **Activer le planning / Couper / ⚡ Lancer maintenant** (PIN). `scenario-switch` v2. OFF par défaut ; jeton
+  API Make + zone toujours à fournir.
+
 ## 2026-08-17
+
+- **NETTOYAGE des redondances + règle « vérifier avant d'ajouter » (demandée par Chachou).** Chachou signale
+  à juste titre que j'avais ajouté une table (`alchimiste_crypte_verdicts`) + un module Make (20024) + 2 vues
+  staking alors que TOUT existait déjà. Correctifs : (1) **règle inscrite** dans `CLAUDE.md` — toujours
+  vérifier l'existant (Supabase + blueprint Make) avant d'affirmer une absence ou de créer un objet ; ne pas
+  faire ajouter de module Make sans avoir confirmé qu'aucun existant ne fait le travail. (2) **Supprimé** :
+  table `alchimiste_crypte_verdicts`, fonction `log_alc_verdict`, vue `v_alc_verdict_dernier`, fichiers
+  `13_alc_verdict_log.sql` + prompt de log (le dé-stake est déjà journalisé dans `alc_destake_reco` par la
+  RPC existante `alc_record_propositions`). Module Make **20024 « LE VERDICT SCELLÉ » à retirer** (prompt Maia).
+  (3) **Staking reconnecté sur l'existant** : les 2 vues texte projettent désormais la vue EXISTANTE
+  `v_staking_point` (déjà apy_pct + unbonding_jours + coût, coins détenus). Fix mapping VÉRIFIÉ (REST 200) :
+  modules 20022/20023 avec en-tête `Accept: application/vnd.pgrst.object+json` → mapping Alchimiste
+  `20022.data.delais_texte` / `20023.data.apy_texte` (sans `[1]`, qui ne se résolvait pas). Objet renvoyé :
+  `{"delais_texte":"ATOM:21j | … | TON:2j | …"}`. `supabase/schema/12_alc_staking_text.sql` mis à jour.
+
+- **Alchimiste — le dé-stake était DÉJÀ loggé (`alc_destake_reco`) ; diagnostic « aucune reco » = correct.**
+  En cherchant pourquoi le journal `alchimiste_crypte_verdicts` restait vide (module Make 20024 n'a pas
+  écrit — la RPC `log_alc_verdict` est pourtant OK, testée en REST 200), découverte que la RPC EXISTANTE
+  `alc_record_propositions` (appelée chaque run par « Le Registre de Cristal ») écrit déjà le dé-stake dans
+  **`alc_destake_reco`** (devise, apy, délai, verdict, raison). Preuve par les données : run 20:12 (pré-fix)
+  = raisons « tables encodées vides / données absentes » (aveugle) ; run 22:00 (post-fix) = 7 coins évalués,
+  **verdict GARDER pour tous**, plus aucune mention d'aveuglement → « aucune reco de dé-stake » = « tout
+  garder staké » = CORRECT. **Réserve** : les valeurs APY/délai de son raisonnement au 22:00 restent estimées
+  (TON 5% vs réel 17.67% ; TRX 3j vs réel 14j) → les CHIFFRES staking ne lui parviennent probablement pas
+  encore (mapping `[1]`), même s'il n'est plus totalement aveugle (prix OK). Pas urgent (APY réels plus élevés
+  → GARDER encore plus justifié), fix Make à préparer. **Vigie** : sonde « Alchimiste verdict » repointée sur
+  `alc_destake_reco` (fiable), test d'aveuglement scopé au **dernier batch** uniquement (un run pré-fix dans
+  la fenêtre donnait un faux positif PANNE, corrigé → OK). `alchimiste_crypte_verdicts`/`log_alc_verdict`
+  conservés (le module 20024 est redondant avec `alc_destake_reco` ; il peut être retiré).
+
+- **LA VIGIE — 2 sondes ajoutées pour « ce genre de problème » (aveuglement Alchimiste).** À la demande de
+  Chachou, la Vigie surveille désormais 13 composants (au lieu de 11). (1) **Alchimiste verdict** : lit le
+  dernier verdict loggué (`alchimiste_crypte_verdicts`) — PANNE si `parse_ok=false` (sortie illisible) ou si
+  le commentaire contient des marqueurs d'aveuglement (« faute de données », « encodées vides », « données
+  manquantes », « faute de prix/APY »…) ; VEILLE tant que le module Make de log n'est pas ajouté (pas de
+  fausse alerte). (2) **Données staking** (catégorie Source) : vérifie en direct que `v_alc_staking_apy_txt`
+  / `v_alc_staking_delais_txt` renvoient du contenu → PANNE immédiate si une table se vide. Ces PANNE
+  déclenchent aussi l'alerte Discord existante. `supabase/schema/11_vigie.sql` mis à jour.
+
+- **Journal du verdict de l'Alchimiste (comble l'angle mort du raisonnement).** Constat : le `commentaire`
+  et la liste `destake_recommande` de l'Alchimiste n'étaient stockés nulle part → impossible de savoir
+  après coup POURQUOI il dé-stake ou non (ex. « aucune reco de dé-stake » ce soir = verdict légitime
+  « garder staké », mais invérifiable). Côté Supabase (fait, testé) : table `alchimiste_crypte_verdicts`,
+  RPC `log_alc_verdict(p_run_id, p_raw_b64)` qui reçoit la sortie BRUTE de l'Alchimiste en base64, la
+  décode + parse côté serveur (pas de `toString` cassant) et extrait commentaire / destake / nb propositions,
+  vue `v_alc_verdict_dernier`. Côté Make (prompt Maia, `docs/decisions/PROMPT-MAIA-LOG-VERDICT-ALCHIMISTE-2026-08-17.md`) :
+  ajouter 1 module HTTP POST après l'Alchimiste appelant la RPC avec
+  `base64(10012.data.choices[1].message.content)`. DDL : `supabase/schema/13_alc_verdict_log.sql`.
+  À suivre (optionnel) : affichage dans la zone privée console + intégration Vigie. NB diagnostic du soir :
+  le « plus aucune reco de dé-stake » est cohérent (APY TON/GRAM 17.67% déblocable en 2j + marché neutre +
+  2.52 USD de cash → garder staké est rationnel) ; ce log permettra de le CONFIRMER au prochain run.
 
 - **Alchimiste « ne voit ni prix ni staking » — bug de mapping Make (pas les données).** Chachou constate
   que l'Alchimiste écrit « faute de données de prix, d'APY et de délais (tables encodées vides) ». Vérifié
