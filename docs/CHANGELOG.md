@@ -8,6 +8,28 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-18 (suite — audit complet + app réelle)
+
+- **`aether.html` v1 RÉEL** : le design validé (maquette v9) devient l'application, branchée sur les vraies
+  sources (oracle-inbox, oracle-tests, dashboard_snapshot, scenario-switch, ju-killswitch, ju-passkey).
+  Face ID réel sur Journal/Commandes, actions scénario/kill-switch réelles, « Signaler un problème » écrit
+  dans oracle_problemes, refresh auto 2 min, aucun chiffre inventé (sans donnée → « — »). Chaque panneau est
+  isolé (`safe()`) : une erreur de rendu ne bloque plus les autres.
+- **Audit complet des tables/calculs (agent, lecture seule)** → 5 correctifs appliqués :
+  ① **JU réconcilié** : les 3 points de perf du 18/08 (~222-226 k$, RÉELS — clôture des ETF) réinsérés dans
+  `oracle_performance` → courbes/gains/comparaison réalignés sur +22,6 %.
+  ② **P&L fantôme +136 660 $ purgé** : `v_live_crypto_positions` filtre désormais prix d'entrée ≤ 0 et
+  valorisation < 0,01 $ (dust corrompue JU).
+  ③ **Stats Alchimiste unifiées** : `alc_stats()` compte les clôtures VENTE (fini le « 100 % sur 1 trade » —
+  vrai WR 33,3 % sur 3 clôtures partout) ; le « 48.5 » codé en dur de `v_perf_resume` remplacé par le calcul réel.
+  ④ **Marées débloqué** : backfill `exit_ts` sur les clôtures (21 trades clos maintenant visibles → gains,
+  courbes et résumés Marées alimentés).
+  ⑤ **Libellés AMF adoucis** (suivi/index/console) : « Objectif +15-20 % » → hypothèse non garantie ;
+  « on bat le S&P 500 » → surperformance simulée ; « SEUL CERVEAU AVEC UN EDGE MESURÉ » → « premier candidat
+  au réel, en validation » ; « La preuve en une courbe » → courbe comparée (simulation) ; etc.
+  Restent documentés (rapport d'audit, non appliqués) : méthodo Sharpe/DD des benchmarks, gains ALC_RÉEL non
+  neutralisés des dépôts (`fonds_versements` vide), incohérences v_gains « jour » multi-dates.
+
 ## 2026-08-18
 
 - **« Alchimiste verdict MUET » : cause racine = clé anon corrompue dans les modules staking 20022/20023.**

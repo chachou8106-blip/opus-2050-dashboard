@@ -63,7 +63,7 @@ border:none;border-radius:12px;padding:13px;font-weight:700;font-size:13.5px;dis
 </head>
 <body>
 <div class="top"><h1><span>◈</span> OPUS 2050 — Suivi</h1><div class="live"><span class="dot"></span><span id="maj">…</span></div></div>
-<div class="obj">Objectif : <b>+15 à +20 %</b> · résultats en simulation (paper trading)</div>
+<div class="obj">Hypothèse de travail (simulation) : <b>+15 à +20 %</b> — aucun rendement n'est garanti</div>
 
 <div class="verdict" id="verdict"><div class="k">PRÊT À LANCER LE RÉEL ?</div><div class="v" id="verdictV">…</div><div class="s" id="verdictS">Chargement…</div></div>
 
@@ -151,7 +151,7 @@ async function charger(){
    {ok:ddMax<5,lb:'Aucun drawdown au-dessus de 5 %',sub:'protège le capital',vl:'max '+f2(ddMax)+' %'},
    {ok:h.win_rate_moyen>=52,lb:'Win rate collectif ≥ 52 %',sub:'sur l\'ensemble des runs',vl:f2(h.win_rate_moyen)+' %'},
    {ok:wrMin>=45,lb:'Aucun archimage sous 45 %',sub:'chaque IA reste fiable',vl:'min '+f2(wrMin)+' %'},
-   {ok:h.alpha_moyen_pct>0,lb:'Alpha positif vs marché',sub:'on bat le S&P 500',vl:sgn(h.alpha_moyen_pct)+' pts'}
+   {ok:h.alpha_moyen_pct>0,lb:'Alpha positif vs marché',sub:'surperformance vs S&P 500 (simulation)',vl:sgn(h.alpha_moyen_pct)+' pts'}
   ];
   document.getElementById('gates').innerHTML=gates.map(g=>`<div class="gate"><div class="ic ${g.ok?'ok':'ko'}">${g.ok?'✓':'✕'}</div>
     <div class="lb">${g.lb}<small>${g.sub}</small></div><div class="vl" style="color:${g.ok?'var(--green)':'var(--red)'}">${g.vl}</div></div>`).join('');
@@ -159,7 +159,7 @@ async function charger(){
   const vd=document.getElementById('verdict'); vd.className='verdict '+(tous?'go':'no');
   document.getElementById('verdictV').textContent=tous?'OUI — feu vert':'PAS ENCORE';
   document.getElementById('verdictS').innerHTML=tous
-    ?'Tous les critères sont au vert. Tu peux réactiver « Trading Algo » dans MetaTrader et lancer la réplication.'
+    ?'Tous les critères sont au vert. La décision de réactiver « Trading Algo » t\'appartient — risque de perte en capital.'
     :`${nOk}/4 critères au vert.${ddMax>=5?' Le drawdown de <b>'+f2(ddMax)+' %</b> doit repasser sous 5 %.':''} On attend que tout soit vert avant de lancer.`;
 
   // Alchimiste
