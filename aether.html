@@ -567,8 +567,9 @@ function hoverize(box,cfg){
  let xh=box.querySelector('.xhair'),tip=box.querySelector('.ctip');
  if(!xh){xh=document.createElement('div');xh.className='xhair';box.appendChild(xh);}
  if(!tip){tip=document.createElement('div');tip.className='ctip';box.appendChild(tip);}
+ box._xh=xh;box._tip=tip;
  box._cfg=cfg;if(box._wired)return;box._wired=true;
- function move(cx){const c=box._cfg;if(!c||!c.series.length||!c.series[0].vals.length)return;const n=c.series[0].vals.length;
+ function move(cx){const c=box._cfg,xh=box._xh,tip=box._tip;if(!c||!xh||!tip||!c.series.length||!c.series[0].vals.length)return;const n=c.series[0].vals.length;
   const r=box.getBoundingClientRect(),sc=r.width/c.W,x0=c.L*sc,inner=(c.W-c.L-c.R)*sc;
   let f=(cx-r.left-x0)/inner;f=Math.max(0,Math.min(1,f));const i=Math.round(f*(n-1)),px=x0+(n>1?(i/(n-1)):0.5)*inner;
   xh.style.left=px+'px';xh.style.display='block';
@@ -578,7 +579,7 @@ function hoverize(box,cfg){
  box.addEventListener('mousemove',e=>move(e.clientX));
  box.addEventListener('touchstart',e=>move(e.touches[0].clientX),{passive:true});
  box.addEventListener('touchmove',e=>move(e.touches[0].clientX),{passive:true});
- box.addEventListener('mouseleave',()=>{xh.style.display='none';tip.style.display='none';});
+ box.addEventListener('mouseleave',()=>{box._xh.style.display='none';box._tip.style.display='none';});
 }
 
 /* ---------- Périodes réelles (les données existent depuis juin 2026) ---------- */
@@ -841,7 +842,7 @@ function rTables(){
   c.map(a=>{const b=num(a.baseline_equity),p=num(a.cumulative_pnl);return ['<span class="tname"><i style="background:'+SCOL[a.archimage]+'"></i>'+a.archimage+' · Alpaca</span>',fmt$(b),fmt$(b!=null&&p!=null?b+p:null),(p!=null&&b?sgn(p/b*100):'—'),(a.win_rate!=null?(num(a.win_rate)*100).toFixed(0)+' %':'—')];})
   .concat(num(alc.total_live_usd)!=null?[['<span class="tname"><i style="background:var(--s-alch)"></i>Alchimiste · Revolut X (réel)</span>',fmt$(num(alc.total_snapshot_usd)),'<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>',sgn(num(alc.ecart_depuis_snapshot_usd)&&num(alc.total_snapshot_usd)?num(alc.ecart_depuis_snapshot_usd)/num(alc.total_snapshot_usd)*100:null),'—']]:[]),'Comptes indisponibles.');
  const pos=Array.isArray(D.positions)?D.positions:[];
- T('positions',["Agent","Actif","Valeur $","P&L latent $","P&L %","Jours"],pos.slice(0,15).map(p=>['<span class="tname"><i style="background:'+(SCOL[p.archimage]||'var(--dim)')+'"></i>'+esc(p.archimage||'—')+'</span>',esc(p.ticker||'—'),fmt$(num(p.market_value)),(num(p.unrealized_pl)!=null?(num(p.unrealized_pl)>=0?up('+'+fmt$(num(p.unrealized_pl))):dn(fmt$(num(p.unrealized_pl)))):'—'),sgn(num(p.unrealized_pl_pct)),(p.days_held??'—')]),'Aucune position vivante.');
+ T('positions',["Agent","Actif","Valeur $","P&L latent $","P&L %","Jours"],pos.slice(0,30).map(p=>['<span class="tname"><i style="background:'+(SCOL[p.archimage]||'var(--dim)')+'"></i>'+esc(p.archimage||'—')+'</span>',esc(p.ticker||'—'),fmt$(num(p.market_value)),(num(p.unrealized_pl)!=null?(num(p.unrealized_pl)>=0?up('+'+fmt$(num(p.unrealized_pl))):dn(fmt$(num(p.unrealized_pl)))):'—'),sgn(num(p.unrealized_pl_pct)),(p.days_held??'—')]),'Aucune position vivante.');
  const hold=D.suivi?.alc_reel_live?.positions||[];
  T('holdings',["Coin","Qté","Valeur live","Snapshot 8h","Staké","Live"],hold.slice(0,20).map(p=>[esc(p.devise||'—'),(p.qty!=null?Number(p.qty).toLocaleString('fr-FR',{maximumFractionDigits:6}):'—'),fmt$(num(p.valeur_live_usd)),fmt$(num(p.valeur_snapshot_usd)),(p.en_stake?'oui':'non'),(p.est_live?'✅':'⏸️')]),'Aucune ligne.');
  const mar=D.suivi?.marees_virtuel?.positions||[];
@@ -1029,7 +1030,12 @@ async function boot(){
  toast('Chargement des données réelles…');
  const [suivi,hero,sages,runs,positions,bt,teq,alch,snap]=await Promise.all([
   INBOX({action:'suivi'}),TESTS('hero'),TESTS('sages'),TESTS('runs'),TESTS('positions'),TESTS('bt_alchimiste'),TESTS('equity'),TESTS('alchimiste'),SNAPF()]);
- if(suivi&&suivi.ok)D.suivi=suivi;D.hero=hero;D.sages=sages;D.runs=runs;D.positions=positions;D.bt=bt;D.teq=teq;D.alch=alch;D.snap=snap;
+ // filtre poussière : reliquats crypto qty~1e-9 / valeur ~0 avec P&L aberrant (oracle_positions_live non purgée côté serveur)
+ const realPos=a=>(Array.isArray(a)?a:[]).filter(p=>{const q=num(p.qty),mv=num(p.market_value),pl=num(p.unrealized_pl);
+  if(q!=null&&Math.abs(q)<1e-6)return false;
+  if((mv==null||Math.abs(mv)<1)&&pl!=null&&Math.abs(pl)>100)return false;
+  return true;});
+ if(suivi&&suivi.ok)D.suivi=suivi;D.hero=hero;D.sages=sages;D.runs=runs;D.positions=realPos(positions);D.bt=bt;D.teq=teq;D.alch=alch;D.snap=snap;
  if(!D.suivi){toast('⚠️ oracle-inbox injoignable — réessaie dans une minute');}
  safe('kpis',rKpis);safe('verdict',rVerdict);safe('totaux',rTotaux);safe('gains',rGains);safe('flux',rFlux);safe('timeline',rTimeline);
  safe('strats',rStrats);safe('chips',rChips);safe('cmp',drawCmp);safe('ov',()=>rOv('1M'));safe('stats',rStats);safe('monthly',rMonthly);
