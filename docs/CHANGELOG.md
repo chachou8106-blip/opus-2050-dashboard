@@ -8,6 +8,27 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-18 (suite 2 — test E2E intégral de la console)
+
+- **Banc de test automatisé complet d'`aether.html`** (Playwright + fixtures = vraies réponses des edge
+  functions capturées le 18/08 à 21:20 via `net.http_post` depuis Postgres, le proxy bloquant supabase.co
+  en direct). Couverture : les 8 onglets, tous les tableaux, les 5 jauges Sages + dossiers (modales
+  `sage_detail`/`archimage_detail`), courbes + périodes 7J/1M/TOUT, comparateur (pastilles), rendements
+  par période, sélecteurs portefeuille (valeur/PnL/drawdown), déverrouillage PIN (repli Face ID),
+  copilote (4 questions), « Signaler un problème » (écriture), calendrier, Vigie (MUET affiché), actions
+  scénario/kill-switch, console de tests, vue mobile 390 px (aucun débordement horizontal).
+- **3 bugs trouvés et corrigés** :
+  ① **Crosshair mort après changement de période** : `lineChart` réécrit `innerHTML` du chartbox, les
+  écouteurs de `hoverize` gardaient les anciens éléments `.xhair`/`.ctip` détachés → infobulles mortes
+  après tout re-rendu. Fix : références vivantes portées par le box (`box._xh`/`box._tip`).
+  ② **Lignes fantômes dans « Positions vivantes »** : oracle-tests `positions` lit la table brute
+  (poussière crypto qty ~1e-9, valeur 0 $, P&L « +188 325 $ ») → filtre client à l'entrée (`realPos`)
+  sur qty < 1e-6 ou valeur < 1 $ avec P&L aberrant ; le KPI « Positions ouvertes » (21 → 17) et le
+  tableau restent cohérents. (À terme : purge côté serveur, documentée.)
+  ③ **Tableau positions tronqué** : `slice(0,15)` cachait 2 vraies lignes (XLK, ETHUSD) → cap à 30.
+- Résultat final : **0 erreur** (SAFE_ERRS vides, aucune pageerror, tous les panneaux alimentés).
+  Banc rejouable : `/tmp/aetest/` (fixtures `fx/build.py`, scénario `test.mjs`, captures `shots/`).
+
 ## 2026-08-18 (suite — audit complet + app réelle)
 
 - **`aether.html` v1 RÉEL** : le design validé (maquette v9) devient l'application, branchée sur les vraies
