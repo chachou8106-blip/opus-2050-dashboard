@@ -10,6 +10,19 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-18
 
+- **BUG JU +22,2 % : garde-fou anti-lecture-equity-aberrante + nettoyage des données polluées.** Ce matin
+  JU affichait un rendement de **+22,2 %** (au lieu de ~5 %). Vérifié dans Supabase (rien inventé) : la vue
+  `v_perf_resume` calcule `cumulative_pnl ÷ baseline` = 221 986 ÷ 999 789 = 22,2 %. Ce `cumulative_pnl` est
+  écrit par `update-brain` = *(equity Alpaca − baseline)*. Seul JU a sauté (GIL/SYL normaux), uniquement sur les
+  2 runs du matin, avec 0 ordre → **lecture d'equity Alpaca fausse** (position fantôme / valeur transitoire),
+  pas un bug Make ni un doublon en base. Confirmé persistant : après nettoyage, le run de 14:30 a re-pollué
+  (JU 225 985). **Correctifs** : (1) `update-brain` **v17** — garde-fou : un saut de PnL > 15 % de la baseline
+  en UN run est rejeté, la dernière bonne valeur est conservée (note « lecture equity aberrante IGNOREE »).
+  (2) **Nettoyage Supabase** : suppression des lignes `oracle_performance` bidon, restauration de
+  `oracle_brain_state.JU.cumulative_pnl` à 47 142 (dernière bonne valeur), purge des leçons/mistakes polluées
+  du Cerveau **et du Méta-Cerveau** (`cerveau`). Reste à faire hors périmètre Supabase : purger la position
+  fantôme du compte paper Alpaca de JU (le garde-fou neutralise l'effet en attendant).
+
 - **Bouton scénario déverrouillé par Face ID (repli PIN), comme le kill-switch.** Chachou : « pour activer/
   désactiver le scénario, rajoute le Face ID ». `ju-passkey` v3 : nouvelle action `scen-options`/`scen-verify`
   — vérifie l'empreinte WebAuthn **côté serveur** (purpose `scen`) puis relaie l'action à `scenario-switch`
