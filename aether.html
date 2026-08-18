@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06090f">
+<title>AETHER — Seul, un petit poisson. Ensemble, un banc.</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2337E0C6'/%3E%3Cstop offset='.5' stop-color='%236E86FF'/%3E%3Cstop offset='1' stop-color='%23F06BB4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%2306090f'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Georgia,serif' font-style='italic' font-weight='600' font-size='36' fill='url(%23g)'%3EÆ%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..600&family=Hanken+Grotesk:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* ===== AETHER — coque unifiée : Console · Tableau de bord · Suivi · Vitrine ===== */
+:root{
+  --ground:#06090F;--surface:#0D131C;--surface-2:#141D2A;--surface-3:#1D2838;
+  --hair:rgba(96,196,214,.13);--hair-2:rgba(120,150,255,.30);
+  --ink:#E9F1F3;--dim:#8FA3B0;--mute:#5B6E7C;
+  --iris:linear-gradient(105deg,#37E0C6 0%,#6E86FF 50%,#F06BB4 100%);
+  --grn:#3FE0A0;--red:#FF6B7D;--amber:#F2C14E;
+  --sans:"Hanken Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Fraunces",Georgia,serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);display:flex;flex-direction:column;overflow:hidden}
+.bar{flex:0 0 auto;z-index:50;backdrop-filter:blur(18px) saturate(1.2);background:linear-gradient(180deg,rgba(6,9,15,.94),rgba(6,9,15,.78));border-bottom:1px solid var(--hair)}
+.bar-in{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:16px;padding:9px 16px}
+.brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;text-decoration:none}
+.sigil{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--iris);box-shadow:0 0 34px rgba(110,134,255,.25);color:#06090F;font:italic 600 19px var(--serif)}
+.wordmark{line-height:1.05}
+.wordmark b{font:500 18px var(--serif);letter-spacing:.4px;background:var(--iris);-webkit-background-clip:text;background-clip:text;color:transparent;display:block}
+.wordmark small{font:italic 400 9.5px var(--serif);color:var(--dim);display:block;max-width:210px}
+.nav{display:flex;gap:3px;margin-left:auto;background:rgba(255,255,255,.02);border:1px solid var(--hair);border-radius:12px;padding:4px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nav button{font:600 13px var(--sans);color:var(--dim);background:none;border:0;padding:8px 13px;border-radius:9px;cursor:pointer;white-space:nowrap;transition:color .2s,background .2s;display:inline-flex;align-items:center;gap:6px}
+.nav button:hover{color:var(--ink)}
+.nav button.on{color:var(--ink);background:linear-gradient(180deg,var(--surface-3),var(--surface-2));box-shadow:inset 0 0 0 1px var(--hair-2);position:relative}
+.nav button.on::after{content:"";position:absolute;left:11px;right:11px;bottom:2px;height:2px;border-radius:2px;background:var(--iris)}
+.stage{flex:1;min-height:0;position:relative}
+.pane{position:absolute;inset:0;display:none}
+.pane.on{display:block}
+.pane iframe{width:100%;height:100%;border:0;background:var(--ground)}
+/* Écran scellé Face ID */
+.gate{position:absolute;inset:0;display:grid;place-items:center;padding:22px;background:
+ radial-gradient(600px 420px at 12% -6%,rgba(55,224,198,.10),transparent 60%),
+ radial-gradient(640px 480px at 88% 4%,rgba(240,107,180,.09),transparent 58%),
+ radial-gradient(820px 640px at 50% 112%,rgba(110,134,255,.12),transparent 62%),var(--ground)}
+.gbox{max-width:430px;text-align:center}
+.gbox .ic{font-size:42px;margin-bottom:12px}
+.gbox h2{font:500 24px var(--serif);margin:0 0 8px;letter-spacing:-.3px}
+.gbox p{color:var(--dim);font-size:14px;line-height:1.6;margin:0 0 20px}
+.btn{font:700 15px var(--sans);padding:13px 22px;border-radius:12px;border:0;cursor:pointer;background:linear-gradient(180deg,#4fe0a6,#2fae82);color:#062318;transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}
+.btn.ghost{background:var(--surface-2);color:var(--ink);border:1px solid var(--hair-2);margin-left:8px}
+.gmsg{margin-top:14px;font:400 12.5px var(--mono);color:var(--mute);min-height:18px}
+.legal{flex:0 0 auto;border-top:1px solid var(--hair);background:rgba(6,9,15,.92);color:var(--mute);font-size:10.5px;line-height:1.45;padding:7px 16px;text-align:center}
+.legal b{color:var(--dim)}
+@media(max-width:720px){
+ .wordmark small{display:none}
+ .bar-in{padding:8px 10px;gap:8px}
+ .nav button{font-size:12px;padding:8px 10px}
+ .legal{font-size:9.5px;padding:6px 10px}
+}
+</style>
+</head>
+<body>
+
+<header class="bar"><div class="bar-in">
+  <a class="brand" href="#console">
+    <span class="sigil">Æ</span>
+    <span class="wordmark"><b>AETHER</b><small>Seul, un petit poisson. Ensemble, un banc.</small></span>
+  </a>
+  <nav class="nav" id="nav">
+    <button data-p="console" class="on">Console</button>
+    <button data-p="dashboard">Tableau de bord <span class="lk">🔒</span></button>
+    <button data-p="suivi">Passage au réel <span class="lk">🔒</span></button>
+    <button data-p="vitrine">Vitrine</button>
+  </nav>
+</div></header>
+
+<main class="stage" id="stage">
+  <!-- Console publique (ses zones sensibles restent scellées par son propre Face ID interne) -->
+  <section class="pane on" id="pane-console"><iframe data-src="console_aether%202.html" title="Console AETHER"></iframe></section>
+
+  <!-- Tableau de bord technique — scellé Face ID -->
+  <section class="pane" id="pane-dashboard">
+    <div class="gate" id="gate-dashboard"><div class="gbox">
+      <div class="ic">🔒</div><h2>Tableau de bord scellé</h2>
+      <p>Le Conseil des Archimages — cerveaux, positions vivantes, debug d'exécution et console de tests — est réservé à l'opérateur. Les prompts, clés et réglages internes ne sont jamais affichés en clair.</p>
+      <button class="btn" onclick="unlock('dashboard')">🔓 Déverrouiller avec Face ID</button><button class="btn ghost" onclick="unlockPin('dashboard')">Code PIN</button>
+      <div class="gmsg" id="msg-dashboard"></div>
+    </div></div>
+    <iframe data-src="dashboard.html" title="Tableau de bord" style="display:none"></iframe>
+  </section>
+
+  <!-- Suivi passage au réel — scellé Face ID -->
+  <section class="pane" id="pane-suivi">
+    <div class="gate" id="gate-suivi"><div class="gbox">
+      <div class="ic">🔒</div><h2>Suivi du passage au réel</h2>
+      <p>Verdict go / no-go, gates de sécurité et santé du système — la décision d'engager de l'argent réel t'appartient, derrière ton empreinte.</p>
+      <button class="btn" onclick="unlock('suivi')">🔓 Déverrouiller avec Face ID</button><button class="btn ghost" onclick="unlockPin('suivi')">Code PIN</button>
+      <div class="gmsg" id="msg-suivi"></div>
+    </div></div>
+    <iframe data-src="suivi.html" title="Suivi quotidien" style="display:none"></iframe>
+  </section>
+
+  <!-- Vitrine publique -->
+  <section class="pane" id="pane-vitrine"><iframe data-src="index.html" title="Vitrine publique"></iframe></section>
+</main>
+
+<footer class="legal"><b>AETHER</b> est un système expérimental de trading autonome. Résultats principalement en <b>simulation</b> (paper trading) ; les performances passées ne préjugent pas des performances futures. Investir comporte des <b>risques de perte en capital</b>. Aucune information de cette application ne constitue un conseil en investissement au sens de la réglementation AMF. © 2026 AETHER.</footer>
+
+<script>
+/* ===== Navigation + chargement paresseux des vraies pages ===== */
+const PANES=['console','dashboard','suivi','vitrine'];
+const GATED=['dashboard','suivi'];
+function loadPane(p){const f=document.querySelector('#pane-'+p+' iframe');if(f&&!f.src)f.src=f.dataset.src;}
+function show(p){
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+ PANES.forEach(x=>document.getElementById('pane-'+x).classList.toggle('on',x===p));
+ if(!GATED.includes(p)||sessionStorage.getItem('aether_unlocked')==='1')loadPane(p);
+ if(GATED.includes(p)&&sessionStorage.getItem('aether_unlocked')==='1')reveal(p);
+ if(location.hash!=='#'+p)history.replaceState(null,'','#'+p);
+}
+document.getElementById('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(b)show(b.dataset.p);});
+
+/* ===== Sceau Face ID — réutilise ju-passkey (WebAuthn serveur) + repli PIN ===== */
+const PK_FN="https://smddzybxebwhfnitxuyp.supabase.co/functions/v1/ju-passkey";
+const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODk4NzksImV4cCI6MjA5NTQ2NTg3OX0.ppjgF79OokQ-2jE8UCp26U-E-YZPcmf6TNnYEKHGKSM";
+async function pkCall(action,extra){const r=await fetch(PK_FN,{method:"POST",headers:{"Content-Type":"application/json","apikey":ANON,"Authorization":"Bearer "+ANON},body:JSON.stringify(Object.assign({action},extra||{}))});return r.json();}
+function reveal(p){const g=document.getElementById('gate-'+p);if(g)g.style.display='none';const f=document.querySelector('#pane-'+p+' iframe');if(f){f.style.display='block';if(!f.src)f.src=f.dataset.src;}}
+function unlockedAll(){sessionStorage.setItem('aether_unlocked','1');GATED.forEach(reveal);document.querySelectorAll('.nav .lk').forEach(l=>l.textContent='🔓');}
+async function unlock(p){const m=document.getElementById('msg-'+p);m.textContent='Vérification Face ID…';
+ try{
+  const o=await pkCall('unlock-options');
+  if(!o.ok)throw new Error(o.error||'aucune passkey enregistrée');
+  const lib=await import('https://esm.sh/@simplewebauthn/browser@13');
+  const asr=await lib.startAuthentication({optionsJSON:o.options});
+  const v=await pkCall('unlock-verify',{response:asr});
+  if(v&&v.ok){m.textContent='✅ Identité vérifiée';unlockedAll();}
+  else{m.textContent='❌ '+((v&&v.error)||'échec — essaie le PIN');}
+ }catch(e){m.textContent='❌ '+((e&&e.message)||'Face ID indisponible — essaie le PIN');}
+}
+async function unlockPin(p){const m=document.getElementById('msg-'+p);
+ const pin=prompt('Code PIN :');if(pin===null)return;m.textContent='Vérification…';
+ try{const v=await pkCall('unlock-pin',{pin});
+  if(v&&v.ok){m.textContent='✅ PIN correct';unlockedAll();}
+  else m.textContent='❌ PIN incorrect';
+ }catch(e){m.textContent='❌ Erreur réseau';}
+}
+
+/* Démarrage : onglet par ancre (#dashboard…), console par défaut */
+const h=(location.hash||'#console').slice(1);
+show(PANES.includes(h)?h:'console');
+if(sessionStorage.getItem('aether_unlocked')==='1')document.querySelectorAll('.nav .lk').forEach(l=>l.textContent='🔓');
+</script>
+</body>
+</html>
