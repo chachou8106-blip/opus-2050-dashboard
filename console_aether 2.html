@@ -758,7 +758,19 @@ function scenRender(e){const st=document.getElementById("scenState"),d=document.
   if(d){let t="Heures (Lun-Ven, Paris) : "+(e.heures||"—")+".";if(!e.api_configuree)t+=" ⚠️ API Make non configurée (jeton manquant) — l'état est mémorisé mais Make n'est pas encore piloté.";if(e.pending_stop_at)t+=" ⏳ Run déclenché — coupure auto à "+new Date(e.pending_stop_at).toLocaleTimeString("fr-FR");if(e.dernier_run)t+=" · Dernier run : "+new Date(e.dernier_run).toLocaleString("fr-FR");d.textContent=t;}}
 async function scenLoad(){const j=await scenCall("status");scenRender(j&&j.ok?j.etat:null);}
 function scenInit(){scenLoad();const on=document.getElementById("scenOn"),off=document.getElementById("scenOff"),run=document.getElementById("scenRun"),m=document.getElementById("scenMsg");
-  const act=async(action,label)=>{const pin=prompt("PIN pour "+label+" :");if(pin===null)return;if(m){m.className="msg";m.textContent="…";}const j=await scenCall(action,pin);if(j&&j.ok){scenRender(j.etat);if(m){m.className="msg ok";m.textContent="✅ "+label+" — OK.";}}else if(m){m.className="msg err";m.textContent="❌ "+((j&&j.error)||"erreur");}};
+  const act=async(action,label)=>{
+    if(m){m.className="msg";m.textContent="Vérification Face ID…";}
+    // 1) Face ID (vérifié côté serveur, puis relai à scenario-switch avec le PIN interne)
+    try{const o=await pkCall("scen-options");
+      if(o&&o.ok){let asr=null;try{const lib=await pkLib();asr=await lib.startAuthentication({optionsJSON:o.options});}catch(e){asr=null;}
+        if(asr){const v=await pkCall("scen-verify",{response:asr,scenAction:action});
+          if(v&&v.ok){scenRender(v.etat);if(m){m.className="msg ok";m.textContent="✅ "+label+" — OK (Face ID).";}return;}
+          if(v&&v.error&&/face id|passkey|verif/i.test(v.error)){if(m){m.className="msg err";m.textContent="❌ "+v.error;}return;}}}
+    }catch(e){}
+    // 2) Repli PIN (Face ID indisponible sur cet appareil / pas encore enregistré)
+    const pin=prompt("Face ID indisponible — PIN pour "+label+" :");if(pin===null){if(m)m.textContent="";return;}
+    if(m){m.className="msg";m.textContent="…";}
+    const j=await scenCall(action,pin);if(j&&j.ok){scenRender(j.etat);if(m){m.className="msg ok";m.textContent="✅ "+label+" — OK.";}}else if(m){m.className="msg err";m.textContent="❌ "+((j&&j.error)||"erreur");}};
   if(on&&!on._w){on._w=1;on.addEventListener("click",()=>act("on","ACTIVER le planning"));}
   if(off&&!off._w){off._w=1;off.addEventListener("click",()=>act("off","COUPER"));}
   if(run&&!run._w){run._w=1;run.addEventListener("click",()=>act("run-now","LANCER un run maintenant"));}}

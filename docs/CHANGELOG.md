@@ -10,6 +10,27 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ## 2026-08-18
 
+- **Bouton scénario déverrouillé par Face ID (repli PIN), comme le kill-switch.** Chachou : « pour activer/
+  désactiver le scénario, rajoute le Face ID ». `ju-passkey` v3 : nouvelle action `scen-options`/`scen-verify`
+  — vérifie l'empreinte WebAuthn **côté serveur** (purpose `scen`) puis relaie l'action à `scenario-switch`
+  avec le PIN lu en interne (le client ne voit jamais le PIN). Console `scenInit` : les boutons Activer/Couper/
+  Lancer demandent d'abord Face ID ; si indisponible (appareil non enregistré), repli sur le prompt PIN. Même
+  schéma de sécurité que l'armement du kill-switch (action sensible exécutée après vérif serveur).
+
+- **Alchimiste : la panne APY vient du Base64, PAS des modules Make.** Vérifié (sous-agent sur le blueprint) :
+  les 2 modules HTTP staking (20022 délais → `v_alc_staking_delais_txt`, 20023 apy → `v_alc_staking_apy_txt`)
+  lisent les BONNES vues avec le bon en-tête `Accept: pgrst.object+json`. La panne est dans le module Alchimiste
+  (10012) qui encode les valeurs en **Base64** (`STAKING_APY_B64={{base64(...)}}`) et demande au LLM de « décoder
+  mentalement » — `sonar-pro` n'y arrive pas et **devine** l'APY (TON 5 % au lieu de 17,67 % ; les délais tombent
+  justes seulement car ce sont des constantes réseau connues). Correctif = prompt Maia pour envoyer du **texte
+  brut** (`docs/decisions/PROMPT-MAIA-ALCHIMISTE-BASE64-2026-08-18.md`).
+
+- **ANOMALIE archimage JU : equity ×4,7 en une nuit (bug, pas un vrai gain).** JU passe de ~47 142 $ (17/08
+  20:55) à **222 007 $** (18/08 07:52) alors que `orders_count=0`. `v_equity_points` pour JU = `oracle_performance
+  .actual_pnl` = `equity Alpaca − baseline` (calculé dans `update-brain`). La base de capital a ~quadruplé sans
+  ordre. Les positions crypto de JU montrent des prix d'entrée **corrompus** (SOL entrée = −136 000 milliards).
+  → À corriger dans une passe dédiée (lecture equity Alpaca / cost-basis). NON résolu, seulement diagnostiqué.
+
 - **FIX modèle de déclenchement : `/run` → `/start` + `/stop` différé (jeton Aether posé, testé bout-en-bout).**
   Le jeton API Make (clé **Aether**) a été mis en Vault par Chachou + zone `eu1` en base. Test : `POST
   /scenarios/{id}/run` renvoie **422 « Scenario is not activated » (IM325)** — l'endpoint « run once » exige

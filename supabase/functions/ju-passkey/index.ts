@@ -1,4 +1,5 @@
-// ju-passkey — WebAuthn (Face ID) : (a) ARMER le kill-switch, (b) DEVERROUILLER le menu technique.
+// ju-passkey — WebAuthn (Face ID) : (a) ARMER le kill-switch, (b) DEVERROUILLER le menu technique,
+// (c) piloter le SCENARIO (on/off/run) — verif Face ID cote serveur puis relai a scenario-switch.
 // Le PIN (ju_crypte_config.arm_pin) reste en secours. verify_jwt=false ; clef service serveur.
 import {
   generateRegistrationOptions,
@@ -128,6 +129,22 @@ Deno.serve(async (req) => {
     if (action === "unlock-pin") {
       const expected = await getPin();
       return json({ ok: !!expected && String(body?.pin ?? "") === expected });
+    }
+
+    // SCENARIO (marche/arret/run) par Face ID : on verifie l'empreinte cote serveur, puis on
+    // relaie l'action a scenario-switch avec le PIN lu en interne (le client ne voit jamais le PIN).
+    if (action === "scen-options") return json(await buildAuthOptions("scen"));
+    if (action === "scen-verify") {
+      const r = await verifyAuth("scen", body.response);
+      if (!r.ok) return json(r);
+      const scenAction = String(body?.scenAction || "").toLowerCase();
+      if (!["on", "off", "run-now"].includes(scenAction)) return json({ ok: false, error: "action scenario invalide" });
+      const pin = await getPin();
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/scenario-switch`, {
+        method: "POST", headers: H, body: JSON.stringify({ action: scenAction, pin }),
+      });
+      const jb = await resp.json().catch(() => ({ ok: false, error: "reponse scenario illisible" }));
+      return json(jb);
     }
 
     return json({ ok: false, error: `action invalide: ${action}` });
