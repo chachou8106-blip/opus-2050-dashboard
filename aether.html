@@ -535,6 +535,8 @@ const PK=(action,extra)=>fetch(SB+"/functions/v1/ju-passkey",{method:"POST",head
 const pkLib=()=>import("https://esm.sh/@simplewebauthn/browser@13");
 
 const D={};                     // toutes les données réelles chargées
+const SAFE_ERRS=[];
+function safe(name,fn){try{fn();}catch(e){SAFE_ERRS.push(name+': '+(e&&e.message||e));console.error('[AETHER]',name,e);}}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=v=>{const n=Number(v);return isFinite(n)?n:null;};
@@ -804,7 +806,7 @@ function rPfControls(){const T=['JU','SYL','GIL','ALCHIMISTE','MAREES'];
 function rPf(){const {trader,metric,period}=pfSel;const raw=slicePer(eqPts(trader),period);
  let pts,fmt;
  if(metric==='valeur'){pts=raw;fmt=fmt$;}
- else if(metric==='pnl'){const base=raw.length?raw[0].y:0;pts=raw.map(p=>({x:p.x,y:p.y-base}));fmt=v=>((v>=0?'+':'')+fmt$(Math.abs(v)).replace('$',(v<0?'−$':'$')));fmt=v=>(v>=0?'+':'−')+fmt$(Math.abs(v)).slice(0);}
+ else if(metric==='pnl'){const base=raw.length?raw[0].y:0;pts=raw.map(p=>({x:p.x,y:p.y-base}));fmt=v=>(v>=0?'+':'−')+fmt$(Math.abs(v));}
  else{let peak=-1e18;pts=raw.map(p=>{if(p.y>peak)peak=p.y;return {x:p.x,y:peak>0?-(peak-p.y)/peak*100:0};});fmt=v=>v.toFixed(2)+' %';}
  const col=metric==='drawdown'?'var(--red)':SCOL[trader];
  lineChart($('pfChart'),{W:880,H:250,fmt:v=>metric==='valeur'?(Math.abs(v)>=10000?'$'+Math.round(v/1000)+'k':fmt$(v)):(metric==='pnl'?(Math.abs(v)>=10000?(v>=0?'+':'−')+'$'+Math.round(Math.abs(v)/1000)+'k':fmt$(v)):v.toFixed(1)+'%'),series:[{name:SNAME[trader],color:col,pts,width:2.4,area:true,areaColor:metric==='drawdown'?'rgba(255,107,125,.18)':'rgba(110,134,255,.20)'}]});
@@ -951,7 +953,7 @@ async function unlockedOK(){sessionStorage.setItem('aeu','1');
  // charge les données privées
  const [j,scen,ks,snapPriv]=await Promise.all([INBOX({action:'journal'}),SCEN({action:'status'}),KS({action:'status'}),D.snap?null:SNAPF()]);
  if(j&&j.ok)D.journal=j;if(scen&&scen.ok)D.scen=scen.etat;if(ks&&ks.ok)D.ks=!!ks.arme;if(snapPriv)D.snap=snapPriv;
- rJournal();rOps();}
+ safe('journal',rJournal);safe('ops',rOps);}
 
 /* ---------- Actions réelles (scénario / kill-switch / tests / copilote / problème) ---------- */
 document.addEventListener('click',async e=>{
@@ -1029,17 +1031,18 @@ async function boot(){
   INBOX({action:'suivi'}),TESTS('hero'),TESTS('sages'),TESTS('runs'),TESTS('positions'),TESTS('bt_alchimiste'),TESTS('equity'),TESTS('alchimiste'),SNAPF()]);
  if(suivi&&suivi.ok)D.suivi=suivi;D.hero=hero;D.sages=sages;D.runs=runs;D.positions=positions;D.bt=bt;D.teq=teq;D.alch=alch;D.snap=snap;
  if(!D.suivi){toast('⚠️ oracle-inbox injoignable — réessaie dans une minute');}
- rKpis();rVerdict();rTotaux();rGains();rFlux();rTimeline();
- rStrats();rChips();drawCmp();rOv('1M');rStats();rMonthly();
- perBar('cmpPer','1M',p=>{CMP_PER=p;drawCmp();});perBar('ovPer','1M',rOv);perBar('icPer','1M',rIndiv);
- $('grTabs').innerHTML=[['Jour','jour'],['Semaine','semaine'],['Mois','mois'],['Année','annee']].map(t=>'<button class="btn" style="padding:8px 14px;font-size:12.5px" data-g="'+t[1]+'">'+t[0]+'</button>').join('');
- $('grTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)rGr(b.dataset.g);});rGr('mois');
- rSages();rArchi();rIndiv('1M');
- rPfControls();rPf();rAlc();$('alcFee').addEventListener('input',rAlc);rHeat();rTables();
- rReel();rSpec();sortable();
+ safe('kpis',rKpis);safe('verdict',rVerdict);safe('totaux',rTotaux);safe('gains',rGains);safe('flux',rFlux);safe('timeline',rTimeline);
+ safe('strats',rStrats);safe('chips',rChips);safe('cmp',drawCmp);safe('ov',()=>rOv('1M'));safe('stats',rStats);safe('monthly',rMonthly);
+ safe('perbars',()=>{perBar('cmpPer','1M',p=>{CMP_PER=p;safe('cmp',drawCmp);});perBar('ovPer','1M',p=>safe('ov',()=>rOv(p)));perBar('icPer','1M',p=>safe('indiv',()=>rIndiv(p)));});
+ safe('gr',()=>{$('grTabs').innerHTML=[['Jour','jour'],['Semaine','semaine'],['Mois','mois'],['Année','annee']].map(t=>'<button class="btn" style="padding:8px 14px;font-size:12.5px" data-g="'+t[1]+'">'+t[0]+'</button>').join('');
+ $('grTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)safe('gr2',()=>rGr(b.dataset.g));});rGr('mois');});
+ safe('sages',rSages);safe('archi',rArchi);safe('indiv',()=>rIndiv('1M'));
+ safe('pfc',rPfControls);safe('pf',rPf);safe('alc',rAlc);safe('fee',()=>$('alcFee').addEventListener('input',()=>safe('alc',rAlc)));safe('heat',rHeat);safe('tables',rTables);
+ safe('reel',rReel);safe('spec',rSpec);safe('sort',sortable);
+ if(SAFE_ERRS.length){console.warn('AETHER erreurs:',SAFE_ERRS);toast('⚠️ '+SAFE_ERRS.length+' panneau(x) en erreur — voir console navigateur');}
  if(sessionStorage.getItem('aeu')==='1')unlockedOK();
  // rafraîchissement auto (2 min) des données publiques
- setInterval(async()=>{const s=await INBOX({action:'suivi'});if(s&&s.ok){D.suivi=s;rKpis();rGains();rStrats();drawCmp();rOv('1M');rStats();rTables();rAlc();sortable();}},120000);
+ setInterval(async()=>{const s=await INBOX({action:'suivi'});if(s&&s.ok){D.suivi=s;['kpis','gains','strats','cmp','ov','stats','tables','alc'].forEach(()=>{});safe('kpis',rKpis);safe('gains',rGains);safe('strats',rStrats);safe('cmp',drawCmp);safe('ov',()=>rOv('1M'));safe('stats',rStats);safe('tables',rTables);safe('alc',rAlc);safe('sort',sortable);}},120000);
 }
 boot();
 
