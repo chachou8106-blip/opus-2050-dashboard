@@ -1,98 +1,95 @@
 -- ============================================================================
--- 14_scenario_scheduler.sql — Pilotage du scénario Make DEPUIS Supabase (0 modif Make)
+-- 14_scenario_scheduler.sql — Déclenchement du scénario Make DEPUIS Supabase (0 modif Make)
 -- ----------------------------------------------------------------------------
--- Le scénario Make a déjà un planning interne horaire (interval 3600) mais il est
--- activé/désactivé à la main → runs irréguliers. On ne touche NI l'interval NI aucun
--- module : Supabase ACTIVE/DÉSACTIVE le scénario aux heures de marché via l'API Make
--- (start/stop) — exactement comme le bouton on/off de Make, mais automatisé + market-aware.
+-- Le scénario Make a un planning interne horaire (interval 3600) mais on ne l'utilise PAS
+-- (coût). On le laisse DÉSACTIVÉ et Supabase déclenche EXACTEMENT N runs/jour à heures
+-- fixes via l'API Make "run once" (POST /scenarios/{id}/run). Coût maîtrisé, régularité.
 --
--- Composants : scenario_control (interrupteur maître = bouton console), scenario_schedule
--- (fenêtres de marché, data-driven → extensible Darwinex/crypto), scenario_reconcile()
--- (appelle l'API Make quand l'état désiré change), cron 10 min, vue v_scenario_etat.
--- Bouton console + edge function scenario-switch (PIN ju_crypte_config.arm_pin).
+-- Bonnes pratiques retenues : peu de runs, réguliers, calés sur les moments de marché US.
+-- Par défaut 4 runs/jour en semaine (Paris) : 09h00 (matin Europe/forex/crypto), 15h45
+-- (ouverture US), 18h30 (mi-séance), 21h15 (avant clôture). Data-driven → extensible.
 --
--- PRÉ-REQUIS pour agir réellement sur Make : secret Vault `make_api_token` + colonne
--- scenario_control.make_zone (ex 'eu2'). Tant qu'absents, tout est mémorisé mais inerte.
+-- Interrupteur maître = bouton console (scenario_control.actif). Cron 5 min vérifie l'heure.
+-- PRÉ-REQUIS pour agir sur Make : Vault `make_api_token` + scenario_control.make_zone (ex 'eu2').
 -- ============================================================================
 create table if not exists public.scenario_control (
-  id            int primary key default 1,
-  actif         boolean not null default false,
+  id int primary key default 1,
+  actif boolean not null default false,
   applied_state text,
-  scenario_id   text not null default '6183820',
-  make_zone     text,
-  last_action   text,
-  last_action_at timestamptz,
-  updated_at    timestamptz not null default now(),
-  updated_by    text,
+  scenario_id text not null default '6183820',
+  make_zone text,
+  last_action text, last_action_at timestamptz,
+  updated_at timestamptz not null default now(), updated_by text,
   constraint scenario_control_one_row check (id = 1)
 );
-insert into public.scenario_control (id, actif, applied_state)
-values (1, false, 'inactive') on conflict (id) do nothing;
+insert into public.scenario_control (id, actif) values (1, false) on conflict (id) do nothing;
 
-create table if not exists public.scenario_schedule (
+-- Heures de run (Paris), data-driven
+create table if not exists public.scenario_runs_planifies (
   id bigserial primary key, libelle text not null,
-  jours int[] not null, heure_debut int not null, heure_fin int not null,
-  actif boolean not null default true
+  heure int not null, minute int not null default 0,
+  jours int[] not null,            -- 0=dim … 6=sam
+  actif boolean not null default true, last_fired timestamptz
 );
-insert into public.scenario_schedule (libelle, jours, heure_debut, heure_fin, actif)
-select 'Session principale (forex Londres + actions US + crypto)', array[1,2,3,4,5], 8, 22, true
-where not exists (select 1 from public.scenario_schedule);
--- Extensions futures (à activer le moment venu, sans toucher Make) :
---   Darwinex forex 24/5 : jours {0,1,2,3,4,5}, plages nocturnes ; crypto week-end : jours {6,0}, 0-24.
+insert into public.scenario_runs_planifies (libelle, heure, minute, jours)
+select * from (values
+  ('Matin Europe (forex + crypto + overnight)', 9, 0, array[1,2,3,4,5]),
+  ('Ouverture US', 15, 45, array[1,2,3,4,5]),
+  ('Mi-seance US', 18, 30, array[1,2,3,4,5]),
+  ('Avant cloture US', 21, 15, array[1,2,3,4,5])
+) v(libelle,heure,minute,jours)
+where not exists (select 1 from public.scenario_runs_planifies);
+-- Extensions futures (sans toucher Make) : ajouter des lignes (Darwinex forex nocturne,
+-- crypto week-end jours {6,0}, etc.).
 
 create table if not exists public.scenario_toggle_log (
   id bigserial primary key, ts timestamptz not null default now(),
   action text, source text, http_status int, detail text
 );
 
-create or replace function public.scenario_doit_etre_actif()
-returns boolean language sql stable security definer set search_path to 'public' as $$
-  select (select actif from scenario_control where id=1)
-     and exists (
-       select 1 from scenario_schedule s
-       where s.actif
-         and (extract(dow  from now() at time zone 'Europe/Paris')::int) = any(s.jours)
-         and (extract(hour from now() at time zone 'Europe/Paris')::int) >= s.heure_debut
-         and (extract(hour from now() at time zone 'Europe/Paris')::int) <  s.heure_fin
-     );
-$$;
-
-create or replace function public.scenario_reconcile(p_source text default 'planning')
+-- Déclencheur : lance un "run once" à l'heure prévue (grâce 30 min), ou tout de suite si p_force.
+create or replace function public.scenario_fire(p_force boolean default false)
 returns jsonb language plpgsql security definer set search_path to 'public' as $$
-declare c record; v_desire boolean; v_cible text; v_token text; v_url text; v_rid bigint;
+declare c record; r record; v_token text; v_url text; v_rid bigint; v_target timestamptz; v_now timestamptz;
+  n int := 0; v_fired jsonb := '[]'::jsonb;
 begin
   select * into c from scenario_control where id=1;
-  v_desire := scenario_doit_etre_actif();
-  v_cible  := case when v_desire then 'active' else 'inactive' end;
-  if c.applied_state is not distinct from v_cible then
-    return jsonb_build_object('change', false, 'etat', v_cible);
-  end if;
+  v_now := now();
+  if not p_force and not c.actif then return jsonb_build_object('fired', false, 'raison', 'maitre off'); end if;
   select decrypted_secret into v_token from vault.decrypted_secrets where name='make_api_token' limit 1;
-  if v_token is null or c.make_zone is null then
-    update scenario_control set applied_state=v_cible, last_action='(config manquante)', last_action_at=now() where id=1;
-    insert into scenario_toggle_log(action, source, http_status, detail)
-      values (case when v_desire then 'start' else 'stop' end, p_source, null, 'jeton ou zone Make absent');
-    return jsonb_build_object('change', false, 'raison', 'jeton/zone Make manquant');
+  v_url := case when c.make_zone is not null
+                then format('https://%s.make.com/api/v2/scenarios/%s/run', c.make_zone, c.scenario_id) end;
+  if v_token is null or v_url is null then return jsonb_build_object('fired', false, 'raison', 'api non configuree'); end if;
+
+  if p_force then
+    select net.http_post(url:=v_url, headers:=jsonb_build_object('Authorization','Token '||v_token,'Content-Type','application/json'), body:='{}'::jsonb) into v_rid;
+    insert into scenario_toggle_log(action, source, detail) values ('run','manuel','req '||v_rid::text);
+    return jsonb_build_object('fired', true, 'request', v_rid);
   end if;
-  v_url := format('https://%s.make.com/api/v2/scenarios/%s/%s',
-                  c.make_zone, c.scenario_id, case when v_desire then 'start' else 'stop' end);
-  select net.http_post(url := v_url,
-           headers := jsonb_build_object('Authorization','Token '||v_token, 'Content-Type','application/json'),
-           body := '{}'::jsonb) into v_rid;
-  update scenario_control set applied_state=v_cible,
-    last_action=case when v_desire then 'start' else 'stop' end, last_action_at=now() where id=1;
-  insert into scenario_toggle_log(action, source, detail)
-    values (case when v_desire then 'start' else 'stop' end, p_source, 'req '||v_rid::text);
-  return jsonb_build_object('change', true, 'etat', v_cible, 'request', v_rid);
+
+  for r in select * from scenario_runs_planifies where actif loop
+    v_target := (((v_now at time zone 'Europe/Paris')::date + make_time(r.heure, r.minute, 0)) at time zone 'Europe/Paris');
+    if (extract(dow from (v_now at time zone 'Europe/Paris'))::int) = any(r.jours)
+       and v_now >= v_target and v_now < v_target + interval '30 minutes'
+       and (r.last_fired is null or r.last_fired < v_target) then
+      select net.http_post(url:=v_url, headers:=jsonb_build_object('Authorization','Token '||v_token,'Content-Type','application/json'), body:='{}'::jsonb) into v_rid;
+      insert into scenario_toggle_log(action, source, detail) values ('run','planning', r.libelle||' req '||v_rid::text);
+      update scenario_runs_planifies set last_fired = v_now where id = r.id;
+      n := n+1; v_fired := v_fired || to_jsonb(r.libelle);
+    end if;
+  end loop;
+  return jsonb_build_object('fired', n>0, 'n', n, 'slots', v_fired);
 end $$;
 
--- select cron.schedule('scenario_reconcile_10min', '*/10 * * * *', 'select public.scenario_reconcile(''planning'');');
+-- Cron toutes les 5 min (ne déclenche qu'aux heures prévues + fenêtre de grâce)
+-- select cron.schedule('scenario_fire_5min', '*/5 * * * *', 'select public.scenario_fire(false);');
 
 create or replace view public.v_scenario_etat as
-select c.actif as maitre_on, scenario_doit_etre_actif() as devrait_tourner,
-       c.applied_state as etat_make, c.last_action, c.last_action_at,
-       (select string_agg(libelle||' ('||array_to_string(jours,',')||' '||heure_debut||'h-'||heure_fin||'h)', ' ; ')
-          from scenario_schedule where actif) as fenetres,
+select c.actif as maitre_on, c.last_action, c.last_action_at,
+       (select string_agg(lpad(heure::text,2,'0')||'h'||lpad(minute::text,2,'0'), ' · ' order by heure, minute)
+          from scenario_runs_planifies where actif) as heures,
+       (select count(*) from scenario_runs_planifies where actif) as nb_runs_jour,
+       (select max(ts) from scenario_toggle_log where action='run') as dernier_run,
        (c.make_zone is not null and exists(select 1 from vault.decrypted_secrets where name='make_api_token')) as api_configuree
 from scenario_control c where c.id=1;
 grant select on public.v_scenario_etat to anon, authenticated, service_role;

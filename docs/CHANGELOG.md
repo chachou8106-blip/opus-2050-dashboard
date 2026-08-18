@@ -24,6 +24,14 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
   ex eu2) pour que le pilotage agisse réellement — d'ici là le bouton mémorise l'état sans toucher Make
   (`api_configuree=false` affiché). Le cron 10 min de réconciliation est prêt (à activer une fois le jeton posé).
 
+- **RÉVISION planning : 4 runs/jour à heures fixes (coût), au lieu d'horaire.** Chachou (à raison, coût) : pas
+  toutes les heures — régulier, 3-4×/jour. **Nouveau modèle** : le scénario reste DÉSACTIVÉ ; Supabase
+  déclenche **exactement N runs via l'API Make « run once »** (`POST /scenarios/{id}/run`) aux heures prévues.
+  Remplace le modèle fenêtre+start/stop. Table `scenario_runs_planifies` (seed **Lun-Ven 09h00 · 15h45 ·
+  18h30 · 21h15 Paris**), fonction `scenario_fire(force)`, cron **5 min** (grâce 30 min). Bouton console :
+  **Activer le planning / Couper / ⚡ Lancer maintenant** (PIN). `scenario-switch` v2. OFF par défaut ; jeton
+  API Make + zone toujours à fournir.
+
 ## 2026-08-17
 
 - **NETTOYAGE des redondances + règle « vérifier avant d'ajouter » (demandée par Chachou).** Chachou signale

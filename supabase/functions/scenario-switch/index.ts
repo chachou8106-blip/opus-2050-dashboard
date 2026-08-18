@@ -1,7 +1,7 @@
-// scenario-switch v1 — bouton console ON/OFF du scénario Make (interrupteur maître).
-// Ne touche PAS au blueprint Make : bascule scenario_control.actif puis appelle scenario_reconcile()
-// qui active/désactive le scénario via l'API Make (start/stop). PIN-gardé (ju_crypte_config.arm_pin).
-// Lecture d'état sans PIN ; bascule ON/OFF avec PIN.
+// scenario-switch v2 — bouton console du scénario Make (interrupteur maître + run manuel).
+// Modèle : Supabase déclenche N runs/jour à heures fixes via l'API Make "run once" (scenario_fire).
+// Le maître (scenario_control.actif) autorise/bloque les runs planifiés. PIN-gardé (arm_pin).
+// Actions : status (lecture, sans PIN) ; on / off (bascule maître) ; run-now (lance un run tout de suite).
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }
@@ -12,6 +12,11 @@ async function sb(path: string, init?: RequestInit) {
   try { return { ok: r.ok, status: r.status, body: await r.json() } } catch { return { ok: r.ok, status: r.status, body: null } }
 }
 const etat = async () => { const r = await sb('v_scenario_etat?select=*'); return Array.isArray(r.body) ? (r.body[0] || null) : null }
+async function checkPin(pin: unknown) {
+  const pr = await sb('ju_crypte_config?key=eq.arm_pin&select=value')
+  const p = Array.isArray(pr.body) && pr.body[0] ? String(pr.body[0].value) : null
+  return !!p && String(pin || '') === p
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -22,16 +27,15 @@ Deno.serve(async (req) => {
     if (action === 'status') return json({ ok: true, etat: await etat() })
 
     if (action === 'on' || action === 'off') {
-      // Vérif PIN (le même que l'armement)
-      const pr = await sb('ju_crypte_config?key=eq.arm_pin&select=value')
-      const pin = Array.isArray(pr.body) && pr.body[0] ? String(pr.body[0].value) : null
-      if (!pin || String(b.pin || '') !== pin) return json({ ok: false, error: 'PIN incorrect' })
+      if (!(await checkPin(b.pin))) return json({ ok: false, error: 'PIN incorrect' })
+      await sb('scenario_control?id=eq.1', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ actif: action === 'on', updated_at: new Date().toISOString(), updated_by: 'console' }) })
+      return json({ ok: true, etat: await etat() })
+    }
 
-      const actif = action === 'on'
-      await sb('scenario_control?id=eq.1', { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ actif, updated_at: new Date().toISOString(), updated_by: 'console' }) })
-      // Applique tout de suite (n'attend pas le cron 10 min)
-      const rc = await sb('rpc/scenario_reconcile', { method: 'POST', body: JSON.stringify({ p_source: 'bouton' }) })
-      return json({ ok: true, etat: await etat(), reconcile: rc.body })
+    if (action === 'run-now') {
+      if (!(await checkPin(b.pin))) return json({ ok: false, error: 'PIN incorrect' })
+      const rc = await sb('rpc/scenario_fire', { method: 'POST', body: JSON.stringify({ p_force: true }) })
+      return json({ ok: true, run: rc.body, etat: await etat() })
     }
 
     return json({ ok: false, error: 'action inconnue' })
