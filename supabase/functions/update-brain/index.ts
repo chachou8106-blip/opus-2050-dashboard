@@ -1,7 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-// v17 : garde-fou anti-lecture-equity-aberrante (bug JU 18/08) -> un saut de PnL > 15% de la baseline
-//        en UN run est rejete (equity Alpaca fausse), la derniere bonne valeur est conservee.
 // v16 : lecons EPINGLEES (pinned:true) preservees en tete de learnings (jamais rognees) ->
 //        une lecon manuelle reste lue en permanence par le prompt via learnings[1].bias.
 // v15 : (SYL fige) current_drawdown = drawdown COURANT (pic -> derniere valeur, se repare) ;
@@ -18,9 +16,9 @@ const SRK = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 const ALPACA = 'https://paper-api.alpaca.markets'
 
 const KEYS: Record<string,{key:string,sec:string}> = {
-  JU:  { key: 'PK_REDACTED', sec: 'REDACTED' },
-  SYL: { key: 'PK_REDACTED', sec: 'REDACTED' },
-  GIL: { key: 'PK_REDACTED', sec: 'REDACTED' },
+  JU:  { key: 'PK_ALPACA_JU', sec: 'SECRET_ALPACA_JU' },
+  SYL: { key: 'PK_ALPACA_SYL', sec: 'SECRET_ALPACA_SYL' },
+  GIL: { key: 'PK_ALPACA_GIL', sec: 'SECRET_ALPACA_GIL' },
 }
 
 function parisRunId(): string {
@@ -99,17 +97,11 @@ serve(async (req) => {
       const prevBase = Number(prev.baseline_equity) || 0
       const isCapture = !(prevBase > 0)
       const baseline = isCapture ? (equity || 100000) : prevBase
-      let pnl = equity !== null ? r2(equity - baseline) : 0
-      // Garde-fou anti-lecture-aberrante (bug JU 18/08) : un saut de PnL > 15% de la baseline en UN
-      // seul run traduit une equity Alpaca fausse (position fantome / valeur transitoire). On rejette
-      // la lecture et on conserve la derniere bonne valeur, au lieu de polluer le Cerveau.
-      const prevPnl = Number(prev.cumulative_pnl) || 0
-      let equityRejected = false
-      if (!isCapture && baseline > 0 && Math.abs(pnl - prevPnl) > 0.15 * baseline) { pnl = prevPnl; equityRejected = true }
+      const pnl = equity !== null ? r2(equity - baseline) : 0
       const curDd = currentDrawdownOf(hist)
       const maxDd = maxDrawdownOf(hist)
       const ordersCount = Array.isArray(ordersArr) ? ordersArr.length : 0
-      stats.push({ ...ac, equity, baseline, pnl, dd: curDd, maxDd, isCapture, prev, ordersCount, equityRejected })
+      stats.push({ ...ac, equity, baseline, pnl, dd: curDd, maxDd, isCapture, prev, ordersCount })
     }
 
     const notes: string[] = []
@@ -122,7 +114,6 @@ serve(async (req) => {
       let factor = lossPenalty * ddPenalty * cumBonus
       if (s.dd >= 0.08) { factor = Math.min(factor, 0.15); notes.push(`${s.a} drawdown courant ${Math.round(s.dd*100)}% >= seuil dur 8% -> poids plancher`) }
       else if (s.dd >= 0.05) { notes.push(`${s.a} drawdown courant ${Math.round(s.dd*100)}% (>=5%, surveille, pas de coupe dure)`) }
-      if (s.equityRejected) notes.push(`${s.a} lecture equity aberrante IGNOREE -> PnL precedent conserve (${Math.round(s.pnl)})`)
       if (s.pnl < 0) notes.push(`${s.a} perte ${Math.round(s.pnl)} -> facteur ${r2(factor)}`)
       else if (s.pnl > 0) notes.push(`${s.a} gain ${Math.round(s.pnl)} -> facteur ${r2(factor)}`)
       return Math.max(0.02, Math.max(0.01, s.w) * factor)
