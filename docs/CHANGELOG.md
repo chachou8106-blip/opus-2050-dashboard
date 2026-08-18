@@ -8,6 +8,22 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-18
+
+- **Planning multi-marchés + bouton ON/OFF console — 100% Supabase, AUCUNE modif Make.** Constat (vérifié) :
+  le scénario a déjà un planning interne horaire (`interval:3600`) mais reste `isActive:false` → activé à la
+  main = runs irréguliers, données polluées. Sur demande de Chachou (« rien sur Make, un bouton par sécurité,
+  décide le planning ») : Supabase **active/désactive** le scénario aux heures de marché via l'**API Make**
+  (start/stop = même effet que le toggle Make, sans toucher interval ni modules). DDL
+  `supabase/schema/14_scenario_scheduler.sql` : `scenario_control` (interrupteur maître), `scenario_schedule`
+  (fenêtres data-driven, seed **Lun-Ven 8h→22h Paris** = forex Londres + session US + crypto ; extensible
+  Darwinex 24/5 + crypto week-end en 1 INSERT), `scenario_reconcile()` (appelle l'API Make au changement
+  d'état), vue `v_scenario_etat`. Edge function **`scenario-switch`** (PIN `arm_pin`) + **bouton dans la zone
+  Face ID de la console** (Activer / Couper, état live). Testé : `status` → HTTP 200. **Défaut OFF** (rien ne
+  tourne). **Reste à fournir** : un **jeton API Make** (Vault `make_api_token`) + la **zone** (`make_zone`,
+  ex eu2) pour que le pilotage agisse réellement — d'ici là le bouton mémorise l'état sans toucher Make
+  (`api_configuree=false` affiché). Le cron 10 min de réconciliation est prêt (à activer une fois le jeton posé).
+
 ## 2026-08-17
 
 - **NETTOYAGE des redondances + règle « vérifier avant d'ajouter » (demandée par Chachou).** Chachou signale
