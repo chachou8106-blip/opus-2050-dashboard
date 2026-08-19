@@ -1,6 +1,19 @@
 # Prompt Maia — RÉPARER la clé API des modules staking (cause du « Alchimiste MUET ») — 2026-08-18
 
-> **RE-VÉRIFIÉ LE 19/08/2026 — toujours valable, rien n'a bougé.**
+> ## ✅ APPLIQUÉ ET VÉRIFIÉ LE 19/08/2026 À 10:06:20
+>
+> Blueprint relu après la sauvegarde de Maia : **la clé corrompue a disparu de tout le scénario**.
+> Les 4 en-têtes (20022 `apikey` + `Authorization`, 20023 `apikey` + `Authorization`) sont désormais
+> **strictement identiques** à ceux du module 10023. URL, méthode, timeout, Content-Type et Accept
+> conservés. 80 modules avant / 80 après, planification identique, routeur 999 intact (7 routes,
+> filtres et enchaînements inchangés — il n'apparaissait « modifié » que parce que 20022/20023 y sont
+> imbriqués). Module 207 (Sage Mémoire) toujours conforme.
+>
+> **Reste à faire : lancer un run et vérifier que `alc_destake_reco` se remplit à nouveau.**
+>
+> ---
+>
+> *(historique)* **RE-VÉRIFIÉ LE 19/08/2026 — toujours valable, rien n'a bougé.**
 > Blueprint relu en lecture seule : le JWT corrompu (`ref: smddzbxebwfnitxuyuyp`) est présent
 > sur **exactement 4 en-têtes** — modules **20022** (`apikey` + `Authorization`, vue
 > `v_alc_staking_delais_txt`) et **20023** (`apikey` + `Authorization`, vue `v_alc_staking_apy_txt`).
