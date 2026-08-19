@@ -8,6 +8,33 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 5) — Comparaison des deux blueprints Make : Make n'a rien cassé
+
+Chachou craignait qu'un enregistrement Make ait abîmé le scénario. Vérification faite en comparant
+**octet par octet** le blueprint lu à 09:12 et celui enregistré à **09:43:26** (même taille : 620 853
+caractères, empreintes différentes).
+
+**7 zones de différence, toutes anodines — 2 changements réels :**
+
+| Ce qui a changé | Détail | Impact |
+|---|---|---|
+| `lastEdit` | `2026-08-17T20:50:38Z` → `2026-08-19T09:43:26Z` | horodatage de l'enregistrement |
+| Position du module « L'Alchimiste de la Crypte » | `x: 12900 → 12940`, `y: 1500 → 1453` | **cosmétique** : la boîte a été déplacée sur le canevas |
+
+**Preuve formelle** : en neutralisant `designer` (positions visuelles) et `lastEdit`, les deux blueprints
+donnent la **même empreinte SHA-256** (`c4c4d6179b81ecf2583b`). Aucune modification fonctionnelle :
+ni prompt, ni clé, ni URL, ni mapping, ni routage, ni planification.
+
+**Re-validation des deux diagnostics sur la version enregistrée à 09:43 :**
+- Clé Supabase corrompue (`ref: smddzbxebwfnitxuyuyp`) : **toujours présente sur 4 en-têtes** —
+  modules **20022** (`apikey` + `Authorization`) et **20023** (`apikey` + `Authorization`).
+- Module **207 · 📚 DEEP MEMORY** : inchangé — schéma à 7 champs (JU/SYL/GIL), **aucune mention de
+  `CRYPTE_JU` ni de `MAREES`**, scories `FORCE_CONTRARIAN` et `prophet_vision` toujours là.
+  Prompt system + user relus **verbatim** : identiques à l'analyse précédente.
+
+→ Les deux prompts Maia (`PROMPT-MAIA-FIX-CLE-STAKING-2026-08-18.md` et
+`PROMPT-MAIA-SAGE-MEMOIRE-5-AGENTS-2026-08-19.md`) restent **valables mot pour mot**.
+
 ## 2026-08-19 (suite 4) — Sages : la console cachait 6 champs sur 7 (je m'étais trompé)
 
 Chachou : « je comprends pas, avant il corrigeait tout le monde, va voir dans Make ». Il avait raison.
