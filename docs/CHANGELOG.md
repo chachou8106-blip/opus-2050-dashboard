@@ -8,6 +8,47 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 15) — RESOLU : le Sage Macro est vivant. C'etait la reference {{CTX}}.
+
+Run de 22:18. Une seule modification depuis le run precedent : dans le message user du module 201,
+`CTX={{CTX}}` remplace par `CTX={{110.value}}` — la reference directe a la sortie du module qui
+construit CTX.
+
+| Champ | Avant (52 runs, 14 jours) | Run de 22:18 |
+|---|---|---|
+| `macro_regime` | `NEUTRAL` **sans exception** | **`BULL`** |
+| `macro_score` | 55 puis 50 — 2 valeurs en 14 j | **60** |
+| `spy_trend` | `FLAT` | **`UP`** |
+| `yield_curve` | `FLAT` | **`NORMAL`** |
+| `urgency` | `LOW` | **`MEDIUM`** |
+| `recommended_bias` | `NEUTRAL` | **`RISK_ON`** |
+| `news_catalyst` | « CTX est ambigu » | **« AI investment, IPO revival, and geopolitics driving mixed risk appetite »** |
+
+`yield_curve = NORMAL` est la preuve la plus nette qu'il calcule desormais : T10Y 4,72 − T2Y 4,19 =
+**+0,53**, et la regle de son propre prompt dit « superieur a 0 = courbe normale ». Il repondait
+`FLAT` par defaut depuis deux semaines.
+
+### Ce que j'ai eu faux, et ce que le detour a apporte
+
+Le gel n'etait **pas** du au modele `sonar-pro` : c'etait la resolution de la variable par nom dans
+ce module precis. Le passage sur Groq n'a pas repare le Sage — mais il a transforme un « CTX est
+ambigu » inexploitable en « Missing keys:VIX,SPY,SPY_CHG,… », et c'est cette liste qui a permis de
+localiser la panne. Le detour n'etait pas inutile ; ma conclusion, si.
+
+### Reste un manque reel, mineur
+
+`news_catalyst` se termine par « ;DXY missing ». C'est exact : **DXY n'est dans aucun des 92 champs
+de CTX**, alors que le prompt systeme reclame `dxy_trend`. Le Sage le signale honnetement au lieu
+d'inventer. Meme situation pour le ratio or/argent et le spread HYG-LQD. A ajouter au module 110 si
+on veut ces trois indicateurs, sinon a retirer du prompt.
+
+### Etat du run
+
+`success`, **completude 100 %**, 6 ordres (2 achats, 4 ventes), 5 Sages OK, Discord envoye.
+**Staking : 7 lignes, 150,99 $** — quatrieme run consecutif exact.
+
+---
+
 ## 2026-08-19 (suite 14) — Le Sage Macro ne recoit PAS CTX. Mon diagnostic precedent etait faux.
 
 Run de 22:02. Le module 201 tourne bien sur Groq (verifie dans le blueprint), et sa reponse est
