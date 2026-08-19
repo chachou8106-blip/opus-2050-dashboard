@@ -1,6 +1,10 @@
 # Prompt pour Maia — étendre le Sage Mémoire aux 5 agents (module 207)
 
 > **Statut : PRÊT, non envoyé.** À arbitrer par Chachou.
+> **Re-vérifié sur le blueprint enregistré le 19/08 à 09:43** : module 207 inchangé (schéma 7 champs,
+> aucune mention de CRYPTE_JU ni MAREES, scories FORCE_CONTRARIAN et prophet_vision toujours présentes).
+> Comparaison des deux blueprints : seuls `lastEdit` et la position visuelle du module Alchimiste ont
+> bougé — aucune modification fonctionnelle. Ce prompt reste valable mot pour mot.
 > Rappel CLAUDE.md : toute modification Make passe par Maia, jamais par le blueprint en direct.
 
 ## Ce qui a été vérifié avant de proposer quoi que ce soit
