@@ -1259,3 +1259,42 @@ CREATE OR REPLACE VIEW public.v_world_context AS
             ELSE 'NEUTRE'::text
         END) || '. Utilise-le pour ajuster ta prudence : en risk-off reduis l''exposition, en risk-on ose davantage. Croise avec ton propre marche, ne copie pas aveuglement.'::text) AS contexte_mondial
 ;
+
+-- ============================================================================
+-- [19/08/2026] STAKING DE L'ALCHIMISTE — séparateur « ; » et source unique
+-- ----------------------------------------------------------------------------
+-- Le message envoyé au module 10012 (L'Alchimiste) sépare ses champs par « | ».
+-- Les vues ci-dessous utilisaient elles aussi « | » en interne : tant que la valeur
+-- était encodée en Base64 c'était sans effet, mais dès le passage en texte brut
+-- (19/08 10:50) les barres se sont confondues avec les séparateurs de champs.
+-- Le modèle a perdu les délais (« sans information sur le délai de déblocage »)
+-- puis les montants (0 partout au run de 11:11). D'où le séparateur « ; ».
+--
+-- v_alc_staking_txt : source UNIQUE et complète (montant réel, APY, délai, coût).
+-- Motif : le modèle devait croiser 3 sources et extrayait le montant d'un gros bloc
+-- de texte — il l'inventait (TON 787 $ au run de 10:28 alors que le vrai montant
+-- staké est 7,91 $, et que TOUT le staking vaut 169 $).
+-- ============================================================================
+
+CREATE OR REPLACE VIEW public.v_alc_staking_delais_txt AS
+ SELECT COALESCE(string_agg(devise || ':' || unbonding_jours || 'j', ' ; ' ORDER BY devise), '') AS delais_texte
+   FROM v_staking_point
+  WHERE unbonding_jours IS NOT NULL;
+
+CREATE OR REPLACE VIEW public.v_alc_staking_apy_txt AS
+ SELECT COALESCE(string_agg(devise || ':' || apy_pct || '%', ' ; ' ORDER BY devise), '') AS apy_texte
+   FROM v_staking_point
+  WHERE apy_pct IS NOT NULL;
+
+CREATE OR REPLACE VIEW public.v_alc_staking_txt AS
+ SELECT COALESCE(
+   string_agg(
+     devise
+     || ' montant=' || round(coalesce(valeur_live, 0)::numeric, 2) || 'USD'
+     || ' apy=' || round(coalesce(apy_pct, 0)::numeric, 2) || '%'
+     || ' deblocage=' || coalesce(unbonding_jours::text, '?') || 'jours'
+     || ' cout_destake=' || round(coalesce(cout_destaking_usd, 0)::numeric, 2) || 'USD',
+     ' ; ' ORDER BY valeur_live DESC NULLS LAST),
+   'aucune ligne stakee') AS staking_texte
+   FROM v_staking_point
+  WHERE coalesce(stake_qty, 0) > 0;
