@@ -1893,6 +1893,10 @@ BEGIN
     -- NOUVEAU : bilan chiffre des 5 Sages (fiabilite mesuree sur donnees reelles)
     'sages_coaching', public.sages_coaching(),
 
+    -- 19/08/2026 : dxy_trend, ratio or/argent et spread de credit HYG-LQD. Le prompt du
+    -- Sage Macro les reclamait alors qu'aucun n'existait dans CTX (il repondait « DXY missing »).
+    'macro_extra', (SELECT to_jsonb(m) FROM public.v_macro_extra m),
+
     'fetched_at', now()
   );
 END;

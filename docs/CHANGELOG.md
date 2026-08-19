@@ -8,6 +8,52 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 16) — Les 3 indicateurs manquants du Sage Macro + verification des runs
+
+### Les runs vont bien : les 3 derniers sont alles au bout
+
+Chachou avait l'impression qu'ils ne terminaient pas. Journal Make :
+
+| Depart | Duree | Operations | Statut |
+|---|---|---|---|
+| 21:15 | 2 min 00 | 76 / 76 | succes |
+| 22:01 | 2 min 09 | 76 / 76 | succes |
+| 22:17 | 2 min 13 | 76 / 76 | succes |
+
+Aucun echec depuis 18:31. Un run complet dure **environ 2 min 15** et la notification n'arrive qu'a
+la toute fin de la chaine — d'ou l'impression d'attente.
+
+### Les 3 indicateurs, cote Supabase (fait et verifie)
+
+Le Sage Macro repondait « DXY missing » : son prompt reclame `dxy_trend`, le ratio or/argent et le
+spread HYG-LQD, **absents des 92 champs de CTX**.
+
+1. **Ingestion** : `HYG`, `LQD`, `UUP` ajoutes au cron `ingest-indices-daily`, et charges sur 30
+   jours immediatement (HYG 252 bougies, LQD 225, UUP 254 ; GLD et SLV rafraichis a 365).
+   `UUP` sert de mandataire cote du dollar index : le DXY n'est pas negociable, donc absent d'Alpaca.
+2. **Vue `v_macro_extra`** :
+
+| Indicateur | Valeur mesuree |
+|---|---|
+| `dxy_trend` | **NEUTRAL** (dollar a -1,03 % sur 20 seances, seuils ±1,5 %) |
+| `ratio_or_argent` | **6,893** |
+| `credit_hyg_lqd_20j_pct` | **+0,10** (leger appetit pour le risque) |
+
+3. **`get_oracle_context()`** expose le bloc `macro_extra` — meme module 105 que CTX utilise deja
+   pour FLASH_INTEL et CIRCUIT_BREAKERS, donc chemin eprouve et aucun nouveau module Make.
+
+### A faire cote Make
+
+`docs/decisions/PROMPT-MAIA-CTX-DXY-OR-ARGENT-CREDIT-2026-08-19.md` : 4 champs a ajouter en fin de
+la variable CTX (module 110) et une phrase a remplacer dans le prompt systeme du 201.
+
+### Reserve honnete
+
+Le niveau absolu de UUP (27,90) **n'est pas** la valeur du DXY. Seuls la tendance et la variation
+sont transmis au Sage ; le niveau brut ne l'est jamais, pour qu'il ne puisse pas le confondre.
+
+---
+
 ## 2026-08-19 (suite 15) — RESOLU : le Sage Macro est vivant. C'etait la reference {{CTX}}.
 
 Run de 22:18. Une seule modification depuis le run precedent : dans le message user du module 201,

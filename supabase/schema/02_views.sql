@@ -1342,3 +1342,51 @@ CREATE OR REPLACE VIEW public.v_perf_anomalies AS
    JOIN alpaca_equity_daily e ON e.archimage = p.archimage AND e.jour = (p.evaluated_at AT TIME ZONE 'UTC')::date
   WHERE abs(bs.baseline_equity + p.actual_pnl - e.equity) > 0.05 * bs.baseline_equity
 ;
+
+
+-- ============================================================
+-- VIEW: v_macro_extra   (ajoutee le 19/08/2026)
+-- ============================================================
+-- Le prompt du Sage Macro reclamait dxy_trend, le ratio or/argent et le spread de credit
+-- HYG-LQD. Aucun des trois n'existait dans les 92 champs de CTX : le Sage repondait
+-- « DXY missing » — honnetement, mais sans pouvoir conclure.
+-- UUP (Invesco DB US Dollar Index Bullish) sert de mandataire cote du dollar index ;
+-- HYG, LQD et UUP ont ete ajoutes au cron ingest-indices-daily le meme jour.
+CREATE OR REPLACE VIEW public.v_macro_extra AS
+WITH d AS (
+  SELECT symbol, (array_agg(close ORDER BY ts DESC))[1] AS dernier
+    FROM price_history
+   WHERE symbol IN ('UUP','GLD','SLV','HYG','LQD') AND "interval" = '1h'
+   GROUP BY symbol
+),
+ref AS (
+  SELECT symbol, (array_agg(close ORDER BY ts DESC))[1] AS ancien
+    FROM price_history
+   WHERE symbol IN ('UUP','GLD','SLV','HYG','LQD') AND "interval" = '1h'
+     AND ts <= now() - interval '20 days'
+   GROUP BY symbol
+),
+v AS (
+  SELECT (SELECT dernier FROM d WHERE symbol='UUP') AS uup,
+         (SELECT ancien  FROM ref WHERE symbol='UUP') AS uup0,
+         (SELECT dernier FROM d WHERE symbol='GLD') AS gld,
+         (SELECT dernier FROM d WHERE symbol='SLV') AS slv,
+         (SELECT dernier FROM d WHERE symbol='HYG') AS hyg,
+         (SELECT ancien  FROM ref WHERE symbol='HYG') AS hyg0,
+         (SELECT dernier FROM d WHERE symbol='LQD') AS lqd,
+         (SELECT ancien  FROM ref WHERE symbol='LQD') AS lqd0
+)
+SELECT round(uup, 4) AS uup,
+       round(100 * (uup / NULLIF(uup0, 0) - 1), 2) AS dxy_var_20j_pct,
+       CASE
+         WHEN uup IS NULL OR uup0 IS NULL THEN 'INCONNU'
+         WHEN 100 * (uup / NULLIF(uup0,0) - 1) >=  1.5 THEN 'STRONG'
+         WHEN 100 * (uup / NULLIF(uup0,0) - 1) <= -1.5 THEN 'WEAK'
+         ELSE 'NEUTRAL'
+       END AS dxy_trend,
+       round(gld / NULLIF(slv, 0), 3) AS ratio_or_argent,
+       round(hyg, 2) AS hyg,
+       round(lqd, 2) AS lqd,
+       round(100 * (hyg / NULLIF(hyg0,0) - lqd / NULLIF(lqd0,0)), 2) AS credit_hyg_lqd_20j_pct
+  FROM v
+;
