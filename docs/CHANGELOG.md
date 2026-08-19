@@ -8,6 +8,54 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 8) — RUN COMPLET RÉUSSI : les trois correctifs validés en réel
+
+Run manuel du **19/08 à 10:27** : **76 opérations sur 76**, 118 s, `status: success`, aucune erreur.
+Premier run complet depuis le 18/08 14:28.
+
+### ✅ Correctif n°1 — Sage Risque (max_tokens 800 → 2000 + bornage des textes)
+
+| | Avant | Après |
+|---|---|---|
+| Sortie du Sage Risque | 2 948 car. ≈ **819 tokens** (plafond 800 → tronqué) | 970 car. ≈ **269 tokens** |
+
+Le bornage à 200 caractères a divisé la sortie par 3. Le module 206 parse sans problème. Les 5 Sages ont
+tous produit leur analyse à 10:27.
+
+### ✅ Correctif n°2 — Staking : le dé-stake est ressuscité
+
+**7 lignes écrites dans `alc_destake_reco` à 10:28** — les premières depuis le **17/08 20:00**, soit 40 h
+de silence. Les **vrais APY Revolut** sont enfin transmis : TON 17,67 % · ATOM 21,06 % · KSM 10,47 % ·
+SOL 6,16 % · OSMO 5,39 % · TRX 3,26 % · ETH 2,45 %. Verdicts : **GARDER** sur les 7 (l'APY dépasse
+partout le gain de trade attendu de 5-6,5 %). La Vigie ne signale plus « MUET » mais
+« dé-stake évalué, raisons lisibles ».
+
+### ✅ Correctif n°3 — Sage Mémoire étendu aux 5 agents
+
+Sa sortie passe de 7 à **11 champs** et couvre enfin tout le Collège :
+`ju 49 · syl 54 · gil 51 · **alc 58** · **marees 64**`, `best_agent: MAREES`, `correction_cible: JU`.
+
+⚠️ **Un défaut mineur** : le modèle a mis `best_archimage: "MAR"`, valeur hors de l'énumération attendue
+(`JU|SYL|GIL|EQUAL`) — il a confondu avec le nouveau `best_agent`. Le module 215 lit `BEST_ARCH` :
+à surveiller au prochain run, à corriger dans le prompt si ça se reproduit.
+
+### ⚠️ Reste à corriger — les délais de déblocage arrivent à 0
+
+L'Alchimiste a écrit `delai_deblocage_jours = 0` pour les 7 devises, alors que la vue envoie bien
+`ATOM:21j | ETH:5j | KSM:7j | OSMO:14j | SOL:3j | TON:2j | TRX:14j`. **Le Base64 est confirmé coupable** :
+le modèle décode partiellement (APY justes, délais à zéro ; le 18/08 c'était l'inverse).
+→ `PROMPT-MAIA-ALCHIMISTE-BASE64-2026-08-18.md`, mis à jour avec cette preuve, est **prêt à envoyer**.
+
+### Le « 0 ordre » du run est NORMAL, pas une panne
+
+17 décisions ont été prises et **toutes bloquées par les garde-fous**, à juste titre :
+- `short_market_closed` (TQQQ, MSTR, GOOGL, TLT, IEF) et `us_market_closed_equity_buy` (GLD) —
+  il était **06:28 à New York**, marché fermé. Le système a refusé d'envoyer des ordres actions.
+- `dust_unsellable` (7 lignes) — les poussières crypto invendables.
+- `momentum_downtrend` (BTCUSD), `short_not_downtrend` (V) — filtres de stratégie.
+
+Le Méta-Cerveau a rééquilibré derrière : **GIL 32 → 40 %**, **SYL 42 → 36 %**, **JU 26 → 24 %** (264 runs).
+
 ## 2026-08-19 (suite 7) — Le run échoue depuis le 18/08 : le Sage Risque déborde son plafond de tokens
 
 Run manuel lancé depuis la console à 10:12:54 → **échec à 10:13:03**, `DataError: Source is not valid JSON`
