@@ -1286,15 +1286,36 @@ CREATE OR REPLACE VIEW public.v_alc_staking_apy_txt AS
    FROM v_staking_point
   WHERE apy_pct IS NOT NULL;
 
+-- v_alc_staking_txt — VERSION RAPIDE (la 1re version mettait 11 s et renvoyait HTTP 500
+-- « statement timeout » via l'API : elle lisait v_staking_point, qui rescanne 467 000 lignes de
+-- price_history pour recalculer le dernier prix de chaque symbole. Mesuré, pas supposé.)
+-- Ici : lecture du seul dernier snapshot Revolut X + les 2 tables de référence staking.
+-- Mesures : 13 ms d'exécution, HTTP 200 vérifié avec les en-têtes exacts du module 20022.
+-- Total des 7 lignes = 150,99 $ contre 150,98 $ déclarés par Revolut (stake_usd) : écart 1 centime.
 CREATE OR REPLACE VIEW public.v_alc_staking_txt AS
- SELECT COALESCE(
-   string_agg(
-     devise
-     || ' montant=' || round(coalesce(valeur_live, 0)::numeric, 2) || 'USD'
-     || ' apy=' || round(coalesce(apy_pct, 0)::numeric, 2) || '%'
-     || ' deblocage=' || coalesce(unbonding_jours::text, '?') || 'jours'
-     || ' cout_destake=' || round(coalesce(cout_destaking_usd, 0)::numeric, 2) || 'USD',
-     ' ; ' ORDER BY valeur_live DESC NULLS LAST),
-   'aucune ligne stakee') AS staking_texte
-   FROM v_staking_point
-  WHERE coalesce(stake_qty, 0) > 0;
+WITH snap AS (
+  SELECT detail, snapshot_at
+    FROM revolut_portfolio_daily
+   ORDER BY snapshot_at DESC
+   LIMIT 1
+), lignes AS (
+  SELECT upper(e.value->>'devise')                      AS devise,
+         COALESCE((e.value->>'stake')::numeric, 0)      AS stake_qty,
+         COALESCE((e.value->>'qty')::numeric, 0)        AS qty_totale,
+         COALESCE((e.value->>'valeur_usd')::numeric, 0) AS valeur_totale_usd
+    FROM snap, jsonb_array_elements(snap.detail) e
+   WHERE COALESCE((e.value->>'stake')::numeric, 0) > 0
+)
+SELECT COALESCE(
+  string_agg(
+    l.devise
+    || ' montant=' || round(CASE WHEN l.qty_totale > 0
+                                 THEN l.valeur_totale_usd * (l.stake_qty / l.qty_totale)
+                                 ELSE 0 END, 2) || 'USD'
+    || ' apy=' || COALESCE(round(a.apy_pct, 2)::text, 'inconnu') || '%'
+    || ' deblocage=' || COALESCE(d.unbonding_jours::text, 'inconnu') || 'jours',
+    ' ; ' ORDER BY l.valeur_totale_usd * (CASE WHEN l.qty_totale > 0 THEN l.stake_qty / l.qty_totale ELSE 0 END) DESC),
+  'aucune ligne stakee') AS staking_texte
+  FROM lignes l
+  LEFT JOIN alc_staking_apy    a ON upper(a.devise) = l.devise
+  LEFT JOIN alc_staking_delais d ON upper(d.devise) = l.devise;
