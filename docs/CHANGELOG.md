@@ -8,6 +8,29 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 — Positions vivantes : les ventes à découvert étaient invisibles
+
+Question de Chachou : « je ne comprends pas ce que tu appelles position vivante, sur Alpaca j'ai 26 positions ».
+Vérification faite sur `oracle_positions_live` (miroir exact d'Alpaca : `sync_alpaca_positions` supprime les
+lignes que le broker ne renvoie plus, avec garde anti-wipe).
+
+- **État réel au 18/08 19:17 UTC** : **77 lignes** = GIL 28 · JU 27 · SYL 22, dont **17 ventes à découvert**
+  (valeur de marché négative) et 4 poussières crypto corrompues (qty ~1e-9 avec « P&L +188 325 $ »).
+  Les 26 de Chachou = **GIL, une fois ses 2 poussières crypto écartées** (28 − 2).
+- **BUG MAJEUR trouvé** : `oracle-tests` action `positions` faisait `order=market_value.desc&limit=60`.
+  Les ventes à découvert ayant une valeur négative, elles se classaient **toutes en dernier** → les 17 tombaient
+  pile hors de la fenêtre de 60. **Aucune position vendeuse n'était visible dans la console**, soit −3 604 778 $
+  d'exposition masquée (dont SYL : TLT −1 461 986 $ et IEF −1 168 914 $). Corrigé : `limit=300`, tri par compte,
+  colonne `side` exposée. Même correctif sur `archimage_detail` (limit 20 → 60). → **oracle-tests v11 déployée.**
+- **Console** : tableau « Positions vivantes » repensé — colonne **Sens (ACHAT / VENTE)**, tri par compte puis
+  par taille, plafond 30 → 90 lignes, et **compteur par compte** (« GIL · 26 lignes dont 7 ventes ») pour
+  recoupement direct avec l'écran Alpaca, plus le nombre de poussières écartées. Format monétaire corrigé :
+  `−$474 556` au lieu de `$-474 556`.
+- Le sens est déduit de `side='short'` **ou** d'une quantité négative : 2 lignes (JU COST, JU META) arrivent
+  d'Alpaca avec `side='long'` malgré une qty négative.
+- Banc E2E étendu : fixtures rechargées avec les 77 vraies lignes, contrôles ajoutés (73 lignes affichées,
+  ventes TLT/IEF/MSTR/META présentes, compteur GIL = 26). Rejoué : 0 erreur.
+
 ## 2026-08-18 (suite 2 — test E2E intégral de la console)
 
 - **Banc de test automatisé complet d'`aether.html`** (Playwright + fixtures = vraies réponses des edge
