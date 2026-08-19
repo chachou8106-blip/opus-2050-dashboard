@@ -1,6 +1,23 @@
 # Prompt Maia — Alchimiste : retirer le Base64 (cause du faux APY) — 2026-08-18
 
-> ## 🔺 CONFIRMÉ PAR LE RUN DU 19/08 À 10:28 — à envoyer
+> ## ✅ APPLIQUÉ ET VÉRIFIÉ LE 19/08/2026 À 10:50:45 — reste à valider par un run
+>
+> Blueprint relu : `STAKING_DELAIS` et `STAKING_APY` sont bien en clair, `PRIX_REVOLUTX_B64`,
+> `CTX_B64` et `SAGES_B64` conservés en Base64, consignes « TEXTE BRUT », interdiction du zéro par
+> défaut et explication des suffixes `j` / `%` présentes. Modèle sonar-pro et max_tokens 8000 intacts.
+> 80 modules avant / 80 après ; routeur 999 intact (7 routes, filtres identiques).
+> **Le diff du message user se limite à 2 lignes remplacées** — aucun autre champ touché.
+>
+> **Avertissement Make « chemins dynamiques non vérifiés » : sans objet.** Les chemins
+> `20022.data.delais_texte` et `20023.data.apy_texte` sont **strictement les mêmes qu'avant**, ils
+> étaient simplement enveloppés dans `base64(...)`. Preuve qu'ils sont valides : au run du 10:28, ces
+> mêmes chemins ont transmis les APY exacts (TON 17,67 · ATOM 21,06). Make ne sait pas résoudre un
+> chemin tant que le module amont n'a pas tourné dans l'éditeur — c'est un avertissement d'édition,
+> pas une erreur.
+>
+> ---
+>
+> *(historique)* ## 🔺 CONFIRMÉ PAR LE RUN DU 19/08 À 10:28
 >
 > Après réparation de la clé staking, l'Alchimiste a de nouveau écrit 7 lignes dans `alc_destake_reco`.
 > Résultat en demi-teinte, qui **prouve** que le Base64 est bien le coupable :
