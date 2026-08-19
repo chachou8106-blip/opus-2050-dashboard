@@ -31,10 +31,23 @@ Ces vues renvoient bien les vraies valeurs (ex. `TON:17.67% | ATOM:21.06% | KSM:
 ## À faire dans Make (module 10012 uniquement, via Maia)
 Édite le corps (JSON body) du module **10012 « L'Alchimiste de la Crypte »**.
 
-### 1) Remplacer les 3 mappings encodés par du texte brut
+### 1) Remplacer les mappings encodés par du texte brut
+
+> **[19/08] Périmètre réduit à 2 champs sur 3, volontairement.** Le Base64 sert aussi de protection :
+> il empêche des guillemets ou des sauts de ligne de casser le corps JSON de la requête. J'ai donc
+> vérifié le contenu réel avant de proposer :
+>
+> | Champ | Contenu | Guillemets | Sauts de ligne | Antislash | Verdict |
+> |---|---|---|---|---|---|
+> | `STAKING_DELAIS` | 65 car. — `ATOM:21j \| ETH:5j \| …` | non | non | non | ✅ sûr en clair |
+> | `STAKING_APY` | 86 car. — `ATOM:21.06% \| ETH:2.45% \| …` | non | non | non | ✅ sûr en clair |
+> | `PRIX_REVOLUTX` | vient de l'edge function 10011, format non vérifié | ? | ? | ? | ⚠️ **on n'y touche pas** |
+>
+> `CTX_B64`, `SAGES_B64` et les `AVIS_GIL_*_B64` restent en Base64 : ce sont de gros blocs de texte
+> libre, le Base64 y est indispensable.
+
 | Chercher (exact) | Remplacer par |
 |---|---|
-| `PRIX_REVOLUTX_B64={{base64(ifempty(10011.data.prix_texte; emptystring))}}` | `PRIX_REVOLUTX={{ifempty(10011.data.prix_texte; emptystring)}}` |
 | `STAKING_DELAIS_B64={{base64(ifempty(20022.data.delais_texte; emptystring))}}` | `STAKING_DELAIS={{ifempty(20022.data.delais_texte; emptystring)}}` |
 | `STAKING_APY_B64={{base64(ifempty(20023.data.apy_texte; emptystring))}}` | `STAKING_APY={{ifempty(20023.data.apy_texte; emptystring)}}` |
 
