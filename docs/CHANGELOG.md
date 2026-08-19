@@ -8,6 +8,34 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 3) — Le plafond de 1000 lignes de PostgREST mangeait 3 marchés + la moitié de SYL
+
+Chachou : « MSCI World, XRP et Pétrole je ne peux plus les sélectionner, soi-disant ils n'ont plus de séries ! »
+Le grisage des pastilles ajouté plus tôt n'était pas une fausse alerte : c'était un **diagnostic juste**.
+
+- **CAUSE : PostgREST plafonne toute réponse à 1000 lignes, côté serveur.** `v_comparaison` en compte
+  **1204**, triées par série alphabétique. Les dernières de l'alphabet étaient donc purement et simplement
+  absentes de la réponse : **URTH (MSCI World) 0/51, USO (Pétrole) 0/51, XRP-USD 0/76**, et **SYL amputée
+  de moitié (26 points sur 52)** — la courbe d'une de tes propres stratégies était fausse.
+- Premier essai `&limit=20000` : **sans effet**, un `limit` client ne dépasse jamais le plafond serveur.
+  Vérifié en réel avant de conclure. Solution : `sbAll()` **pagine** par tranches de 1000 (offset).
+  Appliqué à `v_comparaison`, `v_equity_points` (835 lignes, sous le plafond mais qui grossit chaque jour)
+  et `v_rendements_periodes`. → **oracle-inbox v20 déployée**, vérifiée en réel : les 22 séries remontent,
+  SYL repasse à 52 points.
+- **Repère de version visible** en bas de page (`build 2026-08-19 · b5`) + en-têtes anti-cache. La question
+  « as-tu poussé la version corrigée ? » se répond maintenant d'un coup d'œil : si le build ne change pas
+  après une mise à jour, c'est le cache du navigateur (recharge forcée).
+- **Fixtures reconstruites sur la réponse RÉELLE de `dashboard_snapshot()`** (5 cerveaux dont CRYPTE_JU et
+  MAREES, `poids`/`doctrine`, `data_completeness`, `raisons_skip` en tableau, `montant`/`quand`).
+  C'est ce qui manquait : le banc validait des données que j'avais inventées.
+
+### Constat sur le Sage Mémoire (aucun bug console — c'est le système)
+
+Sur ses **20 derniers signaux évalués** : **7 citent JU**, **13 ne nomment aucun agent**, et **0 citent SYL,
+GIL, l'Alchimiste ou les Marées**. La console affiche fidèlement ce qu'il produit. Le Sage Mémoire ne
+« regarde » donc réellement que JU. Son prompt vit dans le scénario Make (aucune table de prompts en
+Supabase) : la correction passe par **Maia**, pas par moi. À arbitrer par Chachou.
+
 ## 2026-08-19 (suite 2) — Méta-Cerveau à zéro : mauvais noms de champs + comparateur incomplet
 
 - **CAUSE RACINE : `dashboard_snapshot()` renvoie `poids` / `doctrine`, la console lisait

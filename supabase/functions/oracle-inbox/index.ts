@@ -1,4 +1,7 @@
-// oracle-inbox v18 — canal Chachou <-> robot.
+// oracle-inbox v20 — canal Chachou <-> robot.
+// [19/08] PAGINATION : PostgREST plafonne à 1000 lignes côté serveur (un &limit= plus grand ne sert
+// à rien). v_comparaison (1204 lignes) perdait donc URTH/USO/XRP-USD et amputait SYL de moitié.
+// v_comparaison, v_equity_points et v_rendements_periodes passent par sbAll() qui pagine.
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
 //         sharpe, contexte, fx, gains (v_gains_traders), + alc_virtuel + marees_virtuel (positions forex)
 //         + live_crypto (crypto des Sages en direct 24/7) + alc_reel_live (Alchimiste RÉEL Revolut X
@@ -16,6 +19,21 @@ async function sb(path: string, init?: RequestInit) {
   try { return { ok: r.ok, status: r.status, body: await r.json() } } catch { return { ok: r.ok, status: r.status, body: null } }
 }
 const arr = (b: any) => Array.isArray(b) ? b : []
+
+// PostgREST plafonne les réponses à 1000 lignes CÔTÉ SERVEUR : un &limit= plus grand ne change rien.
+// v_comparaison compte 1204 lignes -> URTH (MSCI World), USO (Pétrole) et XRP-USD ne remontaient pas du
+// tout et la courbe de SYL était coupée en deux. On pagine donc explicitement. [19/08]
+async function sbAll(path: string, pageSize = 1000): Promise<any[]> {
+  const out: any[] = []
+  for (let off = 0; off <= 50000; off += pageSize) {
+    const sep = path.includes('?') ? '&' : '?'
+    const r = await sb(`${path}${sep}offset=${off}&limit=${pageSize}`)
+    const rows = arr(r.body)
+    out.push(...rows)
+    if (rows.length < pageSize) break
+  }
+  return out
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -38,15 +56,15 @@ Deno.serve(async (req) => {
       const perf = await sb('v_perf_resume?select=trader,rendement_pct,drawdown_max_pct,reussite_pct,statut,periode')
       const av = await sb('v_perf_avancee?select=serie,volatilite,sortino,calmar,drawdown_max,meilleur_mois,pire_mois,pct_mois_positifs')
       const si = await sb('v_stats_indice?select=serie,correlation,beta,alpha_annualise')
-      const men = await sb('v_rendements_mensuels?select=serie,mois,rendement_pct&order=serie.asc,mois.asc')
-      const rp = await sb('v_rendements_periodes?select=serie,granularite,periode,rendement_pct&serie=in.(OPUS,SYL,JU,GIL,ALCHIMISTE,MAREES)&order=serie.asc,periode.asc')
-      const eqr = await sb('v_equity_points?select=trader,ts,equity&order=trader.asc,ts.asc')
+      const men = await sb('v_rendements_mensuels?select=serie,mois,rendement_pct&order=serie.asc,mois.asc&limit=1000')
+      const rpRows = await sbAll('v_rendements_periodes?select=serie,granularite,periode,rendement_pct&serie=in.(OPUS,SYL,JU,GIL,ALCHIMISTE,MAREES)&order=serie.asc,periode.asc')
+      const eqRows = await sbAll('v_equity_points?select=trader,ts,equity&order=trader.asc,ts.asc')
       const equity: Record<string, any[]> = {}
-      for (const p of arr(eqr.body)) { (equity[p.trader] = equity[p.trader] || []).push({ t: p.ts, v: Number(p.equity) }) }
+      for (const p of eqRows) { (equity[p.trader] = equity[p.trader] || []).push({ t: p.ts, v: Number(p.equity) }) }
       for (const k of Object.keys(equity)) { if (equity[k].length > 90) equity[k] = equity[k].slice(-90) }
-      const cmp = await sb('v_comparaison?select=serie,jour,ret&order=serie.asc,jour.asc')
+      const cmpRows = await sbAll('v_comparaison?select=serie,jour,ret&order=serie.asc,jour.asc')
       const comparaison: Record<string, any[]> = {}
-      for (const p of arr(cmp.body)) { (comparaison[p.serie] = comparaison[p.serie] || []).push({ j: p.jour, r: Number(p.ret) }) }
+      for (const p of cmpRows) { (comparaison[p.serie] = comparaison[p.serie] || []).push({ j: p.jour, r: Number(p.ret) }) }
       const shr = await sb('v_sharpe?select=serie,sharpe')
       const sharpe: Record<string, number> = {}
       for (const p of arr(shr.body)) sharpe[p.serie] = Number(p.sharpe)
@@ -84,7 +102,7 @@ Deno.serve(async (req) => {
       const vgr = await sb('v_vigie_resume?select=*')
       const vgd = await sb('v_vigie_detail?select=composant,categorie,etat,detail,derniere_sortie,run_auditee')
       const vigie = { resume: (arr(vgr.body)[0] || null), detail: arr(vgd.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: arr(rp.body), equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie })
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: rpRows, equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')
