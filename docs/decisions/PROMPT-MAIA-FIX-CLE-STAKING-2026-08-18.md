@@ -7,6 +7,32 @@
 > Côté base : dernière ligne dans `alc_destake_reco` le **17/08 à 20:00**, plus rien depuis ;
 > la Vigie signale toujours « Alchimiste verdict » hors OK. Le prompt ci-dessous reste à envoyer tel quel.
 
+## ⚠️ Pourquoi Maia a répondu « c'est déjà correct » (19/08, 2ᵉ tentative)
+
+Maia a comparé les deux clés **visuellement** et a conclu qu'elles étaient identiques. Elles ne le sont pas —
+mais l'erreur est compréhensible :
+
+- Les deux JWT font **exactement 208 caractères**.
+- Ils ne diffèrent que sur **12 caractères consécutifs**, aux positions **77 à 88**, en plein milieu du
+  base64 :
+  - correcte : `…ZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlw…`
+  - corrompue : `…ZiI6InNtZGR6YnhlYndmbml0eHV5dXlw…`
+- Une fois décodés : `ref: smddzybxebwhfnitxuyp` (bonne) contre `ref: smddzbxebwfnitxuyuyp` (corrompue).
+
+**Mécanisme de la panne, confirmé :** l'en-tête et la **signature** des deux JWT sont **identiques**, seul
+le payload diffère. Le jeton a donc été **édité à la main** sans être re-signé → la signature ne correspond
+plus au contenu → Supabase répond **401 Invalid API key**. Ce n'est pas un problème de droits, c'est un
+jeton mathématiquement invalide.
+
+### Moyen de contrôle infaillible (à donner à Maia)
+
+Ne pas comparer à l'œil. Tester la présence d'une **sous-chaîne discriminante** dans la valeur de l'en-tête :
+
+| Sous-chaîne | Signification |
+|---|---|
+| `ZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlw` | ✅ clé correcte |
+| `ZiI6InNtZGR6YnhlYndmbml0eHV5dXlw` | ❌ clé corrompue, à remplacer |
+
 ## Diagnostic (prouvé, ne rien inventer)
 Depuis la modification du 17/08 ~20:50, les modules **20022** (⛓️ LES CHAÎNES DU SCELLÉ, délais)
 et **20023** (🌾 LA RENTE DES SCELLÉS, APY) portent une **clé anon Supabase corrompue**
