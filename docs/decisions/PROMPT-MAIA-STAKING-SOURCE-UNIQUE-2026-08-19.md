@@ -40,51 +40,72 @@ ATOM montant=5.87USD apy=21.06% deblocage=21jours ; OSMO montant=4.91USD apy=5.3
 TRX montant=0.34USD apy=3.26% deblocage=14jours
 ```
 
+## ⚠️ 19/08 11:42 — Make a bloqué la 2ᵉ moitié : contournement par alias PostgREST
+
+Maia a appliqué l'URL sur le module 20022, mais Make a **refusé** la modification du module 10012 :
+il n'accepte pas une référence à `20022.data.staking_texte` tant qu'il n'a pas « appris » la nouvelle
+structure de sortie du module amont.
+
+**État actuel : cassé.** Le 20022 renvoie désormais la clé `staking_texte`, alors que le 10012 lit
+toujours `20022.data.delais_texte` — qui n'existe plus. Un run maintenant donnerait un champ vide.
+
+**Contournement, testé par appel HTTP réel (200 OK)** : PostgREST sait renommer une colonne à la volée
+avec la syntaxe `alias:colonne`. En demandant `?select=delais_texte:staking_texte`, la réponse porte la
+clé **`delais_texte`** — celle que Make connaît déjà — tout en contenant le texte complet :
+
+```json
+{"delais_texte":"SOL montant=90.27USD apy=6.16% deblocage=3jours ; ETH montant=27.02USD apy=2.45% deblocage=5jours ; …"}
+```
+
+Conséquence : **le mapping du module 10012 n'a plus besoin d'être modifié du tout**. Seules les phrases
+du prompt système changent — du texte pur, que Make ne valide pas. Plus aucun blocage possible.
+
+Le nom de variable reste `STAKING_DELAIS` alors qu'il porte tout le staking : c'est volontaire.
+Le nom n'a aucun effet, seul compte ce que le prompt système en dit.
+
 ## Prompt à envoyer à Maia
 
 ```
-Bonjour Maia. Dernière correction du dé-staking dans le scénario 6183820 (ZCT Oracle v5).
-Deux modules à modifier : 20022 et 10012. Ne touche à AUCUN autre module.
+Bonjour Maia. Suite de la correction du dé-staking, scénario 6183820. Make a bloqué la 2e partie
+la dernière fois ; cette version contourne le problème et ne demande AUCUN nouveau champ.
+
+Attention : le scénario est actuellement dans un état cassé. Le module 20022 renvoie la clé
+staking_texte alors que le module 10012 lit encore 20022.data.delais_texte, qui n'existe plus.
+Il ne faut pas lancer de run avant d'avoir appliqué ce qui suit.
 
 1) MODULE 20022 (⛓️ LES CHAÎNES DU SCELLÉ) — change UNIQUEMENT l'URL :
 
    URL actuelle :
-   https://smddzybxebwhfnitxuyp.supabase.co/rest/v1/v_alc_staking_delais_txt?select=delais_texte
-
-   Nouvelle URL :
    https://smddzybxebwhfnitxuyp.supabase.co/rest/v1/v_alc_staking_txt?select=staking_texte
 
-   Ne change RIEN d'autre sur ce module : ni la méthode GET, ni les en-têtes apikey, Authorization,
-   Content-Type et Accept (application/vnd.pgrst.object+json), ni le timeout.
+   Nouvelle URL :
+   https://smddzybxebwhfnitxuyp.supabase.co/rest/v1/v_alc_staking_txt?select=delais_texte:staking_texte
 
-2) MODULE 10012 (L'Alchimiste de la Crypte) — dans le message "user", remplace exactement ce fragment :
+   C'est un simple renommage de colonne côté API : la réponse portera de nouveau la clé
+   delais_texte, celle que Make connaît déjà, mais elle contiendra le texte complet du staking.
+   Ne change RIEN d'autre : ni la méthode GET, ni les en-têtes, ni le timeout de 120.
 
-   à chercher :
-   STAKING_DELAIS={{ifempty(20022.data.delais_texte; emptystring)}}
-   à remplacer par :
-   STAKING={{ifempty(20022.data.staking_texte; emptystring)}}
+2) MODULE 10012 (L'Alchimiste de la Crypte) — NE TOUCHE PAS au message "user".
+   Il doit rester exactement tel quel, avec STAKING_DELAIS={{ifempty(20022.data.delais_texte; emptystring)}}.
+   Aucun nouveau champ à mapper, donc aucun blocage possible.
 
-   Ne touche à aucun autre champ du message user. Laisse notamment STAKING_APY, PRIX_REVOLUTX_B64,
-   CTX_B64, SAGES_B64 et tous les AVIS_GIL_*_B64 exactement comme ils sont.
-
-3) MODULE 10012 — dans le message "system", remplace ces deux phrases :
+3) MODULE 10012 — dans le message "system" uniquement, remplace ces deux phrases :
 
    à chercher :
    - Le champ PRIX_REVOLUTX_B64 est une chaîne Base64 : décode-la mentalement avant analyse. En revanche STAKING_DELAIS et STAKING_APY sont du TEXTE BRUT directement lisible, au format DEVISE:valeur séparé par des barres verticales (exemple : ATOM:21j | TON:2j pour les délais, ATOM:21.06% | TON:17.67% pour les APY). Utilise ces valeurs TELLES QUELLES, ne les décode pas. N'utilise JAMAIS tes connaissances générales pour l'APY ni pour les délais : si le champ est vide, dis-le explicitement au lieu de deviner, et n'écris jamais 0 par défaut.
    à remplacer par :
-   - Le champ PRIX_REVOLUTX_B64 est une chaîne Base64 : décode-la mentalement avant analyse. Le champ STAKING est du TEXTE BRUT et constitue ta SEULE source pour le de-staking : il contient une entree par devise stakee, separees par des points-virgules, au format DEVISE montant=<nombre>USD apy=<nombre>% deblocage=<nombre>jours. Exemple reel : TON montant=7.91USD apy=17.67% deblocage=2jours ; ATOM montant=5.87USD apy=21.06% deblocage=21jours. Recopie ces trois nombres TELS QUELS dans montant_usd, apy_staking_pct et delai_deblocage_jours. N utilise JAMAIS tes connaissances generales ni le bloc SOLDES_REVOLUTX pour ces trois valeurs. Si le champ STAKING est vide ou vaut aucune ligne stakee, renvoie un tableau destake_recommande vide au lieu d inventer. N ecris jamais 0 par defaut.
+   - Le champ PRIX_REVOLUTX_B64 est une chaîne Base64 : décode-la mentalement avant analyse. Le champ STAKING_DELAIS est du TEXTE BRUT et constitue ta SEULE source pour le de-staking : malgre son nom il contient TOUT, une entree par devise stakee, separees par des points-virgules, au format DEVISE montant=<nombre>USD apy=<nombre>% deblocage=<nombre>jours. Exemple reel : TON montant=7.91USD apy=17.67% deblocage=2jours ; ATOM montant=5.87USD apy=21.06% deblocage=21jours. Recopie ces trois nombres TELS QUELS dans montant_usd, apy_staking_pct et delai_deblocage_jours. N utilise JAMAIS tes connaissances generales ni le bloc SOLDES_REVOLUTX pour ces trois valeurs. Si le champ est vide ou vaut aucune ligne stakee, renvoie un tableau destake_recommande vide au lieu d inventer. N ecris jamais 0 par defaut.
 
    à chercher :
    - STAKING_DELAIS et STAKING_APY : texte brut des deux tables au format DEVISE:valeur | DEVISE:valeur, à joindre par devise de base. Le suffixe j signifie jours : ATOM:21j veut dire delai_deblocage_jours = 21. Le suffixe % est un pourcentage annuel : ATOM:21.06% veut dire apy_staking_pct = 21.06. Reporte ces nombres exactement dans le JSON de sortie.
    à remplacer par :
-   - STAKING : une entree par devise stakee, deja jointe, rien a recouper. Le champ STAKING_APY reste disponible en confirmation mais STAKING fait foi en cas d ecart.
+   - STAKING_DELAIS : une entree par devise stakee, montant apy et delai deja reunis, rien a recouper. Le champ STAKING_APY reste disponible en confirmation mais STAKING_DELAIS fait foi en cas d ecart.
 
 4) Ne change rien d'autre : ni le modèle sonar-pro, ni max_tokens 8000, ni la température, ni le
    schéma de sortie, ni les règles de trading, ni les modules 20023, 10011, 10014, 10023.
 
-Puis SAUVEGARDE le scénario, et confirme-moi :
-- l'URL du module 20022 pointe bien sur v_alc_staking_txt?select=staking_texte
-- le message user du 10012 contient STAKING={{ifempty(20022.data.staking_texte; emptystring)}}
+Puis SAUVEGARDE, et confirme-moi que l'URL du 20022 se termine bien par
+?select=delais_texte:staking_texte
 ```
 
 ## Contrôle après le run (valeurs attendues, au centime près)
