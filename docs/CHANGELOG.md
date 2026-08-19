@@ -8,6 +8,44 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite) — 10 correctifs d'ergonomie signalés par Chachou
+
+- **Plus jamais de JSON brut.** Un moteur de rendu (`autoRender` + libellés français) transforme toute réponse
+  en présentation lisible : cartes de chiffres, sections, tableaux, timelines. Appliqué aux **dossiers des Sages**
+  (rendu dédié : taux de réussite + jauge + derniers signaux ✓/✗ avec ce qu'ils ont dit et le verdict du marché),
+  aux **dossiers des Archimages** (valeur, gain, drawdowns, doctrine, apprentissages, erreurs, positions) et aux
+  **12 actions de la console de tests** (chacune avec son titre et son explication en clair).
+- **Périodes harmonisées** : les barres 7J / 1M / TOUT deviennent **Jour · Semaine · Mois · Année · Début**,
+  identiques aux tableaux de performance. Garde-fou : une fenêtre trop courte retombe sur 2 points minimum
+  au lieu d'afficher un cadre vide.
+- **Classement des portefeuilles** (ex-tableau « comparatif ») entièrement redessiné : podium (★, #2, #3…),
+  valeur, gain en % et en $, jauge de décisions gagnantes, jauge de perte depuis le plus haut, poids
+  Méta-Cerveau, et l'**Alchimiste réel** intégré au classement. Responsive 2 colonnes sur téléphone.
+- **Comparatif par portefeuille qui n'affichait rien** : vérifié en base — `v_equity_points` **ne contient
+  aucune série MAREES** (et `v_comparaison` non plus). Le cadre restait donc vide. Désormais un message explicite
+  + les vrais chiffres Marées disponibles (positions ouvertes, trades clos, P&L latent, exposition).
+- **Calendrier** : icônes différenciées selon l'heure réelle du message (🌅 matin · ☀️ midi · 🌙 soir),
+  **💬 pour les demandes** (oracle_problemes) et 🔔 pour les rappels ; **jours cliquables** qui ouvrent tous les
+  événements du jour (message intégral, demande avec statut/diagnostic/reco, rappel) ; flèches ‹ › fonctionnelles
+  avec le mois affiché en titre.
+- **Contexte système** affiché **en entier** (fini la troncature à 44 caractères et à 10 lignes), groupé par
+  section, avec le compte de réglages lus.
+- **Rapport investisseurs** : vrai document **sur fond clair**, ouvert dans un onglet dédié — en-tête AETHER,
+  synthèse, 4 chiffres clés, courbe AETHER vs S&P 500, tableau par agent, 8 mesures de risque, les 4 critères
+  de passage au réel, le journal de bord et un avertissement AMF complet. Mise en page d'impression (@page,
+  masquage des boutons). Le bouton **Aperçu**, qui ne faisait qu'un message, ouvre maintenant ce document.
+- **Curseur d'autonomie** : les 4 crans sont **cliquables** et **reflètent l'état réel** (planning + kill-switch),
+  la barre de progression suit le niveau, chaque cran explique son contrat et propose l'action réelle
+  correspondante (Face ID). Le cran « Proposer » est honnêtement marqué non disponible — il n'existe pas
+  côté serveur. Aucun nouvel objet en base : le niveau est déduit de `scenario-switch` + `ju-killswitch`.
+- **« Invalid Date »** : `hm()`/`dj()` renvoyaient le texte brut du navigateur sur une date absente — elles
+  renvoient désormais une chaîne vide, et l'affichage omet le fragment.
+- Détail : `.mini` du classement entrait en collision avec la classe `.mini` des cartes du Collège
+  (barres transformées en gros rectangles vides) → renommée `.jauge`.
+- Banc E2E étendu à ces 10 points (JSON brut, périodes, classement, repli Marées, icônes du calendrier,
+  clic sur un jour, navigation de mois, contexte complet, fond clair du rapport, crans d'autonomie,
+  « Invalid Date »). Rejoué : **0 erreur**.
+
 ## 2026-08-19 — Positions vivantes : les ventes à découvert étaient invisibles
 
 Question de Chachou : « je ne comprends pas ce que tu appelles position vivante, sur Alpaca j'ai 26 positions ».
