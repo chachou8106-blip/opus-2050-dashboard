@@ -8,6 +8,60 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 12) — Garde-fou : interdiction de renforcer une vente a decouvert perdante
+
+Demande par Chachou apres l'analyse du short MSTR de GIL. **execute-trades v38**, cote Supabase
+uniquement — aucune modification Make.
+
+### Le trou dans la protection existante
+
+```js
+if (pending.has(sym) || (heldMV[sym] || 0) > 0) { ... 'short_blocked_position' }
+```
+
+Ce test bloque l'ouverture d'un short quand une position ACHETEUSE existe. Mais sur un short,
+`market_value` est **negatif** : la condition etait fausse, l'ordre passait, et il **agrandissait**
+la position. Le 19/08, GIL a ainsi renforce deux fois un short MSTR deja a -10 % (14 952 $ a 15:48,
+puis 2 963 $ a 18:41).
+
+### La regle ajoutee
+
+`RENFORT_SHORT_PERTE_MAX = -0.05` : si un short existe deja sur le ticker **et** perd plus de 5 %,
+l'ordre est refuse et journalise sous `renfort_short_perdant_bloque`, avec la perte constatee, le
+seuil et l'exposition.
+
+Ce que le garde-fou **ne bloque pas**, volontairement :
+- l'ouverture d'un **nouveau** short (aucune position en cours) ;
+- le **rachat** (`buy`) qui deboucle une position — c'est un ordre d'achat, il ne passe pas par la ;
+- la vente d'une position **reellement detenue** ;
+- le renfort d'un short **gagnant**.
+
+### Test realise avant mise en service
+
+Appel reel de la fonction avec un notionnel de **1 $** — trop petit pour produire un ordre meme si
+le garde-fou avait echoue. Resultat : **0 ordre execute, 0 rejete**.
+
+| Ticker | Perte latente | Verdict |
+|---|---|---|
+| **MSTR** | **-8,08 %** | **`renfort_short_perdant_bloque`** (exposition -549 942 $) |
+| XLE | — | `short_not_downtrend` (garde momentum anterieure, atteinte avant) |
+| TQQQ | short **gagnant** | garde-fou **franchi**, puis `short_too_small` |
+
+TQQQ prouve le point important : un short en profit reste renforcable. Le garde-fou ne se declenche
+que sur les positions perdantes.
+
+### Effet immediat sur les positions du soir
+
+Bloques au renfort : **GIL XLE** (-10,43 %), **GIL MSTR** (-7,77 %), **SYL SLV** (-7,57 %).
+Les 14 autres ventes a decouvert du systeme restent renforcables.
+
+### Ce qui n'est pas fait
+
+Le levier de SYL (3,3x, 3,04 M$ de shorts obligataires pour 1,05 M$ de capital) n'est pas plafonne.
+C'est une decision de gestion distincte, a arbitrer separement.
+
+---
+
 ## 2026-08-19 (suite 11) — Les 4 correctifs demandes par Chachou, appliques et verifies
 
 Suite a « tous les comptes se sont pete la figure aujourd'hui ». Verite etablie en interrogeant

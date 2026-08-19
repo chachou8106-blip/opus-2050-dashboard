@@ -1,5 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v38 : GARDE-FOU RENFORT SHORT PERDANT — un `sell` sur un titre non detenu ouvre OU AGRANDIT une
+//       vente a decouvert. Le systeme moyennait donc a la baisse sur une position deja perdante :
+//       le 19/08/2026, GIL portait un short MSTR de -558 353 $ a -10,4 % de perte latente, et l'a
+//       renforce deux fois dans la journee (14 952 $ puis 2 963 $). Desormais, si un short existe
+//       deja sur le ticker et perd plus de RENFORT_SHORT_PERTE_MAX, l'ordre est refuse et journalise.
+//       N'empeche NI l'ouverture d'un nouveau short, NI le rachat (buy) qui debouclerait la position,
+//       NI la vente d'une position reellement detenue.
 // v37 : VERROU ACTIONS/ETF — chaque archimage reste dans sa voie à l'ACHAT. JU (actions individuelles)
 //       ne peut plus acheter d'ETF ; SYL (paniers ETF) ne peut plus acheter d'action individuelle.
 //       GIL est EXEMPTÉ (son univers CRYPTO_TACTICAL_DERIVATIVES est large : proxies, ETF tactiques,
@@ -38,6 +45,8 @@ const POUSSIERE_SEUIL_USD = 2
 const MAX_NOTIONAL_PER_ORDER = 190000
 const DUST_QTY_MIN = 1e-8
 const DUST_USD_MIN = 1
+// Perte latente au-dela de laquelle un short existant ne peut plus etre renforce (-5 %).
+const RENFORT_SHORT_PERTE_MAX = -0.05
 
 const CRYPTO_EXCLUSIF_GIL = ['BTCUSD','ETHUSD','SOLUSD','AVAXUSD','LINKUSD','XRPUSD','DOGEUSD','LTCUSD']
 const INTERDIT_GIL = ['SPY','QQQ']
@@ -224,10 +233,13 @@ serve(async (req) => {
     const heldMV: Record<string, number> = {}
     const heldQty: Record<string, number> = {}
     const heldPx: Record<string, number> = {}
+    const heldPlpc: Record<string, number> = {}
     if (Array.isArray(positions)) for (const p of positions) {
       const s = normSym(p.symbol)
       heldMV[s] = Number(p.market_value) || 0
       heldQty[s] = Number(p.qty) || 0
+      const _plpc = Number(p.unrealized_plpc)
+      if (isFinite(_plpc)) heldPlpc[s] = _plpc
       const px = Number(p.current_price) || (Number(p.qty) ? Math.abs((Number(p.market_value)||0) / Number(p.qty)) : 0)
       heldPx[s] = px || 0
     }
@@ -352,6 +364,18 @@ serve(async (req) => {
         if (!marketOpen) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_market_closed' }); continue }
         if (_px <= 0) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_no_price' }); continue }
         if (pending.has(sym) || (heldMV[sym] || 0) > 0) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_blocked_position' }); continue }
+        // v38 — GARDE-FOU : interdiction de renforcer un short deja perdant.
+        // heldMV est NEGATIF sur un short, donc le test ci-dessus ne l'attrapait pas : l'ordre
+        // passait et agrandissait la position. On refuse desormais si la perte latente depasse
+        // le seuil. Ouvrir un nouveau short (aucune position) reste autorise.
+        const _qShort = heldQty[sym] || 0
+        const _plShort = heldPlpc[sym]
+        if (_qShort < 0 && _plShort !== undefined && _plShort <= RENFORT_SHORT_PERTE_MAX) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'renfort_short_perdant_bloque',
+            perte_pct: Math.round(_plShort*10000)/100, seuil_pct: Math.round(RENFORT_SHORT_PERTE_MAX*10000)/100,
+            exposition_usd: Math.round(heldMV[sym] || 0) })
+          continue
+        }
         const _wantS = Math.round(Number(t.notional) || 0)
         const _concShort = (concentration[sym]?.short) || 0
         const _pctEffS = _concShort >= 2 ? MAX_ORDER_PCT / 2 : MAX_ORDER_PCT
