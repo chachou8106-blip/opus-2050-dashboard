@@ -8,6 +8,41 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 2) — Méta-Cerveau à zéro : mauvais noms de champs + comparateur incomplet
+
+- **CAUSE RACINE : `dashboard_snapshot()` renvoie `poids` / `doctrine`, la console lisait
+  `synthesis_weight` / `current_bias`.** Résultat : poids Méta-Cerveau à 0 %, barres vides et biais
+  absents sur les trois Archimages. Vérifié en base : les vraies valeurs existent (JU 0.26, SYL 0.42,
+  GIL 0.32) avec des doctrines complètes. La console accepte désormais **les deux conventions**
+  (`poidsOf()` / `doctrineOf()`), la RPC comme la lecture directe d'`oracle_brain_state`.
+  Deux autres décalages du même type corrigés : `sante_flux.data_completeness` / `circuit_breaker_fired`
+  (lus comme `completude` / `circuit_breaker` → « — » dans l'audit) et `debug_execution.raisons_skip`
+  (tableau, lu comme `raisons` → colonne vide).
+- **La phrase « Dernière correction » du Méta-Cerveau était codée en dur** dans le HTML. Elle affiche
+  maintenant `meta_cerveau.doctrine` réel, avec sa date de mise à jour.
+- **Les fixtures de test portaient les mauvais noms** — voilà pourquoi le banc ne voyait rien. Elles sont
+  reconstruites sur la forme exacte de la RPC. Leçon : une fixture doit venir de la réponse réelle, jamais
+  d'une supposition.
+- **Sages : phrases coupées** (« REVOIR LA SELECTION DES TRADES JU » tronquée à 42 caractères). Les cartes
+  sont refaites : pastille de taux de réussite, signal **complet** sur plusieurs lignes, jauge colorée,
+  carte entière cliquable vers le dossier. Contrôle automatique ajouté : aucun `dernier_signal` ne doit
+  manquer du rendu.
+- **Comparateur des marchés — deux vrais défauts** :
+  ① **Les courbes n'étaient pas alignées dans le temps.** `lineChart` étirait chaque série sur toute la
+  largeur quel que soit son intervalle réel : une série de 4 points (Alchimiste) paraissait couvrir la
+  même période qu'une série de 52. Le traceur construit désormais un **axe de dates commun** (union des
+  dates), place chaque point à sa vraie date, ne trace une série que là où elle existe, et l'infobulle lit
+  les valeurs réellement alignées.
+  ② **La légende ne listait que les stratégies** — sélectionner 15 marchés n'en affichait que 5. Elle liste
+  maintenant **toutes** les séries affichées, classées par rendement, avec le compte et la période.
+  Les pastilles sans série en base (Marées) sont **grisées et barrées** avec une explication au clic,
+  au lieu de rester silencieusement inertes.
+- **« Performance dans le temps » refait en matrice premium** : une ligne par stratégie, une colonne par
+  période, cellules colorées par intensité du rendement, **mini-tendance** en courbe et **rendement cumulé
+  composé** en bout de ligne, plus une légende explicative.
+- Banc E2E étendu : 22 séries activées d'un coup (toutes tracées, toutes en légende), poids ≠ 0, doctrine
+  présente, phrases de Sages intégrales, matrice rendue, complétude et raisons lues. Rejoué : **0 erreur**.
+
 ## 2026-08-19 (suite) — 10 correctifs d'ergonomie signalés par Chachou
 
 - **Plus jamais de JSON brut.** Un moteur de rendu (`autoRender` + libellés français) transforme toute réponse
