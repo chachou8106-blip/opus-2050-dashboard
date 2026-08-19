@@ -8,6 +8,48 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 14) — Le Sage Macro ne recoit PAS CTX. Mon diagnostic precedent etait faux.
+
+Run de 22:02. Le module 201 tourne bien sur Groq (verifie dans le blueprint), et sa reponse est
+desormais exploitable :
+
+```
+"news_catalyst": "Missing keys:VIX,SPY,SPY_CHG,FG,T10Y,T2Y,FED,CPI,DXY,GOLD_SILVER_RATIO,HYG_LQD_SPREAD,MACRO_SHOCK"
+```
+
+### Correction : ce n'etait pas le modele
+
+J'ai attribue le gel a `sonar-pro`, modele de recherche web. **C'etait faux.** Le changement de
+modele n'a pas repare le Sage — il a seulement transforme un « CTX est ambigu » inutilisable en une
+liste precise de cles manquantes. C'est ce qui a permis le vrai diagnostic, mais la cause est
+ailleurs.
+
+### Ce qui est etabli
+
+1. **CTX est correctement construit.** Sortie memorisee du module 110 :
+   `DATE=2026-08-19 18:40|VIX=15.84|FED=3.63|CPI=332.813|T10Y=4.72|T2Y=4.19|SPY=…`
+2. **Le module 201 ne le recoit pas.** Il declare manquantes des cles qui sont demonstrablement
+   presentes dans CTX — VIX en tete.
+3. **Le module 203 (Technique), lui, le recoit.** Meme reference `{{CTX}}`, meme fournisseur Groq :
+   **8 valeurs distinctes de `tech_score` (40 a 68) sur 53 runs**, 4 phases de cycle, 3 ETF. Son
+   seul autre champ d'entree est `MACRO`, constant depuis 14 jours — la variation ne peut donc venir
+   que de CTX.
+
+Conclusion : `{{CTX}}` se resout pour le 203 et pas pour le 201. La raison n'est pas etablie, et je
+ne la devinerai pas — l'etape suivante est une experience, pas une theorie.
+
+### Experience proposee (1 caractere de diff)
+
+Module 201, message user : `CTX={{CTX}}` -> `CTX={{110.value}}`, la reference directe a la sortie du
+module qui construit CTX. Si les cles arrivent, le probleme etait la resolution par nom.
+
+### Le reste du run
+
+Statut `success`, completude 90 %. **Staking : 7 lignes, total 150,99 $** — troisieme run consecutif
+juste, le correctif du 10012 tient. Garde-fou short actif, aucun renfort de position perdante.
+
+---
+
 ## 2026-08-19 (suite 13) — Sage Macro reellement fige : il tourne sur un moteur de recherche
 
 Alerte Vigie : « 4 Sages FIGES ». Verification sur **14 jours** au lieu des 6 runs de la regle :
