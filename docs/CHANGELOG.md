@@ -8,6 +8,61 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 9) — MON ERREUR : le passage en texte brut a cassé les montants du dé-staking
+
+Chachou : « je ne vois plus le staking et il n'y a plus les montants, je pense qu'elle a cassé quelque chose ».
+**Ce n'est pas Maia — c'est mon correctif Base64 qui a provoqué la régression.**
+
+### Ce que j'ai raté
+
+Avant de proposer de retirer le Base64, j'ai vérifié que les textes staking ne contenaient ni guillemets,
+ni sauts de ligne, ni antislash. **Je n'ai pas vérifié la barre verticale `|`** — qui est précisément le
+séparateur de champs du message envoyé à l'Alchimiste :
+
+```
+SOLDES_REVOLUTX=…|PRIX_REVOLUTX_B64=…|STAKING_DELAIS=…|STAKING_APY=…|CTX_B64=…
+```
+
+Or les deux vues produisaient `ATOM:21j | ETH:5j | KSM:7j | …`. En Base64 c'était inoffensif ; en texte
+brut, les barres internes se confondent avec les séparateurs de champs et le modèle ne sait plus où
+commence ni finit chaque champ.
+
+**Preuve écrite par le modèle lui-même**, dans sa raison pour ATOM au run de 11:11 :
+« *Sans information sur le délai de déblocage…* »
+
+| Run | Encodage | APY | Délais | Montants |
+|---|---|---|---|---|
+| 10:28 | Base64 | ✅ exacts | ❌ 0 | ⚠️ inventés |
+| 11:11 | texte brut | ✅ exacts | ❌ 0 | ❌ **0** |
+
+### Découverte au passage : les montants n'ont JAMAIS été justes
+
+Comparaison avec `v_staking_point` (la vérité) :
+
+| Devise | Montant réel staké | Écrit par l'Alchimiste à 10:28 |
+|---|---|---|
+| TON | **7,91 $** | 787,07 $ |
+| SOL | **90,92 $** | 249,91 $ |
+| ATOM | **5,87 $** | 21,09 $ |
+
+Le modèle devait extraire le montant d'un gros bloc de texte (`soldes_texte`, section « EN STAKE »),
+croisé avec deux autres vues. Il l'a toujours inventé. Le total de son estimation dépassait la valeur
+du portefeuille entier (848 $ pour 169 $ réellement stakés).
+
+### Correctifs appliqués côté Supabase (aucune intervention Make requise)
+
+1. **`v_alc_staking_delais_txt` et `v_alc_staking_apy_txt`** : séparateur interne `|` → **`;`**.
+   Plus aucune collision. Vérifié : aucune barre verticale ne subsiste.
+2. **Nouvelle vue `v_alc_staking_txt`** — source **unique et complète**, 498 caractères, sans barre :
+   `SOL montant=90.92USD apy=6.16% deblocage=3jours cout_destake=0.05USD ; ETH montant=27.13USD …`
+   Elle donne d'un coup le montant **réel**, l'APY, le délai et le coût de dé-stake, coin par coin.
+   Dépendances vérifiées avant modification : aucune autre vue ne consomme ces trois vues.
+3. Schéma versionné dans `supabase/schema/02_views.sql`.
+
+→ Un dernier prompt Maia (module 20022 + 2 phrases du prompt 10012) branche l'Alchimiste sur cette
+source unique. Le séparateur `;` étant déjà corrigé, **les délais reviendront même sans ce prompt** ;
+les montants exacts, eux, l'exigent.
+
 ## 2026-08-19 (suite 8) — RUN COMPLET RÉUSSI : les trois correctifs validés en réel
 
 Run manuel du **19/08 à 10:27** : **76 opérations sur 76**, 118 s, `status: success`, aucune erreur.
