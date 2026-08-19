@@ -8,6 +8,73 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 10) — RÉSOLU : le dé-staking est enfin exact, et les runs ne meurent plus
+
+Run manuel de **18:40 (16:40 UTC)** — **76 opérations sur 76**, succès. Les deux correctifs appliqués
+par Maia sont dans le blueprint (relu à 16:43) et produisent le résultat attendu.
+
+### Module 205 (Sage Risque) — le run ne meurt plus
+
+`max_tokens` 800 → **2000**, et la clause LANGUE bornée à 200 caractères par champ texte.
+Effet mesuré : la sortie du Sage Risque passe de **2 951 à 985 caractères**, soit environ 275 tokens
+pour un plafond de 2 000 — une marge de 7×, contre une marge négative auparavant.
+
+Historique de la panne : 4 échecs `ParseJSON` à 19 opérations sur 76 (18/08 16:31, 19/08 07:04,
+19/08 10:13, 19/08 16:31). Les runs qui passaient ne le devaient à aucun correctif : la sortie
+retombait simplement sous le plafond (965 à 3 009 caractères pour une limite à ~2 900).
+
+**À noter comme erreur de méthode de ma part** : j'ai affirmé le matin du 19/08 que « le correctif
+max_tokens 2000 tient », en me fondant sur la réussite des runs au lieu de lire la valeur dans le
+blueprint. Elle valait 800. Un correctif n'est acquis que lorsqu'il est **lu** dans le blueprint.
+
+### Module 10012 (Alchimiste) — les 21 valeurs sont exactes
+
+Retour au texte brut (`STAKING_DELAIS=` sans Base64), les 3 phrases du prompt système, plus une
+consigne ajoutée : une ligne par devise présente, sans omission.
+
+| Devise | montant_usd | attendu | apy_staking_pct | delai_deblocage_jours |
+|---|---|---|---|---|
+| SOL | 90,27 | 90,27 ✅ | 6,16 ✅ | 3 ✅ |
+| ETH | 27,02 | 27,02 ✅ | 2,45 ✅ | 5 ✅ |
+| KSM | 14,67 | 14,67 ✅ | 10,47 ✅ | 7 ✅ |
+| TON | 7,91 | 7,91 ✅ | 17,67 ✅ | 2 ✅ |
+| ATOM | 5,87 | 5,87 ✅ | 21,06 ✅ | 21 ✅ |
+| OSMO | 4,91 | 4,91 ✅ | 5,39 ✅ | 14 ✅ |
+| TRX | 0,34 | 0,34 ✅ | 3,26 ✅ | 14 ✅ |
+
+Total **150,99 $** contre **150,98 $** déclarés par Revolut. 7 devises sur 7, 21 valeurs sur 21.
+
+### Chronologie complète du feuilleton dé-staking
+
+| Run | Configuration 10012 | Montants | Délais |
+|---|---|---|---|
+| 17/08 → 18/08 | Base64 + clé 20022 corrompue | inventés (TON 787 $ pour 7,91 $) | 0 |
+| 19/08 10:28 | Base64, clé réparée | faux | 0 |
+| 19/08 11:11 | texte brut, séparateur `\|` | 0 | 0 |
+| 19/08 11:56 | texte brut, séparateur `;` | **7/7 exacts** | **7/7 exacts** |
+| 19/08 12:00 | Base64 (revert) | 0 | exacts |
+| 19/08 15:48 | Base64 | 5 devises, 1 fausse, ETH+TON perdus | exacts |
+| 19/08 18:40 | texte brut + consigne « sans omission » | **7/7 exacts** | **7/7 exacts** |
+
+### Reste du run
+
+5 Sages `ok`, 3 Archimages ont répondu, `data_completeness` 100 %, phase DEFENSIVE,
+10 ordres passés (1 achat, 9 ventes), Discord envoyé, aucun circuit breaker.
+80 modules avant / 80 après ; module 20022 intact (clé valide, URL en alias).
+
+### Point ouvert
+
+Trois correctifs validés se sont retrouvés absents du scénario au cours de la journée : la clé JWT du
+20022 (deux fois, sur deux caractères différents du jeton), le `max_tokens` du 205, et le mapping du
+10012. La cause n'est pas identifiée. **Règle retenue : revérifier le blueprint après chaque
+sauvegarde et avant chaque run** ; ne jamais considérer un correctif comme acquis parce qu'un run a
+réussi. Si le phénomène se reproduit, exporter le blueprint qui fonctionne et le conserver comme
+référence restaurable d'un bloc.
+
+Détail : `docs/decisions/PROMPT-MAIA-205-ET-10012-2026-08-19-SOIR.md`.
+
+---
+
 ## 2026-08-19 (suite 9) — MON ERREUR : le passage en texte brut a cassé les montants du dé-staking
 
 Chachou : « je ne vois plus le staking et il n'y a plus les montants, je pense qu'elle a cassé quelque chose ».
