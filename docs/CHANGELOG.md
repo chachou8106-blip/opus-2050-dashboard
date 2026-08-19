@@ -8,6 +8,44 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 4) — Sages : la console cachait 6 champs sur 7 (je m'étais trompé)
+
+Chachou : « je comprends pas, avant il corrigeait tout le monde, va voir dans Make ». Il avait raison.
+
+- **CORRECTION DE MON DIAGNOSTIC PRÉCÉDENT.** J'avais conclu que le Sage Mémoire « ne regarde que JU »
+  en comptant les mentions dans le champ `signal` de `sage_detail`. Or ce champ est une **réduction** :
+  pour le Mémoire, c'est `left(correction_directive, 40)`. En interrogeant `oracle_sages_report` (la sortie
+  brute), le Sage note **les trois Archimages à 100 % des runs, chaque semaine depuis juin**. Ma conclusion
+  était fausse ; la vraie cause était un défaut d'affichage, pas un défaut du système.
+- **Cause : `sage_detail()` réduisait 7 à 16 champs à une seule ligne.** Chaque Sage produit en réalité une
+  analyse structurée — Mémoire 7 champs (`ju/syl/gil_win_rate`, `best_archimage`, `winning_pattern`,
+  `failed_pattern`, `correction_directive`), Macro 11, Technique 9, Flash 8, Risque 16. La console n'en
+  montrait qu'un. **Migration `sage_detail_sortie_complete`** : la RPC renvoie désormais `derniere_sortie`
+  (la sortie brute complète) et `derniere_sortie_le`, sans rien retirer de l'existant.
+- **Console** : la modale d'un Sage affiche « Sa dernière analyse complète » avec tous ses champs traduits
+  en français (≈ 50 libellés ajoutés : « JU · réussite », « Meilleur Archimage », « Ce qui marche »,
+  « Ce qui échoue », « Correction demandée », plus tous les champs Macro / Technique / Flash / Risque).
+  Deux réglages d'affichage au passage : une phrase de plus de 30 caractères devient un bloc de texte au
+  lieu d'être écrasée dans une case de chiffre, et les pourcentages entiers perdent leurs « .00 ».
+
+### Ce que dit vraiment le blueprint Make (module 207 · 📚 DEEP MEMORY)
+
+Inspection **en lecture seule** du scénario 6183820 :
+
+- Sortie imposée : **7 champs**, dont les win rates des **3 Archimages** + `best_archimage`. Confirmé.
+- Mais les **règles** d'analyse ne parlent que de JU (séquence et over-trading testent uniquement `JU_RUNS`),
+  et les entrées sont asymétriques : JU reçoit 4 variables, SYL et GIL seulement 3 (pas de `RUNS` ni `PNL`).
+- **L'Alchimiste (CRYPTE_JU) et les Marées sont totalement absents** du Sage Mémoire — leurs pipelines sont
+  en aval du routeur 999. **Pourtant leurs données arrivent déjà** dans le module 105
+  (`brain_states.CRYPTE_JU` 38 runs WR 52,6 % · `brain_states.MAREES` 25 runs WR 64,0 %) : elles sont
+  simplement non mappées. Aucune nouvelle source ne serait nécessaire.
+- Trois scories dans le prompt : un `FORCE_CONTRARIAN` absent du schéma, un bloc « LANGUE » copié d'un autre
+  Sage citant 5 champs inexistants, et une règle qui demande d'analyser « les 3 dernières décisions JU »
+  alors que le module ne reçoit jamais l'historique des ordres (module 902 exécuté après le 207).
+- → **`docs/decisions/PROMPT-MAIA-SAGE-MEMOIRE-5-AGENTS-2026-08-19.md`** : prompt Maia prêt, non envoyé.
+- ⚠️ **Sécurité** : le blueprint contient en clair une clé API Groq et la clé anon Supabase. CLAUDE.md
+  impose Vault → rotation de la clé Groq recommandée. Rien modifié, décision de Chachou.
+
 ## 2026-08-19 (suite 3) — Le plafond de 1000 lignes de PostgREST mangeait 3 marchés + la moitié de SYL
 
 Chachou : « MSCI World, XRP et Pétrole je ne peux plus les sélectionner, soi-disant ils n'ont plus de séries ! »
