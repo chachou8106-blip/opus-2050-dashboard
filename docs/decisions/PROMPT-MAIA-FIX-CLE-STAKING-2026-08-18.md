@@ -1,5 +1,12 @@
 # Prompt Maia — RÉPARER la clé API des modules staking (cause du « Alchimiste MUET ») — 2026-08-18
 
+> **RE-VÉRIFIÉ LE 19/08/2026 — toujours valable, rien n'a bougé.**
+> Blueprint relu en lecture seule : le JWT corrompu (`ref: smddzbxebwfnitxuyuyp`) est présent
+> sur **exactement 4 en-têtes** — modules **20022** (`apikey` + `Authorization`, vue
+> `v_alc_staking_delais_txt`) et **20023** (`apikey` + `Authorization`, vue `v_alc_staking_apy_txt`).
+> Côté base : dernière ligne dans `alc_destake_reco` le **17/08 à 20:00**, plus rien depuis ;
+> la Vigie signale toujours « Alchimiste verdict » hors OK. Le prompt ci-dessous reste à envoyer tel quel.
+
 ## Diagnostic (prouvé, ne rien inventer)
 Depuis la modification du 17/08 ~20:50, les modules **20022** (⛓️ LES CHAÎNES DU SCELLÉ, délais)
 et **20023** (🌾 LA RENTE DES SCELLÉS, APY) portent une **clé anon Supabase corrompue**
