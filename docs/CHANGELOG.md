@@ -8,6 +8,42 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 7) — Le run échoue depuis le 18/08 : le Sage Risque déborde son plafond de tokens
+
+Run manuel lancé depuis la console à 10:12:54 → **échec à 10:13:03**, `DataError: Source is not valid JSON`
+au module ParseJSON, **19 opérations sur 76**.
+
+- **Cause : module 205 (⚔️ IRON SENTINEL, Sage Risque) plafonné à `max_tokens: 800`** — le plus bas des
+  5 Sages — alors qu'il produit la sortie la plus longue : **2 948 caractères ≈ 819 tokens** au maximum
+  observé. La réponse est coupée en plein milieu → JSON invalide → le module **206 · 💧 DISTILLATION DU
+  RISQUE** plante → tout le run s'arrête.
+  Marges des autres Sages : Technique 5,8× · Macro 3,7× · Flash 10× · Mémoire 16×. Le Risque : **dépassé**.
+- **Intermittence expliquée** : les sorties du Sage Risque ont grossi (288 tokens le 14/08 → 819 le 17/08).
+  Échecs les **18/08 16:31**, **19/08 07:04**, **19/08 10:13** ; succès quand le modèle reste sous 800.
+- **Aggravant : 8 champs sur 16 ne servent à personne.** Le schéma déclare 8 champs courts ; le prompt en
+  réclame 8 de plus, dont 5 textes libres en français (`prophet_vision`, `portfolio_rationale`, `rationale`,
+  `memory_summary`, `evaluations`). Vérification faite : le module **215 · 🔮 LA MATRICE DES SIGNAUX**, seul
+  consommateur, ne lit **que les 8 champs du schéma**. Le modèle brûle la moitié de son budget en texte ignoré.
+- → **`docs/decisions/PROMPT-MAIA-SAGE-RISQUE-MAXTOKENS-2026-08-19.md`** : prompt prêt, non envoyé.
+  Décision retenue : `max_tokens` 800 → 2000 **et** bornage des 5 textes à 200 caractères. On garde les
+  champs de raisonnement (affichés dans le dossier du Sage côté console) mais on les encadre.
+
+### Conséquence : le correctif staking n'a pas encore pu être testé
+
+Les modules 20022/20023 (clé réparée à 10:06) se situent **après** le routeur 999. Le run étant mort à la
+19ᵉ opération, ils n'ont jamais été atteints. `alc_destake_reco` reste donc figé au 17/08 20:00.
+
+### Deux points signalés par Chachou, aucun n'est une panne
+
+- **« dust_unsellable »** : message normal face aux poussières crypto (qty ~1e-9 de SOL/XRP/BTC) qu'Alpaca
+  refuse de vendre car sous le minimum négociable. Le système les saute proprement à chaque run.
+  Seul défaut : elles gonflent le compteur « ignorés ». Un nettoyage côté Alpaca les supprimerait.
+- **Aucun message Discord** : le module 10031 est en fin de chaîne, jamais atteint. Il reviendra avec un
+  run complet.
+- **La console a bien fonctionné** : `v_scenario_etat` confirme run déclenché à 10:12:54 et coupure
+  automatique à 10:20:00. Le run n'apparaît pas dans la liste parce que `oracle_college_runs` n'est écrit
+  qu'en fin de chaîne.
+
 ## 2026-08-19 (suite 6) — Vérification après passage de Maia + sort de la règle « 3 pertes consécutives »
 
 ### Ce que Maia a fait (blueprint enregistré à 09:52:54)
