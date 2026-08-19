@@ -163,6 +163,14 @@ svg{max-width:100%}
 .tog{font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:20px;border:1px solid var(--hair);background:rgba(255,255,255,.02);color:var(--dim);cursor:pointer;display:inline-flex;align-items:center;gap:6px;user-select:none}
 .tog i{width:8px;height:8px;border-radius:2px}
 .tog.on{border-color:var(--hair-2);color:var(--ink)}
+.tog.vide{opacity:.4;cursor:not-allowed;text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+/* --- tableau « performance dans le temps » : matrice colorée --- */
+.matrix th{text-align:center}.matrix th:first-child,.matrix td:first-child{text-align:left}
+.matrix th:last-child,.matrix td:last-child{text-align:right}
+.matrix td.pcell{text-align:center;padding:6px 5px}
+.matrix td.pcell .v{display:inline-block;min-width:62px;padding:5px 8px;border-radius:7px;font:600 11.5px var(--mono);font-variant-numeric:tabular-nums}
+.matrix td.pcell .vide{color:var(--mute);font-size:11px}
+.matrix tr:hover td{background:rgba(110,134,255,.04)}
 
 .strat{padding:0;transition:transform .25s,box-shadow .25s}
 .strat:hover{transform:translateY(-3px);box-shadow:var(--glow)}
@@ -342,7 +350,8 @@ svg{max-width:100%}
   <div class="sect"><div class="sect-h">Rendements mensuels</div><div class="card pad scroll"><table class="tbl heat" id="monthly"></table></div></div>
   <div class="sect"><div class="sect-h">Performance dans le temps</div>
     <div class="btnrow" id="grTabs" style="margin-bottom:12px"></div>
-    <div class="card pad scroll"><table class="tbl" id="perTime"></table></div>
+    <div class="card pad scroll"><table class="tbl matrix" id="perTime"></table></div>
+    <div class="note" id="perTimeNote" style="margin-top:10px"></div>
   </div>
 </section>
 
@@ -371,7 +380,7 @@ svg{max-width:100%}
   </div>
 
   <div class="sect"><div class="sect-h">Le Méta-Cerveau · répartition des poids</div>
-    <div class="card pad"><div style="color:var(--dim);font-size:13px;margin-bottom:12px">Dernière correction : <i>« GIL sous-pondéré temporairement — drawdown contrarian élevé ; SYL renforcé pour sa régularité. »</i></div><div id="poids"></div></div>
+    <div class="card pad"><div id="mcDoctrine" style="color:var(--dim);font-size:13px;margin-bottom:12px;line-height:1.6">—</div><div id="poids"></div></div>
   </div>
 </section>
 
@@ -764,30 +773,55 @@ function slicePer(pts,per){if(!pts||!pts.length)return[];const d=(PSET[per]||PSE
  // une courbe a besoin d'au moins 2 points : sur « Jour » les séries à faible fréquence en auraient 1
  return out.length>=2?out:pts.slice(-2);}
 
-/* ---------- Traceur générique (axes Y/X réels + zéro + interactif) ---------- */
+/* ---------- Traceur générique — toutes les courbes sur le MÊME axe de dates ----------
+   Avant : chaque série était étirée sur toute la largeur quel que soit son intervalle réel,
+   donc une série de 4 points (Alchimiste) paraissait couvrir la même période qu'une série de 52.
+   Maintenant : axe = union des dates de toutes les séries, chaque série est placée à sa vraie date,
+   et une série qui ne couvre qu'une partie de la fenêtre n'est tracée que sur cette partie. */
 function lineChart(box,opt){
- // opt: {W,H,series:[{name,color,pts:[{x,y}],width,dash,area,iris}], fmt, x0line}
+ // opt: {W,H,series:[{name,color,pts:[{x,y}],width,dash,area,areaColor,iris}], fmt, x0line}
  if(!box)return;const W=opt.W,H=opt.H,L=52,R=12,T=12,B=22,iw=W-L-R,ih=H-T-B;
- const all=opt.series.flatMap(s=>s.pts.map(p=>p.y)).filter(v=>v!=null);
- if(!all.length){box.innerHTML='<div style="color:var(--mute);font-size:13px;padding:30px 0;text-align:center">Pas encore de données.</div>';return;}
+ const series=(opt.series||[]).filter(s=>s&&Array.isArray(s.pts)&&s.pts.length);
+ const all=series.flatMap(s=>s.pts.map(p=>p.y)).filter(v=>v!=null);
+ if(!all.length){box.innerHTML='<div style="color:var(--mute);font-size:13px;padding:30px 0;text-align:center">Pas encore de données.</div>';box._cfg=null;return;}
+ // axe des dates commun
+ const key=x=>{const t=new Date(x).getTime();return isNaN(t)?String(x):t;};
+ const xs=[...new Set(series.flatMap(s=>s.pts.map(p=>key(p.x))))].sort((a,b)=>(typeof a==='number'&&typeof b==='number')?a-b:String(a).localeCompare(String(b)));
+ const n=xs.length,pos={};xs.forEach((x,i)=>pos[x]=i);
+ // valeurs alignées : chaque série garde sa dernière valeur connue entre deux points, et rien avant son 1er point
+ const VALS=series.map(s=>{const v=new Array(n).fill(null);
+  s.pts.forEach(p=>{const i=pos[key(p.x)];if(i!=null&&p.y!=null)v[i]=p.y;});
+  let last=null,seen=false;
+  for(let i=0;i<n;i++){if(v[i]!=null){last=v[i];seen=true;}else if(seen)v[i]=last;}
+  return v;});
  let mn=Math.min(...(opt.x0line?[0,...all]:all)),mx=Math.max(...(opt.x0line?[0,...all]:all));if(mn===mx){mn-=1;mx+=1;}
- const n=Math.max(...opt.series.map(s=>s.pts.length));
- const X=(i,len)=>L+(len>1?i/(len-1):0.5)*iw,Y=v=>T+ih-((v-mn)/(mx-mn))*ih;
+ const X=i=>L+(n>1?i/(n-1):0.5)*iw,Y=v=>T+ih-((v-mn)/(mx-mn))*ih;
  let ax='';for(let k=0;k<=3;k++){const v=mn+(mx-mn)*k/3,y=Y(v).toFixed(1);ax+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="rgba(96,196,214,.08)"/><text x="'+(L-6)+'" y="'+(Y(v)+3).toFixed(1)+'" fill="var(--mute)" font-size="10" text-anchor="end">'+opt.fmt(v)+'</text>';}
  if(opt.x0line&&mn<0&&mx>0)ax+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(0).toFixed(1)+'" y2="'+Y(0).toFixed(1)+'" stroke="rgba(233,241,243,.18)" stroke-dasharray="2 4"/>';
- const ref=opt.series[0].pts;
- for(let k=0;k<=5;k++){const ti=Math.round(k/5*(ref.length-1));if(ref[ti])ax+='<text x="'+(L+k/5*iw).toFixed(1)+'" y="'+(H-7)+'" fill="var(--mute)" font-size="9" text-anchor="middle">'+dj(ref[ti].x)+'</text>';}
+ const lab=i=>{const x=xs[i];return dj(typeof x==='number'?new Date(x):x);};
+ const nlab=Math.min(5,Math.max(1,n-1));
+ for(let k=0;k<=nlab;k++){const i=Math.round(k/nlab*(n-1));ax+='<text x="'+X(i).toFixed(1)+'" y="'+(H-7)+'" fill="var(--mute)" font-size="9" text-anchor="middle">'+lab(i)+'</text>';}
  let defs='',body='';
- opt.series.forEach((s,si)=>{if(!s.pts.length)return;let d='';s.pts.forEach((p,i)=>d+=(i?'L':'M')+X(i,s.pts.length).toFixed(1)+' '+Y(p.y).toFixed(1)+' ');
-  if(s.area){const gid='gA'+si+box.id;defs+='<linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+(s.areaColor||'rgba(110,134,255,.28)')+'"/><stop offset="1" stop-color="rgba(0,0,0,0)"/></linearGradient>';
-   body+='<path d="'+d+' L'+X(s.pts.length-1,s.pts.length).toFixed(1)+' '+(T+ih)+' L'+L+' '+(T+ih)+' Z" fill="url(#'+gid+')"/>';}
+ series.forEach((s,si)=>{const v=VALS[si];
+  // segments continus (une série absente d'une partie de la fenêtre n'y est pas tracée)
+  const segs=[];let cur=null;
+  for(let i=0;i<n;i++){if(v[i]==null){if(cur&&cur.length>1)segs.push(cur);cur=null;}else{(cur=cur||[]).push(i);}}
+  if(cur&&cur.length>1)segs.push(cur);
+  if(!segs.length){ // série à un seul point : on le matérialise par un repère
+   const i=v.findIndex(x=>x!=null);
+   if(i>=0)body+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(v[i]).toFixed(1)+'" r="3.4" fill="'+s.color+'"/>';
+   return;}
+  const dOf=seg=>seg.map((i,k)=>(k?'L':'M')+X(i).toFixed(1)+' '+Y(v[i]).toFixed(1)).join(' ');
+  if(s.area){const gid='gA'+si+(box.id||'');defs+='<linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+(s.areaColor||'rgba(110,134,255,.28)')+'"/><stop offset="1" stop-color="rgba(0,0,0,0)"/></linearGradient>';
+   segs.forEach(seg=>{body+='<path d="'+dOf(seg)+' L'+X(seg[seg.length-1]).toFixed(1)+' '+(T+ih)+' L'+X(seg[0]).toFixed(1)+' '+(T+ih)+' Z" fill="url(#'+gid+')"/>';});}
   let stroke=s.color;
-  if(s.iris){defs+='<linearGradient id="gI'+box.id+'" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#37E0C6"/><stop offset=".5" stop-color="#6E86FF"/><stop offset="1" stop-color="#F06BB4"/></linearGradient>';stroke='url(#gI'+box.id+')';}
-  body+='<path d="'+d+'" fill="none" stroke="'+stroke+'" stroke-width="'+(s.width||2.4)+'"'+(s.dash?' stroke-dasharray="'+s.dash+'"':'')+' stroke-linejoin="round"/>';
-  if(si===0)body+='<circle cx="'+X(s.pts.length-1,s.pts.length).toFixed(1)+'" cy="'+Y(s.pts[s.pts.length-1].y).toFixed(1)+'" r="4" fill="'+(s.iris?'#F06BB4':s.color)+'"/>';});
+  if(s.iris){defs+='<linearGradient id="gI'+(box.id||'')+'" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#37E0C6"/><stop offset=".5" stop-color="#6E86FF"/><stop offset="1" stop-color="#F06BB4"/></linearGradient>';stroke='url(#gI'+(box.id||'')+')';}
+  segs.forEach(seg=>{body+='<path d="'+dOf(seg)+'" fill="none" stroke="'+stroke+'" stroke-width="'+(s.width||2.4)+'"'+(s.dash?' stroke-dasharray="'+s.dash+'"':'')+' stroke-linejoin="round" stroke-linecap="round"/>';});
+  if(si===0){const li=segs[segs.length-1][segs[segs.length-1].length-1];
+   body+='<circle cx="'+X(li).toFixed(1)+'" cy="'+Y(v[li]).toFixed(1)+'" r="4" fill="'+(s.iris?'#F06BB4':s.color)+'"/>';}});
  box.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block"><defs>'+defs+'</defs>'+ax+body+'</svg>';
- hoverize(box,{W,L,R,label:i=>ref[Math.min(i,ref.length-1)]?dj(ref[Math.min(i,ref.length-1)].x):'—',
-  series:opt.series.filter(s=>s.pts.length).map(s=>({name:s.name,color:s.iris?'var(--s-opus)':s.color,vals:opt.series[0].pts.map((_,i)=>{const p=s.pts[Math.round(i*(s.pts.length-1)/Math.max(1,ref.length-1))];return p?p.y:null;}),fmt:v=>v==null?'—':opt.fmt(v)}))});
+ hoverize(box,{W,L,R,label:i=>lab(Math.min(i,n-1)),
+  series:series.map((s,si)=>({name:s.name,color:s.iris?'var(--s-opus)':s.color,vals:VALS[si],fmt:v=>v==null?'—':opt.fmt(v)}))});
 }
 
 /* ---------- Référentiel séries (identique à la console) ---------- */
@@ -901,14 +935,26 @@ function rStrats(){const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);cons
 
 /* --- Marchés --- */
 let CMP_PER='Mois';const activeSet=new Set(['AETHER','SYL','JU','GIL','Alchimiste','Marées','S&P 500','Bitcoin']);
-function rChips(){const chip=(n,c,on)=>'<span class="tog'+(on?' on':'')+'" data-n="'+n+'"><i style="background:'+c+'"></i>'+n+'</span>';
+function rChips(){
+ const chip=(n,c,on)=>{const nb=cmpPts(KEYOF[n]).length;const vide=nb<2;
+  return '<span class="tog'+(on&&!vide?' on':'')+(vide?' vide':'')+'" data-n="'+n+'"'+(vide?' title="Aucune série disponible pour cet actif"':' title="'+nb+' points"')+'><i style="background:'+(vide?'var(--mute)':c)+'"></i>'+n+(vide?' <span style="opacity:.7">·&nbsp;pas&nbsp;de&nbsp;série</span>':'')+'</span>';};
  const sh=t=>'<span style="width:100%;font-size:10.5px;color:var(--mute);text-transform:uppercase;letter-spacing:1px">'+t+'</span>';
  $('chips').innerHTML=sh('Stratégies')+Object.keys(SNAME).map(k=>chip(SNAME[k],SCOL[k],activeSet.has(SNAME[k]))).join('')+sh('Marchés')+BENCH.map(b=>chip(b[1],b[2],activeSet.has(b[1]))).join('');
- $('chips').addEventListener('click',e=>{const t=e.target.closest('.tog');if(!t)return;const n=t.dataset.n;if(activeSet.has(n)){activeSet.delete(n);t.classList.remove('on');}else{activeSet.add(n);t.classList.add('on');}drawCmp();});}
+ if($('chips')._w)return;$('chips')._w=true;
+ $('chips').addEventListener('click',e=>{const t=e.target.closest('.tog');if(!t)return;
+  if(t.classList.contains('vide')){toast('« '+t.dataset.n+' » n\'a pas encore de série de rendement en base.');return;}
+  const n=t.dataset.n;if(activeSet.has(n)){activeSet.delete(n);t.classList.remove('on');}else{activeSet.add(n);t.classList.add('on');}drawCmp();});}
 function drawCmp(){const box=$('cmpChart');const act=[...activeSet].filter(n=>cmpPts(KEYOF[n]).length>1);
  lineChart(box,{W:900,H:260,fmt:v=>pctF(v),x0line:true,series:act.map((n,i)=>{const strat=!!SNAME[KEYOF[n]];
   return {name:n,color:CLR[n]||'#888',pts:slicePer(cmpPts(KEYOF[n]),CMP_PER),width:strat?2.4:1.4,dash:strat?null:null,iris:false};})});
- $('cmpReading').innerHTML=act.filter(n=>SNAME[KEYOF[n]]).map(n=>{const p=cmpPts(KEYOF[n]);const last=p.length?p[p.length-1].y:null;return '<b style="color:'+CLR[n]+'">'+n+' '+pctF(last)+'</b>';}).join(' · ');}
+ // légende : TOUTES les séries affichées (stratégies ET marchés), classées par rendement décroissant
+ const lus=act.map(n=>{const p=slicePer(cmpPts(KEYOF[n]),CMP_PER);const last=p.length?p[p.length-1].y:null;
+  return {n,last,strat:!!SNAME[KEYOF[n]]};}).sort((a,b)=>(b.last==null?-1e9:b.last)-(a.last==null?-1e9:a.last));
+ $('cmpReading').innerHTML=lus.length
+  ? '<div style="display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:flex-end;max-width:560px">'
+    +lus.map(x=>'<span'+(x.strat?' style="font-weight:700"':' style="opacity:.85"')+'><i style="display:inline-block;width:9px;height:3px;border-radius:2px;background:'+(CLR[x.n]||'#888')+';margin-right:5px;vertical-align:middle"></i>'+esc(x.n)+' '+pctF(x.last)+'</span>').join('')
+    +'</div><div style="text-align:right;color:var(--mute);font-size:10.5px;margin-top:5px">'+lus.length+' série'+(lus.length>1?'s':'')+' affichée'+(lus.length>1?'s':'')+' · '+(PSET[CMP_PER]&&PSET[CMP_PER].t||CMP_PER)+'</div>'
+  : '<span style="color:var(--mute)">Aucune série sélectionnée.</span>';}
 function rOv(per){const box=$('ovChart');
  lineChart(box,{W:760,H:220,fmt:pctF,x0line:true,series:[
   {name:'AETHER',color:'var(--s-opus)',pts:slicePer(cmpPts('OPUS'),per),width:2.8,iris:true,area:true},
@@ -931,10 +977,38 @@ function rMonthly(){const M=D.suivi?.mensuel||{};const order=['OPUS','SYL','JU',
 function rGr(gr){const R=(D.suivi?.rendements||[]).filter(x=>x.granularite===gr);
  const order=['OPUS','SYL','JU','GIL','ALCHIMISTE','MAREES'];const lim={jour:10,semaine:8,mois:6,annee:3}[gr]||8;
  const by={};R.forEach(x=>{(by[x.serie]=by[x.serie]||[]).push(x);});
- let rows=[];order.forEach(k=>{const a=(by[k]||[]).sort((x,y)=>x.periode<y.periode?-1:1).slice(-lim);
-  a.forEach(x=>rows.push([SNAME[k],x.periode,num(x.rendement_pct)]));});
- $('perTime').innerHTML='<thead><tr><th>Stratégie</th><th>Période</th><th>Rendement</th></tr></thead><tbody>'+
-  (rows.length?rows.map(r=>'<tr><td><span class="tname"><i style="background:'+CLR[r[0]]+'"></i>'+r[0]+'</span></td><td class="mono" style="text-align:left">'+esc(r[1])+'</td><td>'+sgn(r[2])+'</td></tr>').join(''):'<tr><td class="mono" style="color:var(--mute)">Pas de données sur cette période.</td></tr>')+'</tbody>';
+ // colonnes = périodes réellement présentes, les plus récentes à droite
+ const cols=[...new Set(R.map(x=>x.periode))].sort().slice(-lim);
+ const lignes=order.filter(k=>by[k]&&by[k].length).map(k=>{const m={};(by[k]||[]).forEach(x=>m[x.periode]=num(x.rendement_pct));
+  return {k,vals:cols.map(c=>m[c]!=null?m[c]:null)};});
+ const el=$('perTime');
+ if(!lignes.length||!cols.length){el.innerHTML='<div style="color:var(--mute);font-size:13px;padding:18px 0">Pas de données sur cette granularité.</div>';return;}
+ const tous=lignes.flatMap(l=>l.vals).filter(v=>v!=null).map(Math.abs);
+ const ech=Math.max(0.5,...tous);
+ const PLAB={jour:'Jour',semaine:'Semaine',mois:'Mois',annee:'Année'}[gr]||'Période';
+ const fmtCol=c=>{if(gr==='mois'&&/^\d{4}-\d{2}$/.test(c)){const d=new Date(c+'-01T12:00:00');return isNaN(d)?c:d.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'});}
+  if(gr==='jour'&&/^\d{4}-\d{2}-\d{2}$/.test(c))return dj(c);
+  return c;};
+ const cell=v=>{if(v==null)return '<td class="pcell"><span class="vide">—</span></td>';
+  const a=Math.min(.42,Math.abs(v)/ech*.38+.06),pos=v>=0;
+  return '<td class="pcell"><span class="v" style="background:'+(pos?'rgba(63,224,160,':'rgba(255,107,125,')+a+');color:'+(pos?'var(--grn)':'var(--red)')+'">'+(pos?'+':'−')+Math.abs(v).toFixed(2)+'</span></td>';};
+ // mini-tendance par ligne
+ const spark=vals=>{const v=vals.filter(x=>x!=null);if(v.length<2)return '';
+  const mn=Math.min(...v),mx=Math.max(...v),rg=(mx-mn)||1;
+  let d='',i2=0;vals.forEach((x,i)=>{if(x==null)return;const px=(i/(vals.length-1))*56,py=16-((x-mn)/rg)*13;d+=(i2++?'L':'M')+px.toFixed(1)+' '+(py+1).toFixed(1)+' ';});
+  const der=v[v.length-1];
+  return '<svg viewBox="0 0 56 18" style="width:56px;height:18px"><path d="'+d+'" fill="none" stroke="'+(der>=0?'var(--grn)':'var(--red)')+'" stroke-width="1.6" stroke-linejoin="round"/></svg>';};
+ el.innerHTML='<thead><tr><th>Stratégie</th>'+cols.map(c=>'<th>'+esc(fmtCol(c))+'</th>').join('')+'<th>Tendance</th><th>Cumulé</th></tr></thead><tbody>'
+  +lignes.map(l=>{const v=l.vals.filter(x=>x!=null);
+   const cum=v.length?(v.reduce((acc,x)=>acc*(1+x/100),1)-1)*100:null;
+   return '<tr><td><span class="tname"><i style="background:'+(SCOL[l.k]||'var(--dim)')+'"></i>'+esc(SNAME[l.k]||l.k)+'</span></td>'
+   +l.vals.map(cell).join('')
+   +'<td class="pcell" style="padding-right:4px">'+spark(l.vals)+'</td>'
+   +'<td><b class="'+(cum>0?'up':cum<0?'down':'')+'">'+(cum==null?'—':(cum>=0?'+':'−')+Math.abs(cum).toFixed(2)+' %')+'</b></td></tr>';}).join('')
+  +'</tbody>';
+ el.insertAdjacentHTML('afterend','');
+ const note=$('perTimeNote');
+ if(note)note.textContent=PLAB+' par '+PLAB.toLowerCase()+' — '+cols.length+' période'+(cols.length>1?'s':'')+' affichée'+(cols.length>1?'s':'')+', la plus récente à droite. Le cumulé compose les rendements de la fenêtre.';
  document.querySelectorAll('#grTabs button').forEach(b=>b.style.background=b.dataset.g===gr?'linear-gradient(180deg,var(--surface-3),var(--surface-2))':'var(--surface-2)');}
 
 /* --- Collège --- */
@@ -945,19 +1019,36 @@ function rSages(){const arr=Array.isArray(D.sages)?D.sages:[];const el=$('gauges
   const pct=num(s.taux_reussite);const ang=(pct||0)/100*283,col=pct==null?'var(--mute)':(pct>=65?'var(--grn)':(pct>=50?'var(--amber)':'var(--red)'));
   return '<div style="text-align:center;cursor:pointer" data-sage="'+esc(s.sage||key)+'"><svg viewBox="0 0 100 100" style="width:96px;height:96px"><circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="7"/><circle cx="50" cy="50" r="45" fill="none" stroke="'+col+'" stroke-width="7" stroke-linecap="round" stroke-dasharray="'+ang.toFixed(0)+' 283" transform="rotate(-90 50 50)"/><text x="50" y="56" text-anchor="middle" fill="var(--ink)" font-size="19" font-weight="700" font-family="JetBrains Mono">'+(pct==null?'—':pct.toFixed(0)+'%')+'</text></svg><div style="font-weight:700;font-size:13px;margin-top:4px">'+meta[0]+' '+meta[1]+'</div><div class="mono" style="font-size:10px;color:var(--mute)">'+(s.evalue!=null?s.evalue+' évals · ':'')+'OUVRIR →</div></div>';}).join('');
  $('sages').innerHTML=arr.map(s=>{const key=String(s.sage||'').toLowerCase();const meta=SAGE_META[key]||['◈',s.sage,''];
-  return '<div class="card mini c4"><div class="h"><div><div class="nm">'+meta[0]+' '+(meta[2]||meta[1])+'</div><div class="rl">'+meta[1]+'</div></div></div><div class="kv"><span class="k">Dernier signal</span><span class="v" style="font-family:var(--sans);font-size:12px">'+esc(String(s.dernier_signal||'—').slice(0,42))+'</span></div><div class="kv"><span class="k">Taux de réussite</span><span class="v">'+(s.taux_reussite!=null?num(s.taux_reussite).toFixed(0)+' %':'—')+'</span></div></div>';}).join('');}
+  const tx=num(s.taux_reussite);
+  return '<div class="card mini c4" data-sage="'+esc(s.sage||'')+'" style="cursor:pointer"><div class="h"><div><div class="nm">'+meta[0]+' '+(meta[2]||meta[1])+'</div><div class="rl">'+meta[1]+'</div></div>'
+   +'<span class="chip'+(tx>=60?' ok':tx<45?' warn':'')+'" style="margin-left:auto">'+(tx!=null?tx.toFixed(0)+' %':'—')+'</span></div>'
+   +'<div style="font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--mute);margin:10px 0 4px">Dernier signal</div>'
+   +'<div style="font-size:12.5px;color:var(--dim);line-height:1.5;white-space:normal;word-break:break-word">'+esc(String(s.dernier_signal||'—'))+'</div>'
+   +'<div class="bar-meter" style="margin-top:10px"><i style="width:'+Math.max(0,Math.min(100,tx||0))+'%;background:'+(tx>=60?'var(--grn)':tx<45?'var(--red)':'var(--amber)')+'"></i></div>'
+   +'<div class="mono" style="font-size:10px;color:var(--mute);margin-top:8px;text-align:right">OUVRIR LE DOSSIER →</div></div>';}).join('');}
+/* dashboard_snapshot renvoie « poids » / « doctrine » ; oracle_brain_state en direct renvoie
+   « synthesis_weight » / « current_bias ». On accepte les deux pour ne dépendre d'aucune des deux. */
+function poidsOf(a){const v=num(a&&(a.poids!=null?a.poids:a.synthesis_weight));return v==null?null:(v>1?v/100:v);}
+function doctrineOf(a){return String((a&&(a.doctrine||a.current_bias))||'—');}
+function raisonsTxt(x){const r=x&&(x.raisons_skip||x.raisons||x.reasons);
+ if(r==null)return '—';
+ if(Array.isArray(r))return r.filter(Boolean).join(' · ')||'—';
+ return String(r);}
 function rArchi(){const c=(D.snap&&Array.isArray(D.snap.cerveau))?D.snap.cerveau.filter(x=>['JU','SYL','GIL'].includes(x.archimage)):[];
  if(!c.length){$('archi').innerHTML='<div class="c12" style="color:var(--mute);font-size:13px">Cerveau indisponible (dashboard_snapshot).</div>';$('poids').innerHTML='';return;}
- $('archi').innerHTML=c.map(a=>{const wr=num(a.win_rate);const w=num(a.synthesis_weight);
+ $('archi').innerHTML=c.map(a=>{const wr=num(a.win_rate);const w=poidsOf(a);
   return '<div class="card mini c4"><div class="h"><span class="dot" style="color:'+SCOL[a.archimage]+';background:'+SCOL[a.archimage]+'"></span><div><div class="nm">'+a.archimage+'</div><div class="rl">'+esc(DESCS[a.archimage]?.m||'')+'</div></div><span class="chip ok" style="margin-left:auto">apprend ✓</span></div>'
-  +'<div class="kv"><span class="k">Biais courant</span><span class="v" style="font-family:var(--sans);font-size:12px">'+esc(String(a.current_bias||'—').slice(0,40))+'</span></div>'
+  +'<div class="kv" style="align-items:flex-start;gap:12px"><span class="k" style="flex:0 0 34%">Doctrine</span><span class="v" style="font-family:var(--sans);font-size:11.5px;text-align:right;white-space:normal;line-height:1.45">'+esc(doctrineOf(a))+'</span></div>'
   +'<div class="kv"><span class="k">% gagnantes</span><span class="v">'+(wr!=null?(wr*100).toFixed(0)+' %':'—')+'</span></div>'
   +'<div class="kv"><span class="k">Bilan (V/D)</span><span class="v">'+(a.wins??'—')+'-'+(a.losses??'—')+'</span></div>'
   +'<div class="kv"><span class="k">Drawdown courant</span><span class="v">'+(a.current_drawdown!=null?(num(a.current_drawdown)*100).toFixed(2)+' %':'—')+'</span></div>'
   +'<div class="kv"><span class="k">Poids Méta-Cerveau</span><span class="v">'+(w!=null?(w*100).toFixed(0)+' %':'—')+'</span></div>'
   +'<div class="bar-meter"><i style="width:'+((w||0)*100)+'%;background:'+SCOL[a.archimage]+'"></i></div>'
   +'<div class="mono" data-arch="'+a.archimage+'" style="font-size:10px;color:var(--mute);margin-top:8px;text-align:right;cursor:pointer">OUVRIR LE DOSSIER →</div></div>';}).join('');
- $('poids').innerHTML=c.map(a=>{const w=(num(a.synthesis_weight)||0)*100;
+ const mc=D.snap&&D.snap.meta_cerveau;
+ if($('mcDoctrine'))$('mcDoctrine').innerHTML=mc&&mc.doctrine?('Dernière correction : <i>« '+esc(String(mc.doctrine))+' »</i>'+(mc.maj?' <span class="mono" style="font-size:11px;color:var(--mute)">— '+esc(String(mc.maj))+'</span>':'')):'<span style="color:var(--mute)">Aucune correction enregistrée pour l\'instant.</span>';
+ const tw=c.reduce((s,a)=>s+(poidsOf(a)||0),0);
+ $('poids').innerHTML=c.map(a=>{const w=(poidsOf(a)||0)*100;
   return '<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><b>'+a.archimage+'</b><span class="mono">'+w.toFixed(0)+' %</span></div><div class="bar-meter" style="height:8px"><i style="width:'+w+'%;background:'+SCOL[a.archimage]+'"></i></div></div>';}).join('');}
 function rIndiv(per){const el=$('indivCharts');const AG=['JU','SYL','GIL','ALCHIMISTE','MAREES'];
  el.innerHTML=AG.map(k=>'<div class="card pad c6"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="tname"><i style="background:'+SCOL[k]+'"></i><b>'+SNAME[k]+'</b></span><span class="mono" id="icv-'+k+'" style="font-size:13px"></span></div><div class="chartbox" id="ic-'+k+'"></div></div>').join('');
@@ -1051,7 +1142,7 @@ function rClassement(c){const el=$('comparatif');if(!el)return;
  const lignes=(c||[]).map(a=>{const b=num(a.baseline_equity),p=num(a.cumulative_pnl);
   return {k:a.archimage,valeur:(b!=null&&p!=null)?b+p:null,gain:(b&&p!=null)?p/b*100:null,gainUsd:p,
    wr:a.win_rate!=null?num(a.win_rate)*100:null,dd:a.current_drawdown!=null?num(a.current_drawdown)*100:null,
-   sharpe:SH[a.archimage]!=null?num(SH[a.archimage]):null,poids:a.synthesis_weight!=null?num(a.synthesis_weight)*100:null,reel:false};});
+   sharpe:SH[a.archimage]!=null?num(SH[a.archimage]):null,poids:poidsOf(a)!=null?poidsOf(a)*100:null,reel:false};});
  if(num(alc.total_live_usd)!=null){const s=num(alc.total_snapshot_usd),l=num(alc.total_live_usd);
   lignes.push({k:'ALCHIMISTE',valeur:l,gain:num(A.rendement_compose_pct),gainUsd:(s!=null?l-s:null),
    wr:A.win_rate!=null?num(A.win_rate):null,dd:null,sharpe:SH.ALCHIMISTE!=null?num(SH.ALCHIMISTE):null,poids:null,reel:true});}
@@ -1333,8 +1424,8 @@ function rOps(){
   return '<div class="vg"><span class="b'+(warn?' warn':'')+'">'+esc(c2.etat)+'</span><span style="flex:1;min-width:0"><b>'+esc(c2.composant)+'</b><div class="d">'+esc(c2.detail||c2.categorie||'')+'</div></span></div>';}).join('')||'<div style="color:var(--mute);font-size:13px">Vigie indisponible.</div>';
  // audit / garde-fous
  const sf=D.snap?.sante_flux||{};const G=gatesCalc();
- $('audit').innerHTML=[[sf.completude!=null?sf.completude+'/100':(sf.score!=null?sf.score+'/100':'—'),'Complétude des données',''],
-  [sf.circuit_breaker!=null?(sf.circuit_breaker?'DÉCLENCHÉ':'silencieux'):'—','Circuit breaker',sf.circuit_breaker?'':'ok'],
+ $('audit').innerHTML=[[(sf.data_completeness??sf.completude??sf.score)!=null?(sf.data_completeness??sf.completude??sf.score)+'/100':'—','Complétude des données',''],
+  [(()=>{const cb=sf.circuit_breaker_fired??sf.circuit_breaker;return cb!=null?(cb?'DÉCLENCHÉ':'silencieux'):'—';})(),'Circuit breaker',(sf.circuit_breaker_fired??sf.circuit_breaker)?'':'ok'],
   [D.ks!=null?(D.ks?'ARMÉ':'ARRÊTÉ'):'—','Kill-switch réel',D.ks?'':'ok'],
   [D.scen&&D.scen.maitre_on!=null?(D.scen.maitre_on?'ACTIF':'coupé'):'—','Planning scénario',D.scen&&D.scen.maitre_on?'ok':''],
   [D.scen&&D.scen.dernier_run?hm(D.scen.dernier_run):'—','Dernier run déclenché',''],
@@ -1342,7 +1433,7 @@ function rOps(){
   .map(t=>'<div class="card kpi c4" style="min-height:80px"><span class="lab">'+t[1]+'</span><span class="val" style="font-size:20px;'+(t[2]==='ok'?'color:var(--grn)':'')+'">'+t[0]+'</span></div>').join('');
  // debug + runs
  const dbg=Array.isArray(D.snap?.debug_execution)?D.snap.debug_execution:[];
- T('debug',["Agent","Quand","Acceptés","Rejetés","Ignorés","Raisons"],dbg.slice(0,8).map(x=>[esc(x.archimage||'—'),(x.quand||x.created_at?hm(x.quand||x.created_at):'—'),(x.acceptes??x.accepted??'—'),(x.rejetes??x.rejected??'—'),(x.ignores??x.skipped??'—'),'<span style="font-family:var(--sans);font-size:11.5px;color:var(--dim)">'+esc(String(x.raisons||x.reasons||'—').slice(0,70))+'</span>']),'Debug indisponible.');
+ T('debug',["Agent","Quand","Acceptés","Rejetés","Ignorés","Raisons"],dbg.slice(0,8).map(x=>[esc(x.archimage||'—'),(x.quand||x.created_at?hm(x.quand||x.created_at):'—'),(x.acceptes??x.accepted??'—'),(x.rejetes??x.rejected??'—'),(x.ignores??x.skipped??'—'),'<span style="font-family:var(--sans);font-size:11.5px;color:var(--dim)">'+esc(raisonsTxt(x))+'</span>']),'Debug indisponible.');
  const runs=Array.isArray(D.runs)?D.runs:[];
  T('runs',["Quand","Phase de marché","Ordres","Achats / Ventes"],runs.slice(0,8).map(x=>[(x.run_at?new Date(x.run_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'),esc(x.market_phase||'—'),(x.orders_count??'—'),(x.orders_buy??0)+' / '+(x.orders_sell??0)]),'Pas de runs.');
  // scénario + kill-switch état
