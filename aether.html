@@ -581,7 +581,7 @@ svg{max-width:100%}
    Règle : AUCUNE donnée inventée — sans donnée, on affiche « — ».            */
 /* Version affichée en bas de page : si elle ne bouge pas après une mise à jour,
    c'est que le navigateur sert une copie en cache (recharge forcée / vider le cache). */
-const BUILD="2026-08-19 · b5";
+const BUILD="2026-08-19 · b6";
 const SB="https://smddzybxebwhfnitxuyp.supabase.co";
 const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODk4NzksImV4cCI6MjA5NTQ2NTg3OX0.ppjgF79OokQ-2jE8UCp26U-E-YZPcmf6TNnYEKHGKSM";
 const HD={"Content-Type":"application/json","apikey":ANON,"Authorization":"Bearer "+ANON};
@@ -641,7 +641,24 @@ const LBL={sage:'Sage',evalue:'Signaux évalués',corrects:'Signaux corrects',ta
  notional_total:'Volume traité',cout_estime_usd:'Coût estimé',ordres_executes:'Ordres exécutés',friction_moyenne_pct:'Friction moyenne',
  slippage_achats_moyen_pct:'Écart de prix à l\'achat',kelly_raw:'Kelly brut',kelly_fraction:'Kelly appliqué',
  avg_win_pct:'Gain moyen',avg_loss_pct:'Perte moyenne',consecutive_runs_held:'Runs consécutifs',is_stale:'Périmée',
- taux:'Taux',nb_ok:'Composants OK',nb_total:'Composants suivis',composant:'Composant',categorie:'Catégorie',etat:'État',detail:'Détail'};
+ taux:'Taux',nb_ok:'Composants OK',nb_total:'Composants suivis',composant:'Composant',categorie:'Catégorie',etat:'État',detail:'Détail',
+ // sorties des 5 Sages (champs réels produits à chaque run)
+ ju_win_rate:'JU · réussite',syl_win_rate:'SYL · réussite',gil_win_rate:'GIL · réussite',
+ best_archimage:'Meilleur Archimage',winning_pattern:'Ce qui marche',failed_pattern:'Ce qui échoue',
+ correction_directive:'Correction demandée',derniere_sortie:'Dernière analyse',derniere_sortie_le:'Produite le',
+ macro_regime:'Régime macro',macro_score:'Score macro',spy_trend:'Tendance S&P',vix_signal:'Signal VIX',
+ yield_curve:'Courbe des taux',dxy_trend:'Tendance dollar',rate_pressure:'Pression des taux',
+ fear_greed_level:'Peur / avidité',news_catalyst:'Catalyseur',recommended_bias:'Biais recommandé',urgency:'Urgence',
+ wyckoff_phase:'Phase de Wyckoff',cycle_phase:'Phase de cycle',spy_momentum:'Momentum S&P',tech_score:'Score technique',
+ recommended_etf:'ETF conseillé',second_etf:'2ᵉ ETF',entry_timing:'Moment d\'entrée',
+ entry_price_offset_pct:'Écart de prix visé',order_type_recommended:'Type d\'ordre',
+ flash_sentiment:'Sentiment',market_shock:'Choc de marché',shock_type:'Type de choc',urgency_level:'Niveau d\'urgence',
+ top_headline_1:'Titre principal',top_headline_2:'2ᵉ titre',btc_breaking_news:'Alerte Bitcoin',immediate_action:'Action immédiate',
+ risk_level:'Niveau de risque',risk_score:'Score de risque',sizing_multiplier:'Multiplicateur de taille',
+ max_notional_per_trade:'Plafond par ordre',max_single_position_pct:'Plafond par position',cash_floor_pct:'Plancher de liquidités',
+ crypto_max_pct:'Plafond crypto',drawdown_alert:'Alerte drawdown',hedge_recommendation:'Couverture conseillée',
+ use_bracket_orders:'Ordres encadrés',take_profit_multiplier:'Multiplicateur de gain',evaluations:'Évaluations',
+ memory_summary:'Synthèse mémoire',portfolio_rationale:'Raisonnement portefeuille',prophet_vision:'Vision',rationale:'Raisonnement'};
 const lbl=k=>LBL[k]||(String(k).charAt(0).toUpperCase()+String(k).slice(1)).replace(/_/g,' ');
 const PCTK=/(_pct|taux|win_rate|accuracy|completude|completeness|drawdown|kelly|correlation|beta)/i;
 const USDK=/(pnl|value|valeur_|_usd|equity|notional|montant)/i;
@@ -652,7 +669,7 @@ function fval(k,v){
   const n=Number(v);
   if(/^(created_at|computed_at|checked_at|evaluated_at|fired_at|quand|last_synced|at)$/.test(k))return esc(String(v));
   if(PCTK.test(k)){const p=(Math.abs(n)<=1&&/win_rate|kelly|drawdown|correlation|beta|accuracy/i.test(k))?n*100:n;
-   return '<span class="'+(p>0?'up':p<0?'down':'')+'">'+p.toFixed(2)+' %</span>';}
+   return '<span class="'+(p>0?'up':p<0?'down':'')+'">'+(Number.isInteger(p)?p:p.toFixed(2))+' %</span>';}
   if(USDK.test(k))return (n>=0?'':'')+fmt$(n);
   return '<span class="mono">'+(Number.isInteger(n)?n:n.toFixed(3).replace(/0+$/,'').replace(/\.$/,''))+'</span>';}
  if(/^(created_at|computed_at|checked_at|evaluated_at|fired_at|quand)$/.test(k))return '<span class="mono" style="font-size:11px">'+esc(hm(v)||String(v))+'</span>';
@@ -676,7 +693,8 @@ function autoRender(d,depth){depth=depth||0;
   if(v==null)return;
   if(Array.isArray(v)){if(v.length)arrs.push([k,v]);return;}
   if(typeof v==='object'){arrs.push([k,[v]]);return;}
-  if(typeof v==='string'&&v.length>70){txts.push([k,v]);return;}
+  // une phrase n'entre pas dans une case de chiffre : au-delà de 30 caractères, bloc de texte
+  if(typeof v==='string'&&v.length>30){txts.push([k,v]);return;}
   scal.push([k,v]);});
  let h='';
  if(scal.length)h+='<div class="mstat">'+scal.map(([k,v])=>'<div class="s"><b>'+fval(k,v)+'</b><span>'+esc(lbl(k))+'</span></div>').join('')+'</div>';
@@ -698,6 +716,12 @@ function renderSage(nom,d){
   +'<div class="s"><b>'+(d.corrects??'—')+'</b><span>Signaux corrects</span></div>'
   +'<div class="s"><b>'+(d.evalue??'—')+'</b><span>Signaux évalués</span></div></div>';
  h+='<div class="bar-meter" style="height:7px"><i style="width:'+Math.max(0,Math.min(100,tx||0))+'%;background:'+(tx>=60?'var(--grn)':tx<45?'var(--red)':'var(--amber)')+'"></i></div>';
+ // Sa dernière analyse COMPLÈTE — chaque Sage produit 7 à 16 champs, pas une seule ligne.
+ const s0=d.derniere_sortie;
+ if(s0&&typeof s0==='object'){
+  h+='<div class="msec">Sa dernière analyse complète'+(d.derniere_sortie_le?' <span style="text-transform:none;letter-spacing:0;font-weight:500">— '+esc(dj(d.derniere_sortie_le)+' '+(hm(d.derniere_sortie_le)||''))+'</span>':'')+'</div>';
+  h+=autoRender(s0);
+  if(key==='memoire')h+='<div class="note" style="margin-top:10px">Le Sage de la Mémoire note <b>les trois Archimages</b> à chaque run et désigne le meilleur ; sa directive de correction cible l\'agent qui décroche.</div>';}
  const hist=Array.isArray(d.historique)?d.historique:[];
  h+='<div class="msec">Ses derniers signaux <span style="text-transform:none;letter-spacing:0;font-weight:500">('+hist.length+' évalués)</span></div>';
  h+=hist.length?hist.slice(0,25).map(x=>'<div class="tl"><span class="dot '+(x.correct?'ok':'ko')+'">'+(x.correct?'✓':'✗')+'</span><div class="bd">'
