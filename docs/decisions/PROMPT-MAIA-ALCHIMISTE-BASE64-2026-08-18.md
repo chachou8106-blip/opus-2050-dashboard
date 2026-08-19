@@ -1,5 +1,24 @@
 # Prompt Maia — Alchimiste : retirer le Base64 (cause du faux APY) — 2026-08-18
 
+> ## 🔺 CONFIRMÉ PAR LE RUN DU 19/08 À 10:28 — à envoyer
+>
+> Après réparation de la clé staking, l'Alchimiste a de nouveau écrit 7 lignes dans `alc_destake_reco`.
+> Résultat en demi-teinte, qui **prouve** que le Base64 est bien le coupable :
+>
+> | | Attendu (vues Supabase) | Écrit par l'Alchimiste |
+> |---|---|---|
+> | **APY** | TON 17,67 · ATOM 21,06 · KSM 10,47 | ✅ **exacts** |
+> | **Délais de déblocage** | TON 2j · ATOM 21j · KSM 7j · OSMO 14j · SOL 3j · TRX 14j · ETH 5j | ❌ **0 pour les 7** |
+>
+> La vue `v_alc_staking_delais_txt` envoie pourtant bien `ATOM:21j | ETH:5j | KSM:7j | OSMO:14j | SOL:3j | TON:2j | TRX:14j`.
+> Le modèle décode donc le Base64 **partiellement** : il sort les APY justes et met les délais à zéro.
+> (Le 18/08 c'était l'inverse — délais justes, APY inventés. Le décodage mental n'est pas fiable, point.)
+>
+> **Conséquence concrète** : avec un délai à 0, un futur arbitrage pourrait conclure à tort qu'un dé-stake
+> est instantané et sans coût. Les 7 verdicts « GARDER » du run restent justes (APY 21 % contre 6 % de gain
+> attendu), mais la donnée enregistrée est fausse.
+>
+
 ## Diagnostic (vérifié, ne rien inventer)
 Les 2 modules HTTP staking **lisent les bonnes données** :
 - `20022` (⛓️ LES CHAÎNES DU SCELLÉ) → `GET v_alc_staking_delais_txt?select=delais_texte` + `Accept: application/vnd.pgrst.object+json` ✅
