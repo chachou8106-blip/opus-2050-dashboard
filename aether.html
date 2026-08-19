@@ -370,7 +370,10 @@ svg{max-width:100%}
   </div>
 
   <div class="sect"><div class="sect-h">Comptes — départ, valeur, gain</div><div class="card pad scroll"><table class="tbl" id="comptes"></table></div></div>
-  <div class="sect"><div class="sect-h">Positions vivantes (Alpaca) — par agent</div><div class="card pad scroll"><table class="tbl" id="positions"></table></div></div>
+  <div class="sect"><div class="sect-h">Positions vivantes (Alpaca) — par compte</div>
+    <div class="note" style="margin-bottom:10px">Miroir exact de tes comptes Alpaca au dernier run : chaque ligne encore ouverte chez le courtier, achats <b>et</b> ventes à découvert. Les lignes fermées disparaissent automatiquement.</div>
+    <div class="chips" id="posCount" style="margin:0 0 10px"></div>
+    <div class="card pad scroll"><table class="tbl" id="positions"></table></div></div>
   <div class="sect"><div class="sect-h">Cryptos de l'Alchimiste — Revolut X (réel)</div><div class="card pad scroll"><table class="tbl" id="holdings"></table></div></div>
   <div class="sect"><div class="sect-h">🌊 Marées — Forex (positions ouvertes)</div><div class="card pad scroll"><table class="tbl" id="marees"></table></div></div>
   <div class="sect"><div class="sect-h">Comparatif — tous les agents côte à côte</div><div class="card pad scroll"><table class="tbl" id="comparatif"></table></div></div>
@@ -540,7 +543,7 @@ function safe(name,fn){try{fn();}catch(e){SAFE_ERRS.push(name+': '+(e&&e.message
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const num=v=>{const n=Number(v);return isFinite(n)?n:null;};
-const fmt$=v=>v==null?"—":"$"+Number(v).toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(v)<1000?2:0});
+const fmt$=v=>v==null?"—":(Number(v)<0?"−":"")+"$"+Math.abs(Number(v)).toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(v)<1000?2:0});
 const fmtE=v=>v==null?"—":(v>=0?"+":"")+Number(v).toLocaleString("fr-FR",{maximumFractionDigits:0})+" €";
 const pctF=v=>v==null?"—":(v>0?"+":"")+Number(v).toFixed(1)+" %";
 const pct2=v=>v==null?"—":(v>0?"+":"")+Number(v).toFixed(2)+" %";
@@ -669,7 +672,7 @@ function rTotaux(){const c=(D.snap&&Array.isArray(D.snap.cerveau))?D.snap.cervea
  const runs=c.length?Math.max(...c.map(x=>num(x.total_runs)||0)):null;
  $('totaux').innerHTML=[[tot!=null?fmt$(tot):'—','Valeur totale · 3 Alpaca + Revolut X',''],
   [gain!=null?('+'+fmt$(gain).replace('$','$')):'—','Gain cumulé (papier) · GIL+JU+SYL','up'],
-  [npos!=null?npos:'—','Positions ouvertes',''],
+  [npos!=null?npos:'—','Positions ouvertes · 3 comptes Alpaca',''],
   [runs!=null?runs:'—','Runs automatiques exécutés','']]
   .map(t=>'<div class="card kpi c3"><span class="lab">'+t[1]+'</span><span class="val '+t[2]+'" style="font-size:23px">'+t[0]+'</span></div>').join('');}
 
@@ -841,8 +844,19 @@ function rTables(){
  T('comptes',["Compte","Départ (baseline)","Valeur actuelle","Gain","Win rate"],
   c.map(a=>{const b=num(a.baseline_equity),p=num(a.cumulative_pnl);return ['<span class="tname"><i style="background:'+SCOL[a.archimage]+'"></i>'+a.archimage+' · Alpaca</span>',fmt$(b),fmt$(b!=null&&p!=null?b+p:null),(p!=null&&b?sgn(p/b*100):'—'),(a.win_rate!=null?(num(a.win_rate)*100).toFixed(0)+' %':'—')];})
   .concat(num(alc.total_live_usd)!=null?[['<span class="tname"><i style="background:var(--s-alch)"></i>Alchimiste · Revolut X (réel)</span>',fmt$(num(alc.total_snapshot_usd)),'<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>',sgn(num(alc.ecart_depuis_snapshot_usd)&&num(alc.total_snapshot_usd)?num(alc.ecart_depuis_snapshot_usd)/num(alc.total_snapshot_usd)*100:null),'—']]:[]),'Comptes indisponibles.');
- const pos=Array.isArray(D.positions)?D.positions:[];
- T('positions',["Agent","Actif","Valeur $","P&L latent $","P&L %","Jours"],pos.slice(0,30).map(p=>['<span class="tname"><i style="background:'+(SCOL[p.archimage]||'var(--dim)')+'"></i>'+esc(p.archimage||'—')+'</span>',esc(p.ticker||'—'),fmt$(num(p.market_value)),(num(p.unrealized_pl)!=null?(num(p.unrealized_pl)>=0?up('+'+fmt$(num(p.unrealized_pl))):dn(fmt$(num(p.unrealized_pl)))):'—'),sgn(num(p.unrealized_pl_pct)),(p.days_held??'—')]),'Aucune position vivante.');
+ // Positions vivantes = miroir exact d'Alpaca au dernier run (le sync supprime les lignes fermées).
+ // Achats (valeur > 0) ET ventes à découvert (valeur < 0), triés par compte puis par taille.
+ const pos=(Array.isArray(D.positions)?D.positions:[]).slice().sort((a,b)=>String(a.archimage||'').localeCompare(String(b.archimage||''))||Math.abs(num(b.market_value)||0)-Math.abs(num(a.market_value)||0));
+ const vente=p=>String(p.side||'').toLowerCase()==='short'||(num(p.qty)!=null&&num(p.qty)<0);
+ T('positions',["Compte","Actif","Sens","Valeur $","P&L latent $","P&L %","Jours"],pos.slice(0,90).map(p=>{const sh=vente(p);
+  return ['<span class="tname"><i style="background:'+(SCOL[p.archimage]||'var(--dim)')+'"></i>'+esc(p.archimage||'—')+'</span>',esc(p.ticker||'—'),
+   (sh?'<span class="tag sell">VENTE</span>':'<span class="tag buy">ACHAT</span>'),
+   fmt$(num(p.market_value)),(num(p.unrealized_pl)!=null?(num(p.unrealized_pl)>=0?up('+'+fmt$(num(p.unrealized_pl))):dn(fmt$(num(p.unrealized_pl)))):'—'),sgn(num(p.unrealized_pl_pct)),(p.days_held??'—')];}),'Aucune position vivante.');
+ // rappel de comptage par compte, pour recoupement direct avec l'écran Alpaca
+ const cnt={};pos.forEach(p=>{const k=p.archimage||'?';cnt[k]=cnt[k]||{n:0,v:0};cnt[k].n++;if(vente(p))cnt[k].v++;});
+ const elc=$('posCount');
+ if(elc)elc.innerHTML=Object.keys(cnt).sort().map(k=>'<span class="chip"><i style="background:'+(SCOL[k]||'var(--dim)')+';width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px"></i>'+k+' · '+cnt[k].n+' ligne'+(cnt[k].n>1?'s':'')+(cnt[k].v?' dont '+cnt[k].v+' vente'+(cnt[k].v>1?'s':''):'')+'</span>').join(' ')
+  +(D.posDust?' <span class="chip warn">'+D.posDust+' poussière'+(D.posDust>1?'s':'')+' crypto écartée'+(D.posDust>1?'s':'')+'</span>':'');
  const hold=D.suivi?.alc_reel_live?.positions||[];
  T('holdings',["Coin","Qté","Valeur live","Snapshot 8h","Staké","Live"],hold.slice(0,20).map(p=>[esc(p.devise||'—'),(p.qty!=null?Number(p.qty).toLocaleString('fr-FR',{maximumFractionDigits:6}):'—'),fmt$(num(p.valeur_live_usd)),fmt$(num(p.valeur_snapshot_usd)),(p.en_stake?'oui':'non'),(p.est_live?'✅':'⏸️')]),'Aucune ligne.');
  const mar=D.suivi?.marees_virtuel?.positions||[];
@@ -1035,6 +1049,7 @@ async function boot(){
   if(q!=null&&Math.abs(q)<1e-6)return false;
   if((mv==null||Math.abs(mv)<1)&&pl!=null&&Math.abs(pl)>100)return false;
   return true;});
+ D.posDust=(Array.isArray(positions)?positions.length:0)-realPos(positions).length;
  if(suivi&&suivi.ok)D.suivi=suivi;D.hero=hero;D.sages=sages;D.runs=runs;D.positions=realPos(positions);D.bt=bt;D.teq=teq;D.alch=alch;D.snap=snap;
  if(!D.suivi){toast('⚠️ oracle-inbox injoignable — réessaie dans une minute');}
  safe('kpis',rKpis);safe('verdict',rVerdict);safe('totaux',rTotaux);safe('gains',rGains);safe('flux',rFlux);safe('timeline',rTimeline);

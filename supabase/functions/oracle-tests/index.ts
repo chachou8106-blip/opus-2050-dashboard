@@ -1,4 +1,6 @@
-// oracle-tests v10 — ajout action 'marees' (Forex). Sinon identique v9.
+// oracle-tests v11 — positions : le limit=60 + tri market_value.desc masquait TOUTES les positions
+// vendeuses (valeur negative, donc classees en dernier). Passe a 300 + side expose. Idem archimage_detail
+// (limit 20 -> 60). Sinon identique v10. [19/08/2026]
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -92,7 +94,9 @@ Deno.serve(async (req) => {
       case 'equity':
         data = await rpc('equity_series'); break
       case 'positions': {
-        const rows = await rest('oracle_positions_live?select=archimage,ticker,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held&order=market_value.desc.nullslast&limit=60')
+        // limite 300 (et tri par |valeur|) : avec limit=60 + tri sur market_value desc, les positions
+        // VENDEUSES (market_value negatif) tombaient toutes hors de la fenetre -> invisibles en console. [19/08]
+        const rows = await rest('oracle_positions_live?select=archimage,ticker,side,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held&order=archimage.asc,market_value.desc.nullslast&limit=300')
         data = Array.isArray(rows) ? rows.map((r: any) => ({ ...r, market_value: Math.round(r.market_value), unrealized_pl: Math.round(r.unrealized_pl) })) : rows
         break }
       case 'lead': {
@@ -148,7 +152,7 @@ Deno.serve(async (req) => {
         if (!['JU','SYL','GIL'].includes(a)) { data = { error: 'archimage inconnu' }; break }
         const [brain, pos] = await Promise.all([
           rest(`oracle_brain_state?archimage=eq.${a}&select=archimage,win_rate,directional_accuracy,kelly_fraction,current_drawdown,max_drawdown,cumulative_pnl,alpaca_portfolio_value,consecutive_losses,current_bias,learnings,mistakes_history`),
-          rest(`oracle_positions_live?archimage=eq.${a}&select=ticker,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held&order=market_value.desc.nullslast&limit=20`)
+          rest(`oracle_positions_live?archimage=eq.${a}&select=ticker,side,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held&order=market_value.desc.nullslast&limit=60`)
         ])
         const b = Array.isArray(brain) && brain[0] ? brain[0] : {}
         data = {
