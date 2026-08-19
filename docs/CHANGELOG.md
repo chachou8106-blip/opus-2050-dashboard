@@ -8,6 +8,40 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 6) — Vérification après passage de Maia + sort de la règle « 3 pertes consécutives »
+
+### Ce que Maia a fait (blueprint enregistré à 09:52:54)
+
+- **Module 207 · 📚 DEEP MEMORY : conforme sur toute la ligne.** 21 variables présentes (dont `ALC_*`,
+  `MAR_*`, `JU_BIAS`, `SYL_RUNS/PNL`, `GIL_RUNS/PNL`), mappings `brain_states.CRYPTE_JU` et `.MAREES`
+  branchés, schéma passé à 11 champs (`alc_win_rate`, `marees_win_rate`, `best_agent`,
+  `correction_cible` ajoutés), 3 scories supprimées (`FORCE_CONTRARIAN`, bloc `prophet_vision`,
+  « ANALYSE DE SEQUENCE »), règles multi-agents en place (CIBLAGE, VOLUME INSUFFISANT).
+  Paramètres techniques intacts : modèle, température, max_tokens, response_format, URL, timeout, en-têtes.
+- **Portée du changement : 80 modules avant, 80 après ; seul le 207 modifié.** Ni le 208, ni le 215.
+- **Modules 20022 / 20023 : NON corrigés.** La clé corrompue (`ref: smddzbxebwfnitxuyuyp`) est toujours
+  sur les 4 en-têtes. Le prompt staking n'a pas été appliqué → renvoyé seul à Maia.
+
+### La règle « 3 pertes consécutives = changement de régime probable » : ne pas la restaurer
+
+Question de Chachou : « si on avait mis ces règles, elles avaient une raison valable ? » Vérification faite —
+**l'intention était bonne, l'implémentation ne pouvait pas fonctionner, et le besoin est déjà couvert ailleurs.**
+
+1. **Pas d'entrée.** `consecutive_losses` existe bien dans `get_oracle_context()->brain_states`
+   (JU 0, SYL 2 aujourd'hui) mais n'a **jamais** été mappé dans le message user du module 207. Le Sage
+   ne recevait pas l'information dont la règle avait besoin.
+2. **Pas de sortie.** Aucun champ du schéma (7 champs à l'époque, 11 aujourd'hui) ne peut porter un
+   « changement de régime ». Le modèle n'avait aucun moyen de l'exprimer.
+3. **Déjà couvert, et mieux.** `check_circuit_breakers()` déclenche un breaker `pertes_consecutives_5`
+   dès `consecutive_losses >= 5`, avec action `prudence_maximale_demandee` — déterministe, en base,
+   et qui **agit** au lieu de décrire. Déjà déclenché **2 fois**, la dernière le **17/08 à 12:19**,
+   auto-résolu depuis.
+
+→ **Rien à restaurer.** Conformément à CLAUDE.md (réutiliser l'existant plutôt qu'ajouter), le garde-fou
+déterministe prime sur une phrase de prompt inapplicable. Si Chachou veut malgré tout que le Sage
+*commente* les séries de pertes, il faudrait un vrai chantier : mapper `JU_STREAK`/`SYL_STREAK`/`GIL_STREAK`
+**et** ajouter un champ `regime_alerte` au schéma — sinon la règle resterait décorative.
+
 ## 2026-08-19 (suite 5) — Comparaison des deux blueprints Make : Make n'a rien cassé
 
 Chachou craignait qu'un enregistrement Make ait abîmé le scénario. Vérification faite en comparant
