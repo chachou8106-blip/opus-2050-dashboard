@@ -2728,6 +2728,12 @@ BEGIN
       )
       ON CONFLICT (archimage, ticker) DO UPDATE SET
         qty = EXCLUDED.qty,
+        -- 19/08/2026 : ces 3 colonnes n'etaient jamais mises a jour et restaient figees
+        -- a la valeur du premier INSERT (SYL XLF : position de 0,42 $ pour un cost_basis
+        -- de 149 497 $ ; JU META marque 'long' avec une quantite de -59).
+        side = EXCLUDED.side,
+        avg_entry_price = EXCLUDED.avg_entry_price,
+        cost_basis = EXCLUDED.cost_basis,
         current_price = EXCLUDED.current_price,
         market_value = EXCLUDED.market_value,
         unrealized_pl = EXCLUDED.unrealized_pl,

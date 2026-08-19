@@ -8,6 +8,74 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 11) — Les 4 correctifs demandes par Chachou, appliques et verifies
+
+Suite a « tous les comptes se sont pete la figure aujourd'hui ». Verite etablie en interrogeant
+**Alpaca directement** (`/v2/account` et `/v2/account/portfolio/history`), pas la console.
+
+### Correction d'une erreur de diagnostic de ma part
+
+J'avais annonce deux bugs d'arithmetique dans `v_gains_traders` (« pourcentage calcule sur le gain »,
+« multiplie par le capital entier »). **C'etait faux** : `v_comparaison` rapporte deja le gain cumule
+au capital de depart, et `gain_usd` redonnait exactement la variation en dollars. Le calcul etait bon.
+Le probleme etait **la donnee** : des instantanes pris a l'heure des runs, donc en pleine seance.
+
+### Point 1 — les courbes s'appuient sur la cloture officielle Alpaca
+
+Ecart mesure entre la base et Alpaca sur 7 jours : **-12 925 $ a +32 382 $** les jours normaux
+(simple decalage intra-seance), et **+182 624 $ sur JU le 18/08**.
+
+- Nouvelle table `alpaca_equity_daily` (52-53 jours par compte, du 04/06 au 19/08), alimentee a
+  chaque run par **update-brain v19**, qui lisait deja cet historique sans l'archiver.
+- `v_comparaison` et `v_equity_points` reecrites dessus.
+
+| Affichage « jour » | Avant | Apres | Cloture Alpaca |
+|---|---|---|---|
+| JU | -17,95 % (-179 462 $) | **+0,70 % (+6 999 $)** | 1 047 365 -> 1 054 319 |
+| GIL | -6,93 % (-69 299 $) | **+3,27 % (+32 700 $)** | 1 040 367 -> 1 073 037 |
+| SYL | -2,43 % (-24 299 $) | **-0,65 % (-6 500 $)** | 1 091 405 -> 1 084 884 |
+| AETHER | **-9,10 % (-273 060 $)** | **+1,10 % (+33 199 $)** | — |
+
+### Point 2 — mesures aberrantes neutralisees
+
+Colonne `oracle_performance.fiable` (les lignes sont conservees, jamais supprimees). Marquees false :
+- **4 lignes JU du 18/08** (gain 222 007 a 230 200 $ ; cloture Alpaca : 47 576 $) ;
+- **2 lignes du 07/07** (JU -665 308 $, GIL -871 345 $ : calibration ratee).
+
+Garde-fou ajoute : `v_perf_anomalies` liste toute mesure s'ecartant de plus de 5 % du capital face a
+la cloture Alpaca. **Aucune exclusion automatique** — une vraie chute ne doit jamais etre masquee.
+
+### Point 3 — exposition brute et levier affiches
+
+Nouvelle vue `v_exposition_traders` + section « Exposition reelle & levier » dans la console (b7).
+La somme nette masquait les ventes a decouvert, qui annulent les achats :
+
+| Compte | Achats | Ventes a decouvert | Engage (brut) | Levier |
+|---|---|---|---|---|
+| **SYL** | 401 149 $ | **-3 041 036 $** (TLT, IEF) | 3 442 184 $ | **3,3x — ELEVE** |
+| GIL | 1 003 062 $ | -920 234 $ | 1 923 296 $ | 1,9x |
+| JU | 846 153 $ | -306 600 $ | 1 152 752 $ | 1,1x |
+
+Confirme par Alpaca : SYL `short_market_value` = -3 119 834 $, `multiplier` = 4.
+
+### Point 4 — cost_basis, avg_entry_price et side suivent enfin le courtier
+
+Cause trouvee dans `sync_alpaca_positions` : le `ON CONFLICT ... DO UPDATE SET` **omettait ces trois
+colonnes**. Elles restaient figees a la valeur du tout premier INSERT — d'ou SYL XLF a 0,42 $ avec un
+`cost_basis` de 149 497 $ (facteur 388 611), et JU META marque `long` avec une quantite de -59.
+
+Apres correction et resynchronisation des 76 positions : **0 ligne incoherente** sur cost_basis,
+**0 ligne** ou `side` contredit le signe de la quantite.
+
+### Ce qui reste, et qui n'est pas un bug
+
+GIL porte un short MSTR de **-558 353 $** en perte latente de **-52 485 $ (-10,4 %)**, renforce deux
+fois le 19/08 (sell 14 952 $ puis 2 963 $) — un `sell` sur un titre non detenu augmente la vente a
+decouvert. Encadrer ce comportement est une **decision de gestion qui appartient a Chachou**, pas une
+correction technique.
+
+---
+
 ## 2026-08-19 (suite 10) — RÉSOLU : le dé-staking est enfin exact, et les runs ne meurent plus
 
 Run manuel de **18:40 (16:40 UTC)** — **76 opérations sur 76**, succès. Les deux correctifs appliqués

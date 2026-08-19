@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v19 : archive la cloture quotidienne Alpaca dans alpaca_equity_daily (source des courbes).
 // v16 : lecons EPINGLEES (pinned:true) preservees en tete de learnings (jamais rognees) ->
 //        une lecon manuelle reste lue en permanence par le prompt via learnings[1].bias.
 // v15 : (SYL fige) current_drawdown = drawdown COURANT (pic -> derniere valeur, se repare) ;
@@ -71,6 +72,24 @@ function currentDrawdownOf(hist: any): number {
 }
 const r2 = (x:number) => Math.round(x*100)/100
 
+// v19 : la cloture quotidienne officielle d'Alpaca est archivee dans alpaca_equity_daily.
+//       Les courbes de performance s'appuyaient jusqu'ici sur des instantanes pris a l'heure
+//       des runs, donc en pleine seance : ecart mesure jusqu'a 182 624 $ sur JU le 18/08/2026.
+function equityRowsOf(archimage: string, hist: any): any[] {
+  try {
+    const ts = (hist && Array.isArray(hist.timestamp)) ? hist.timestamp : []
+    const eq = (hist && Array.isArray(hist.equity)) ? hist.equity : []
+    const now = new Date().toISOString()
+    const out: any[] = []
+    for (let i = 0; i < ts.length && i < eq.length; i++) {
+      const v = Number(eq[i])
+      if (!(v > 0)) continue
+      out.push({ archimage, jour: new Date(Number(ts[i]) * 1000).toISOString().slice(0,10), equity: r2(v), source: 'alpaca_portfolio_history', updated_at: now })
+    }
+    return out
+  } catch { return [] }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
@@ -101,7 +120,7 @@ serve(async (req) => {
       const curDd = currentDrawdownOf(hist)
       const maxDd = maxDrawdownOf(hist)
       const ordersCount = Array.isArray(ordersArr) ? ordersArr.length : 0
-      stats.push({ ...ac, equity, baseline, pnl, dd: curDd, maxDd, isCapture, prev, ordersCount })
+      stats.push({ ...ac, equity, baseline, pnl, dd: curDd, maxDd, isCapture, prev, ordersCount, hist })
     }
 
     const notes: string[] = []
@@ -172,8 +191,12 @@ serve(async (req) => {
     const wBrain = await sbWrite('oracle_brain_state?on_conflict=archimage', brainRows, 'resolution=merge-duplicates,return=minimal')
     const wCerveau = await sbWrite('oracle_brain_state?on_conflict=archimage', [cerveauRow], 'resolution=merge-duplicates,return=minimal')
     const wPerf = await sbWrite('oracle_performance', perfRows, 'return=minimal')
+    const equityRows = stats.flatMap((s:any) => equityRowsOf(s.a, s.hist))
+    const wEquity = equityRows.length
+      ? await sbWrite('alpaca_equity_daily?on_conflict=archimage,jour', equityRows, 'resolution=merge-duplicates,return=minimal')
+      : 'aucune ligne'
 
-    return new Response(JSON.stringify({ run_id, corrected_weights: { JU: weights[0], SYL: weights[1], GIL: weights[2] }, meta_notes: notes, stats: stats.map(s=>({ a: s.a, equity: s.equity, baseline: s.baseline, pnl: s.pnl, dd: s.dd, max_dd: s.maxDd, orders_3h: s.ordersCount, capture: s.isCapture })), writes: { brain: wBrain, cerveau: wCerveau, performance: wPerf } }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ run_id, corrected_weights: { JU: weights[0], SYL: weights[1], GIL: weights[2] }, meta_notes: notes, stats: stats.map(s=>({ a: s.a, equity: s.equity, baseline: s.baseline, pnl: s.pnl, dd: s.dd, max_dd: s.maxDd, orders_3h: s.ordersCount, capture: s.isCapture })), writes: { brain: wBrain, cerveau: wCerveau, performance: wPerf, equity_daily: wEquity } }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }

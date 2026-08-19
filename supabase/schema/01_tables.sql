@@ -1125,3 +1125,31 @@ ALTER TABLE public.price_history ADD CONSTRAINT price_history_symbol_interval_ts
 ALTER TABLE public.revolut_portfolio_daily ADD CONSTRAINT revolut_portfolio_daily_pkey PRIMARY KEY (id);
 ALTER TABLE public.revolut_univers_complet ADD CONSTRAINT revolut_univers_complet_pkey PRIMARY KEY (paire);
 ALTER TABLE public.world_regime_journal ADD CONSTRAINT world_regime_journal_pkey PRIMARY KEY (id);
+
+-- ============================================================
+-- TABLE: alpaca_equity_daily   (ajoutee le 19/08/2026)
+-- ============================================================
+-- Cloture quotidienne officielle de chaque compte Alpaca, lue sur
+-- /v2/account/portfolio/history et archivee a chaque run par update-brain (v19).
+-- Devient la source de verite des courbes de performance : les instantanes de
+-- oracle_performance sont pris a l'heure des runs, donc en pleine seance, et
+-- derivaient de -12 925 $ a +32 382 $ par jour (et de +182 624 $ sur JU le 18/08/2026).
+CREATE TABLE IF NOT EXISTS public.alpaca_equity_daily (
+  archimage   text        NOT NULL,
+  jour        date        NOT NULL,
+  equity      numeric     NOT NULL,
+  source      text        NOT NULL DEFAULT 'alpaca_portfolio_history',
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (archimage, jour)
+);
+ALTER TABLE public.alpaca_equity_daily ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS alpaca_equity_daily_lecture ON public.alpaca_equity_daily;
+CREATE POLICY alpaca_equity_daily_lecture ON public.alpaca_equity_daily FOR SELECT USING (true);
+
+-- oracle_performance : marquage des mesures aberrantes (19/08/2026).
+-- false = mesure contredite par la cloture officielle Alpaca ; la ligne est conservee
+-- pour l'historique mais exclue des courbes et des rendements.
+ALTER TABLE public.oracle_performance
+  ADD COLUMN IF NOT EXISTS fiable boolean NOT NULL DEFAULT true;
+CREATE INDEX IF NOT EXISTS oracle_performance_fiable_idx
+  ON public.oracle_performance (archimage, evaluated_at) WHERE fiable;
