@@ -8,6 +8,76 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 13) — Sage Macro reellement fige : il tourne sur un moteur de recherche
+
+Alerte Vigie : « 4 Sages FIGES ». Verification sur **14 jours** au lieu des 6 runs de la regle :
+**un seul** Sage est reellement bloque.
+
+| Sage | Runs 14 j | Valeurs distinctes | Verdict |
+|---|---|---|---|
+| **Macro** | 52 | **1** (`NEUTRAL` sans exception) | **fige** |
+| Risque | 53 | 2 | limite |
+| Memoire | 52 | 4 | sain |
+| Flash | 61 | 3 | sain |
+
+`macro_score` = **55 sur tous les runs du 06 au 15/08**, puis **50 depuis le 17/08**. Deux valeurs
+en deux semaines, pendant que le BTC passait de 63 000 a 68 700 $.
+
+### Cause : le mauvais moteur
+
+Croisement sans ambiguite — le seul Sage qui recoit CTX **et** tourne sur un modele de recherche web
+est le seul fige :
+
+| Sage | Endpoint | Modele | CTX | Etat |
+|---|---|---|---|---|
+| **Macro (201)** | **api.perplexity.ai** | **sonar-pro** | oui | **fige** |
+| Flash (209) | api.perplexity.ai | sonar-pro | **non** | sain |
+| Memoire (207) | api.groq.com | gpt-oss-120b | oui | sain |
+| Technique (203) | api.groq.com | gpt-oss-120b | oui | sain |
+| Risque (205) | api.mistral.ai | mistral-large | oui | limite |
+
+`sonar-pro` traite le message comme une **requete de recherche**. On lui envoie 8 421 caracteres de
+champs separes par des barres verticales ; il les cherche sur le web au lieu de les analyser.
+
+Sa sortie l'ecrit noir sur blanc dans `news_catalyst` : « inflation » sur les 48 runs du 06 au 15/08,
+puis **« CTX est ambigu ; aucune donnee macro exploitable » sur 16 runs sur 16 depuis le 17/08**.
+
+### Les donnees etaient parfaites
+
+Module 102, `data_quality = 100` : VIX 15,84 · SPY 770,57 · BTC 68 686 · Fear&Greed 46 · CPI · taux ·
+FX, et un CATALYST reel. CTX bien forme : **92 champs, 8 421 caracteres**. Ni la donnee ni CTX ne
+sont en cause — seulement le moteur qui les lit.
+
+### Correctif Supabase applique : la regle de la Vigie
+
+Elle comparait **un** champ sur **6 runs**. Sur une seance calme, NEUTRAL/LOW/MEDIUM/SYL se repetent
+naturellement : 4 Sages signales pour un seul malade. Desormais deux niveaux —
+**ALERTE** (6 runs, a surveiller) et **FIGE** (12 runs sur 72 h, confirme). `v_vigie_resume` compte
+ALERTE parmi les alertes (niveau ORANGE).
+
+Apres correction, la Vigie dit exactement ce que montrent les mesures : **Macro FIGE**, Flash /
+Memoire / Risque ALERTE, Technique OK.
+
+Le seuil long est a 12 runs et non 20 : a ~5 runs/jour, 72 h n'en contiennent que 16, et 20 n'etait
+jamais atteignable.
+
+### A faire cote Make
+
+`docs/decisions/PROMPT-MAIA-SAGE-MACRO-FIGE-2026-08-19.md` : basculer le module 201 sur Groq
+(URL, en-tete Authorization copie du 207, modele `openai/gpt-oss-120b`, `response_format` en
+`json_object`) et ajouter au prompt systeme une consigne de lecture explicite des cles de CTX.
+
+**Controle de guerison** : `macro_score` doit varier d'un run a l'autre. Deux valeurs en 14 jours,
+c'est le symptome ; un score qui bouge, c'est repare.
+
+### Point ouvert
+
+Le Sage Risque n'a produit que 2 valeurs de `risk_level` en 53 runs. A reexaminer apres la
+reparation du Macro : il recoit `MACRO={{202.macro_regime}}`, donc une partie de son immobilite
+vient peut-etre de ce qu'on lui repete NEUTRAL depuis 14 jours.
+
+---
+
 ## 2026-08-19 (suite 12) — Garde-fou : interdiction de renforcer une vente a decouvert perdante
 
 Demande par Chachou apres l'analyse du short MSTR de GIL. **execute-trades v38**, cote Supabase
