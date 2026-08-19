@@ -8,6 +8,49 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-19 (suite 17) — Les 3 indicateurs sont branches. Le Sage Macro analyse. Un champ reste faux.
+
+Run de 23:22. Maia a tout applique — verifie dans le blueprint : les 4 champs `DXY_TREND`,
+`DXY_VAR20J`, `OR_ARGENT`, `CREDIT_HYG_LQD` sont en fin de CTX, la phrase INDICATEURS est remplacee,
+le message user reste `CTX={{110.value}}`, 80 modules, et aucun correctif de la journee n'a recule.
+
+### Le Sage Macro analyse pour de vrai
+
+| Champ | 14 jours de gel | 22:18 | **23:22** |
+|---|---|---|---|
+| `macro_score` | 55 puis 50 | 60 | **55** |
+| `macro_regime` | NEUTRAL toujours | BULL | **NEUTRAL** |
+| `rate_pressure` | NEUTRAL toujours | NEUTRAL | **HAWKISH** |
+| `news_catalyst` | « CTX est ambigu » | catalyseur reel | **« Oil, inflation, Fed minutes, and AI-driven earnings/capital spending »** |
+| `dxy_trend` | NEUTRAL par defaut | « DXY missing » | **NEUTRAL, calcule** |
+
+Plus aucune mention de « missing ». `yield_curve = NORMAL` reste juste : T10Y 4,71 − T2Y 4,19 = +0,52.
+
+### Une erreur reelle, a corriger
+
+`fear_greed_level = GREED` alors que la donnee dit **46, label « Fear »**. Verifie en appelant
+`collect-market-data` : `fear_greed: 46`, `fear_greed_label: Fear`, `data_quality: 100`.
+
+Cause identifiee : le prompt systeme donne les seuils du VIX (15 / 20 / 25 / 30) mais **aucune table
+de correspondance** pour les 5 valeurs de `fear_greed_level`. Il ne donne que les deux regles
+contrariantes (< 20 achat, > 80 vente). Le modele doit donc deviner le mapping — et se trompe.
+
+`recommended_bias = RISK_ON` decoule de cette erreur : avec un Fear&Greed a 46, rien ne justifie
+un biais risque.
+
+### Sage Memoire absent de ce run
+
+4 Sages sur 5 : Flash, Macro, Risque, Technique. Le Memoire n'a rien ecrit. **Premiere fois sur les
+5 derniers runs** — les 4 precedents avaient bien 5 Sages. Le run n'est pas mort pour autant
+(succes, completude 100 %). A surveiller ; si cela se reproduit, regarder le module 207 cote Groq.
+
+### Etat du run
+
+`success`, completude 100 %, 7 ordres (2 achats, 5 ventes), Discord envoye.
+**Staking : 7 lignes, 150,99 $** — cinquieme run consecutif exact.
+
+---
+
 ## 2026-08-19 (suite 16) — Les 3 indicateurs manquants du Sage Macro + verification des runs
 
 ### Les runs vont bien : les 3 derniers sont alles au bout
