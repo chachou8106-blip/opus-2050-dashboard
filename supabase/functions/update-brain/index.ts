@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v20 : la ponderation tient compte du LEVIER et de la MARGE DISPONIBLE, pas seulement du PnL,
+//        du drawdown et du win rate (SYL : 56 % du poids avec 0 $ de pouvoir d'achat le 19/08).
 // v19 : archive la cloture quotidienne Alpaca dans alpaca_equity_daily (source des courbes).
 // v16 : lecons EPINGLEES (pinned:true) preservees en tete de learnings (jamais rognees) ->
 //        une lecon manuelle reste lue en permanence par le prompt via learnings[1].bias.
@@ -120,7 +122,14 @@ serve(async (req) => {
       const curDd = currentDrawdownOf(hist)
       const maxDd = maxDrawdownOf(hist)
       const ordersCount = Array.isArray(ordersArr) ? ordersArr.length : 0
-      stats.push({ ...ac, equity, baseline, pnl, dd: curDd, maxDd, isCapture, prev, ordersCount, hist })
+      // v20 : marge disponible et levier reel, lus sur le meme /v2/account deja recupere.
+      const bp = acct ? Number(acct.buying_power) : null
+      const longMV = acct ? Math.abs(Number(acct.long_market_value) || 0) : 0
+      const shortMV = acct ? Math.abs(Number(acct.short_market_value) || 0) : 0
+      const brut = longMV + shortMV
+      const levier = (equity && equity > 0) ? brut / equity : 0
+      const margeRatio = (bp !== null && equity && equity > 0) ? bp / equity : 1
+      stats.push({ ...ac, equity, baseline, pnl, dd: curDd, maxDd, isCapture, prev, ordersCount, hist, bp, brut, levier, margeRatio })
     }
 
     const notes: string[] = []
@@ -130,7 +139,18 @@ serve(async (req) => {
       const lossPenalty = s.pnl < 0 ? 1/(1 + (-s.pnl)/D) : 1 + Math.min(0.5, (s.pnl/D)*0.25)
       const ddPenalty = 1/(1 + s.dd*3)
       const cumBonus = 1 + Math.max(0, Math.min(0.5, (s.pnl||0)/150000))
-      let factor = lossPenalty * ddPenalty * cumBonus
+      // v20 : la ponderation ne regardait QUE le PnL, le drawdown et le win rate. Le 19/08/2026,
+      // SYL recevait 56 % du poids — le plus eleve — alors qu'il etait a 0 $ de pouvoir d'achat et
+      // 3,35x de levier, donc incapable d'executer : ses ordres GLD, TLT et IEF ont ete rejetes
+      // pour « insufficient buying power ». Un agent qui ne peut plus passer d'ordre ne doit pas
+      // porter le poids le plus lourd du College.
+      const levPenalty = s.levier >= 3 ? 0.5 : (s.levier >= 2 ? 0.8 : 1)
+      const margePenalty = s.margeRatio < 0.02 ? 0.3 : (s.margeRatio < 0.10 ? 0.7 : 1)
+      let factor = lossPenalty * ddPenalty * cumBonus * levPenalty * margePenalty
+      if (s.levier >= 3) notes.push(`${s.a} levier ${Math.round(s.levier*100)/100}x (>=3x) -> poids reduit de moitie`)
+      else if (s.levier >= 2) notes.push(`${s.a} levier ${Math.round(s.levier*100)/100}x (>=2x) -> poids reduit de 20%`)
+      if (s.margeRatio < 0.02) notes.push(`${s.a} marge disponible ${Math.round(s.margeRatio*1000)/10}% du capital (<2%) -> ne peut plus executer, poids fortement reduit`)
+      else if (s.margeRatio < 0.10) notes.push(`${s.a} marge disponible ${Math.round(s.margeRatio*1000)/10}% du capital (<10%) -> poids reduit`)
       if (s.dd >= 0.08) { factor = Math.min(factor, 0.15); notes.push(`${s.a} drawdown courant ${Math.round(s.dd*100)}% >= seuil dur 8% -> poids plancher`) }
       else if (s.dd >= 0.05) { notes.push(`${s.a} drawdown courant ${Math.round(s.dd*100)}% (>=5%, surveille, pas de coupe dure)`) }
       if (s.pnl < 0) notes.push(`${s.a} perte ${Math.round(s.pnl)} -> facteur ${r2(factor)}`)
@@ -196,7 +216,7 @@ serve(async (req) => {
       ? await sbWrite('alpaca_equity_daily?on_conflict=archimage,jour', equityRows, 'resolution=merge-duplicates,return=minimal')
       : 'aucune ligne'
 
-    return new Response(JSON.stringify({ run_id, corrected_weights: { JU: weights[0], SYL: weights[1], GIL: weights[2] }, meta_notes: notes, stats: stats.map(s=>({ a: s.a, equity: s.equity, baseline: s.baseline, pnl: s.pnl, dd: s.dd, max_dd: s.maxDd, orders_3h: s.ordersCount, capture: s.isCapture })), writes: { brain: wBrain, cerveau: wCerveau, performance: wPerf, equity_daily: wEquity } }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ run_id, corrected_weights: { JU: weights[0], SYL: weights[1], GIL: weights[2] }, meta_notes: notes, stats: stats.map(s=>({ a: s.a, equity: s.equity, baseline: s.baseline, pnl: s.pnl, dd: s.dd, max_dd: s.maxDd, orders_3h: s.ordersCount, capture: s.isCapture, buying_power: s.bp, exposition_brute: Math.round(s.brut), levier: Math.round(s.levier*100)/100, marge_pct: Math.round(s.margeRatio*1000)/10 })), writes: { brain: wBrain, cerveau: wCerveau, performance: wPerf, equity_daily: wEquity } }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }

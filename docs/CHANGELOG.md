@@ -8,6 +8,75 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-20 (suite 2) — Correctifs 2 et 3 : rachat de short, et ponderation qui voit le levier
+
+Les deux sont cote Supabase, aucune intervention Make. **Les verrous d'univers sont inchanges** —
+JU actions, SYL ETF, GIL large — et verifies apres deploiement.
+
+### Correctif 2 — `execute-trades` v39 : rachat de vente a decouvert EN QUANTITE
+
+Un achat sur un ticker deja vendu a decouvert partait en **notionnel**. Alpaca convertissait
+50 000 $ en 121,25 titres alors que la position short n'etait que de 22,85, et refusait l'ordre
+entier : il ne retourne pas une position en un seul ordre. Le short GLD de SYL est reste ouvert,
+rachat rejete **3 fois en 2 jours** — 18/08 14:30 (404,14 pour 24,07), 18/08 19:17 (406,38 pour
+24,07), 19/08 16:41 (121,25 pour 22,85).
+
+Desormais : quand `heldQty < 0`, on envoie la **quantite exacte** du short.
+
+Detail trouve en lisant `placeOrder` mot a mot : la quantite n'etait transmise que pour
+`sell`, `_auto` ou `_short`. Sans ajouter `_cover` a cette condition, la correction aurait ete
+**sans aucun effet** — l'ordre serait reparti en notionnel.
+
+Placement du bloc, volontaire :
+- **apres** les verrous d'univers -> un rachat hors univers reste refuse comme avant ;
+- **avant** le controle `accountFrozen` -> racheter un short REDUIT l'exposition, c'est justement
+  l'operation qu'il faut pouvoir faire quand la marge est saturee ;
+- **apres** le controle marche ouvert -> un ordre `day` sur action ne part pas marche ferme.
+
+### Correctif 3 — `update-brain` v20 : la ponderation regarde le levier et la marge
+
+Elle ne regardait que PnL, drawdown et win rate. Le 19/08, **SYL recevait 56 % du poids** — le plus
+eleve du College — avec **0 $ de pouvoir d'achat et 3,35x de levier**, donc incapable d'executer :
+ses ordres GLD, TLT et IEF ont ete rejetes pour « insufficient buying power ».
+
+Deux penalites ajoutees, lues sur le `/v2/account` deja recupere :
+
+| | seuil | penalite |
+|---|---|---|
+| Levier | >= 3x | x0,5 |
+| Levier | >= 2x | x0,8 |
+| Marge disponible | < 2 % du capital | x0,3 |
+| Marge disponible | < 10 % du capital | x0,7 |
+
+Effet simule sur les chiffres reels du matin :
+
+| Compte | Marge | Levier | Facteur applique |
+|---|---|---|---|
+| JU | 260,8 % | 1,14x | **x1,00** |
+| GIL | 8,9 % | 2,00x | **x0,56** |
+| SYL | 0,0 % | 3,35x | **x0,15** |
+
+Le poids se deplace vers le compte qui peut reellement trader. La penalite se leve d'elle-meme
+des que l'agent se desendette : rien n'est fige.
+
+`levier`, `marge_pct`, `exposition_brute` et `buying_power` sont desormais renvoyes par la fonction
+et journalises dans les notes du Meta-Cerveau.
+
+### Test realise
+
+Appel reel avec un notionnel de **1 $**, trop petit pour produire un ordre. Resultat :
+**0 ordre execute, 0 rejete.**
+
+| Ticker | Verdict | Ce que ca prouve |
+|---|---|---|
+| **AAPL** (SYL) | `univers_action_reserve_ju` | **le verrou d'univers tient** : SYL ne peut toujours pas acheter une action |
+| GLD (SYL) | `us_market_closed_equity_buy` | marche US ferme a 07:35 : le bloc de rachat n'a pas ete atteint |
+
+**Le chemin de rachat n'est donc pas encore eprouve** — il ne peut l'etre qu'a marche ouvert,
+a partir de 15:30 heure francaise. A verifier au run de 15:45.
+
+---
+
 ## 2026-08-20 — Audit complet des agents : 7 anomalies, dont 3 serieuses
 
 Correspondance Fear & Greed verifiee dans le module 201, au bon endroit. **Pas encore eprouvee** :

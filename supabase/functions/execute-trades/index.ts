@@ -1,5 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v39 : RACHAT DE VENTE A DECOUVERT EN QUANTITE. Un achat sur un ticker deja vendu a decouvert
+//       partait en NOTIONNEL : Alpaca convertissait 50 000 $ en 121,25 titres alors que la position
+//       short n'etait que de 22,85, et refusait l'ordre entier (il ne retourne pas une position en
+//       un seul ordre). Le short GLD de SYL est reste ouvert, rachat rejete 3 fois en 2 jours :
+//       18/08 14:30 (404,14 pour 24,07), 18/08 19:17 (406,38 pour 24,07), 19/08 16:41 (121,25 pour
+//       22,85). On envoie desormais la QUANTITE exacte de la position short.
+//       Les VERROUS D'UNIVERS sont inchanges et restent evalues AVANT ce bloc : JU actions,
+//       SYL ETF, GIL large. Un rachat hors univers reste donc refuse comme avant.
 // v38 : GARDE-FOU RENFORT SHORT PERDANT — un `sell` sur un titre non detenu ouvre OU AGRANDIT une
 //       vente a decouvert. Le systeme moyennait donc a la baisse sur une position deja perdante :
 //       le 19/08/2026, GIL portait un short MSTR de -558 353 $ a -10,4 % de perte latente, et l'a
@@ -180,7 +188,9 @@ async function placeOrder(alpacaKey: string, alpacaSecret: string, order: any, m
     const _advanced = false
 
     const _sellQty = numClean(order.qty)
-    if (_sellQty > 0 && (order.side.toLowerCase() === 'sell' || order._auto || order._short)) {
+    // v39 : order._cover ajoute — sans lui, la quantite d'un rachat de short serait ignoree
+    // et l'ordre repartirait en notionnel, c'est-a-dire exactement le bug corrige.
+    if (_sellQty > 0 && (order.side.toLowerCase() === 'sell' || order._auto || order._short || order._cover)) {
       delete body.notional
       body.qty = qtyStr(_sellQty)
     }
@@ -189,7 +199,7 @@ async function placeOrder(alpacaKey: string, alpacaSecret: string, order: any, m
     const data = await resp.json()
     if (resp.ok) console.log('ORDER_OK ' + JSON.stringify({ t: order.ticker, raw_qty: order.qty, qty: body.qty||null, notional: body.notional||null, type: body.type, cls: 'simple', alpaca: data.status, chunk: order._chunk || null }))
     else console.log('ORDER_REJECT ' + JSON.stringify({ t: order.ticker, raw_qty: order.qty, body, alpaca: data }))
-    return { ticker: order.ticker, side: order.side, notional: notional, order_type: body.type, order_class: 'simple', qty: body.qty || null, raw_qty_in: (order.qty != null ? String(order.qty) : null), auto: order._auto || null, short: order._short || null, plpc: order._plpc != null ? order._plpc : null, chunk: order._chunk || null, status: resp.ok ? 'accepted' : 'rejected', alpaca_id: data.id || null, alpaca_status: data.status || null, error: resp.ok ? null : (data.message || data.code || 'error') }
+    return { ticker: order.ticker, side: order.side, notional: notional, order_type: body.type, order_class: 'simple', qty: body.qty || null, raw_qty_in: (order.qty != null ? String(order.qty) : null), auto: order._auto || null, short: order._short || null, cover: order._cover || null, plpc: order._plpc != null ? order._plpc : null, chunk: order._chunk || null, status: resp.ok ? 'accepted' : 'rejected', alpaca_id: data.id || null, alpaca_status: data.status || null, error: resp.ok ? null : (data.message || data.code || 'error') }
   } catch(e) { return { ticker: order.ticker, status: 'error', error: String(e), raw_qty_in: (order.qty != null ? String(order.qty) : null) } }
 }
 
@@ -339,6 +349,26 @@ serve(async (req) => {
       }
 
       if (isBuy && !isCryptoT && !marketOpen) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'us_market_closed_equity_buy' }); continue }
+
+      // v39 — RACHAT D'UNE VENTE A DECOUVERT : on solde en QUANTITE, jamais en notionnel.
+      // Place APRES les verrous d'univers (lignes plus haut), donc un rachat hors univers reste
+      // refuse. Place AVANT le controle accountFrozen : racheter un short REDUIT l'exposition,
+      // c'est l'operation qu'il faut justement pouvoir faire quand la marge est saturee.
+      if (isBuy && (heldQty[sym] || 0) < 0) {
+        if (pending.has(sym)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_ordre_deja_ouvert' }); continue }
+        const _qCover = Math.abs(heldQty[sym] || 0)
+        const _pxCover = heldPx[sym] || priceMap[sym] || 0
+        const _notionnelDemande = Math.round(numClean(t.notional))
+        if (!(_qCover > 0)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_quantite_nulle' }); continue }
+        t.qty = qtyStr(_qCover)
+        t.notional = _pxCover > 0 ? Math.max(1, Math.round(_qCover * _pxCover)) : Math.max(1, _notionnelDemande)
+        t._cover = true
+        // trace : ce que le modele demandait avant qu'on le ramene a la taille reelle du short
+        if (_notionnelDemande !== t.notional) t._clamped_from = _notionnelDemande
+        toExec.push(t)
+        continue
+      }
+
       if (isBuy && accountFrozen) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'account_frozen_buying_power' }); continue }
       if (isBuy && pending.has(sym)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'duplicate_open_order' }); continue }
       if (isBuy && (heldMV[sym] || 0) >= exposureCap) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'max_ticker_exposure', held: heldMV[sym], cap: Math.round(exposureCap) }); continue }
@@ -471,9 +501,10 @@ serve(async (req) => {
     const slCount = executed.filter(e => e.auto === 'stop_loss' && e.status === 'accepted').length
     const deleverageCount = executed.filter(e => e.auto === 'deleverage' && e.status === 'accepted').length
     const shortCount = executed.filter(e => e.short && e.status === 'accepted').length
+    const coverCount = executed.filter(e => e.cover && e.status === 'accepted').length
 
     console.log('RUN_DONE ' + JSON.stringify({ archimage, run_id, market_open: marketOpen, cash, buying_power: buyingPower, total: allTrades.length, accepted, rejected, skipped: skipped.length }))
-    await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: allTrades.length, accepted, rejected, skipped: skipped.length, payload: { skipped_detail: skipped, results: executed.map(e => ({ t:e.ticker, side:e.side, raw_qty: (e.raw_qty_in != null ? e.raw_qty_in : null), qty:e.qty, notional:e.notional, type:e.order_type, status:e.status, alpaca:e.alpaca_status, err:e.error, clamped_from: (e._clamped_from != null ? e._clamped_from : null), short: (e.short || null), mom: (e._mom != null ? e._mom : null), chunk: (e.chunk || null) })) } })
+    await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: allTrades.length, accepted, rejected, skipped: skipped.length, payload: { skipped_detail: skipped, results: executed.map(e => ({ t:e.ticker, side:e.side, raw_qty: (e.raw_qty_in != null ? e.raw_qty_in : null), qty:e.qty, notional:e.notional, type:e.order_type, status:e.status, alpaca:e.alpaca_status, err:e.error, clamped_from: (e._clamped_from != null ? e._clamped_from : null), short: (e.short || null), cover: (e.cover || null), mom: (e._mom != null ? e._mom : null), chunk: (e.chunk || null) })) } })
 
     if (SUPABASE_KEY) {
       const ordersToSave = executed.filter(e => e.status === 'accepted').map(e => ({ run_id, archimage: archimage || 'ND', symbol: e.ticker, side: e.side, asset_class: e.asset_type || 'etf', notional: e.notional, broker: 'alpaca', broker_order_id: e.alpaca_id || null, broker_status: e.alpaca_status || 'accepted', validated: true }))
@@ -482,7 +513,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: accepted, rejected, skipped: skipped.length, skipped_detail: skipped, take_profit: tpCount, stop_loss: slCount, deleverage_sells: deleverageCount, shorts: shortCount, results: executed }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: accepted, rejected, skipped: skipped.length, skipped_detail: skipped, take_profit: tpCount, stop_loss: slCount, deleverage_sells: deleverageCount, shorts: shortCount, covers: coverCount, results: executed }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch(e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
