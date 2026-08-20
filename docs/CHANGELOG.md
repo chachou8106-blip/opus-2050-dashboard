@@ -8,6 +8,36 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-20 (suite 3) — Correctif 4 : `execute-trades` v40, plafond de levier a l'ouverture
+
+Constat verifie sur `/v2/account` le 19/08 : SYL a **0 $ de pouvoir d'achat pour 3,35x de levier**
+(maximum du compte : 4x). Toute nouvelle ouverture partait quand meme vers Alpaca et revenait
+« insufficient buying power » — GLD 413 $, TLT 580 $, IEF 560 $ le 19/08 a 21:16. Le systeme
+depensait des appels et polluait `oracle_trades` avec des rejets previsibles.
+
+Desormais, `execute-trades` calcule avant toute ouverture :
+
+```
+levier = (|long_market_value| + |short_market_value|) / equity
+```
+
+et si `levier >= 3.0` :
+- un **achat** est refuse avec `levier_sature_ouverture_bloquee` ;
+- une **nouvelle vente a decouvert** est refusee avec `levier_sature_short_bloque`.
+
+Deux operations restent autorisees a levier sature, deliberement, parce qu'elles **reduisent**
+l'exposition : la vente d'une position detenue, et le **rachat de short** du correctif v39 — son
+bloc est place avant le controle de levier, exactement pour cette raison.
+
+`levier` et `levier_sature` sont desormais renvoyes dans l'objet `account` de la reponse, donc
+visibles dans les logs sans requete supplementaire.
+
+**Verrous d'univers inchanges** : les 5 occurrences (`univers_crypto_reserve_gil`,
+`univers_etf_reserve_syl`, `univers_action_reserve_ju`, `univers_spy_qqq_interdit_gil`) sont
+evaluees **avant** tout nouveau controle. JU reste aux actions, SYL aux ETF, GIL au large.
+
+---
+
 ## 2026-08-20 (suite 2) — Correctifs 2 et 3 : rachat de short, et ponderation qui voit le levier
 
 Les deux sont cote Supabase, aucune intervention Make. **Les verrous d'univers sont inchanges** —
