@@ -8,6 +8,79 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-20 (suite 5) — Marees : le livre cible n'etait pas un livre cible
+
+Detail complet : `docs/decisions/MAREES-LIVRE-CIBLE-2026-08-20.md`.
+Sauvegarde prealable : table `bak_20260820_marees_propositions`.
+
+Le prompt systeme de l'Archimage dit « le miroir aligne le book reel sur ta cible ; une paire
+absente de ta cible = position fermee ». **Cette semantique n'etait implementee nulle part** :
+`marees_record_propositions` reinserait le livre entier a chaque run, sans jamais rien cloturer.
+Une position tenue 34 runs comptait pour 34 trades. **113 lignes en base pour 37 positions
+reelles**, et les « 68 positions ouvertes » de l'audit d'hier etaient en fait **4**.
+
+Second defaut independant : `marees_rebuild_virtual` calculait `win_rate = TP/(TP+SL)` et ignorait
+les 28 sorties au marche, **dont 16 gagnantes** -> il affichait 0 %.
+
+Corrections (100 % Supabase) :
+- `marees_record_propositions` : tenue = ligne d'origine conservee (prix d'entree et date
+  d'ouverture inchanges), disparition = `cloturee_at`, nouveaute = insertion. Cle `inserted`
+  conservee, le module Make n'a pas besoin de changer.
+- `marees_rebuild_virtual` : nouveau motif de sortie `FERME` ; le win rate compte toute cloture
+  au signe du P&L.
+- `marees_evaluate_and_learn` et `marees_resume` : prise en compte de `FERME`, exclusion des
+  doublons `remplacee`. Au passage, `jsonb_agg(e ORDER BY ord DESC)` inversait la chronologie
+  des `learnings` a chaque trim au-dela de 30 entrees -> corrige.
+- Historique replie : 76 lignes passent en `remplacee` (conservees, hors statistiques).
+
+Bilan reel apres correction : **37 positions, 35 cloturees, 10 gagnantes / 25 perdantes,
+win rate 28,6 %, somme des rendements −3,3 %** (contre 35,6 % et −12,3 % affiches avant).
+Le win rate est plus mauvais qu'annonce, la perte quatre fois plus petite.
+
+Tests : idempotence (livre identique -> 0 nouvelle, 4 tenues, 0 fermee, table inchangee) et
+chemin fermeture+ouverture dans une transaction annulee par exception (0 ligne de test ecrite).
+
+Deux points **non touches**, qui relevent d'un choix de Chachou : le filtre du module 20014
+s'appelle « [OFF] Marees — mettre ON pour activer » alors que sa condition compare `"ON"` a
+`"ON"` (toujours vraie, l'agent tourne) ; et USD-JPY est tenu depuis 6 jours alors que la
+doctrine vise 2 a 4 jours et que la simulation coupe a 96 h.
+
+---
+
+## 2026-08-20 (suite 4) — L'Alchimiste : pourquoi il ne trade plus depuis le 13/08
+
+Detail complet et prompt Maia : `docs/decisions/PROMPT-5-ALCHIMISTE-2026-08-20.md`.
+
+**50 propositions, 50 expirees, zero validee — depuis la creation de la table le 13/08.**
+`oui_at` est `null` sur les 50.
+
+Correction d'une de mes affirmations : j'allais proposer d'apprendre a l'Alchimiste a VENDRE
+pour se refaire du cash. **Il vend deja, et c'est son geste dominant** — 29 ventes a 17,29 $ de
+ticket moyen contre 21 achats a 2,15 $. Le 19/08 a 13:48 il a propose de lui-meme de vendre 20 $
+de BTC « pour degager du cash utilisable ». Le probleme n'est pas son jugement, c'est son
+debouche.
+
+Les causes, verifiees :
+1. `kill_switch = OFF` dans `ju_crypte_config`. Le module 20013 appelle bien `alc-auto` avec
+   `dry_run:false` ; c'est `alc-auto` qui refuse en premiere ligne. **Le dispositif fonctionne
+   comme prevu.** Per CLAUDE.md, l'armement est la decision de Chachou seul — non touche.
+2. La validation manuelle n'est branchee nulle part : la fonction `alc_process_oui` existe mais
+   **aucun module du scenario ne l'appelle** (0 occurrence dans les 20 327 lignes du blueprint),
+   et le message Discord (module 10031) n'affiche **jamais les propositions** — seulement les
+   resultats d'`alc-auto`, donc rien quand il est bloque.
+3. Le module 10012 utilise `CTX_B64={{base64(CTX)}}` et `SAGES_B64={{base64(SAGES)}}` — les memes
+   references nues que les six autres modules. **Je me corrige** : j'avais ecrit hier que 10012
+   n'etait pas concerne « parce que le staking est exact », mais le staking vient du module 20022,
+   pas de `CTX` — ce raisonnement ne prouvait rien. Indice concordant : sur 50 propositions,
+   **aucune** ne cite un chiffre macro (VIX, SPY, Fed, taux, DXY).
+
+Constat annexe : le portefeuille contient 2,52 $ d'USD **et 22,65 $ d'USDT**. L'Alchimiste ne
+considere que l'USD comme achetable (« ACHETER : uniquement avec du cash USD disponible »), d'ou
+les tickets a 2 $. La paire USDT-USD n'apparait ni dans `revolut_univers_complet` ni dans
+`price_history` : **impossible d'affirmer qu'elle est cotee sur Revolut X**, a verifier dans l'app.
+
+---
+
 ## 2026-08-20 (suite 3) — Correctif 4 : `execute-trades` v40, plafond de levier a l'ouverture
 
 Constat verifie sur `/v2/account` le 19/08 : SYL a **0 $ de pouvoir d'achat pour 3,35x de levier**

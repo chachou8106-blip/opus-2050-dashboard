@@ -417,7 +417,10 @@ CREATE TABLE IF NOT EXISTS public.marees_propositions (
   statut text DEFAULT 'proposee'::text,
   proposed_at timestamp with time zone NOT NULL DEFAULT now(),
   tp_pct double precision,
-  sl_pct double precision
+  sl_pct double precision,
+  -- 20/08 : instant ou la ligne a quitte le livre cible = fermeture de la position.
+  -- statut 'remplacee' = doublon de tenue de l'ancien modele append-only (exclu des stats).
+  cloturee_at timestamp with time zone
 );
 
 -- TABLE: marees_virtual_trades

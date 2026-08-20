@@ -2214,14 +2214,14 @@ DECLARE
 BEGIN
   -- Only trades with a REAL outcome count as evaluated. SANS_DONNEES = pas encore de prix forward.
   SELECT
-    count(*) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE') AND pnl_pct > 0),
-    count(*) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE') AND pnl_pct <= 0),
-    count(*) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE')),
+    count(*) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE','FERME') AND pnl_pct > 0),
+    count(*) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE','FERME') AND pnl_pct <= 0),
+    count(*) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE','FERME')),
     count(*) FILTER (WHERE is_open OR exit_reason = 'OUVERT'),
     count(*) FILTER (WHERE exit_reason = 'SANS_DONNEES'),
-    avg(pnl_pct) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE') AND pnl_pct > 0),
-    avg(pnl_pct) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE') AND pnl_pct <= 0),
-    sum(pnl_pct) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE'))
+    avg(pnl_pct) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE','FERME') AND pnl_pct > 0),
+    avg(pnl_pct) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE','FERME') AND pnl_pct <= 0),
+    sum(pnl_pct) FILTER (WHERE exit_reason IN ('TP','SL','MARCHE','FERME'))
   INTO v_wins, v_losses, v_evald, v_open, v_nodata, v_aw, v_al, v_sum
   FROM public.marees_virtual_trades;
 
@@ -2241,7 +2241,7 @@ BEGIN
     'avg_win_pct', round(coalesce(v_aw,0),3), 'avg_loss_pct', round(coalesce(v_al,0),3),
     'somme_rendements_pct', round(coalesce(v_sum,0),3));
   IF jsonb_array_length(v_learn) > 30 THEN
-    v_learn := (SELECT jsonb_agg(e ORDER BY ord DESC)
+    v_learn := (SELECT jsonb_agg(e ORDER BY ord)
                 FROM jsonb_array_elements(v_learn) WITH ORDINALITY AS t(e, ord)
                 WHERE ord > jsonb_array_length(v_learn) - 30);
   END IF;
@@ -2273,18 +2273,16 @@ begin
     (proposition_id, paire, side, prix_entree, montant, opened_at, tp_pct, sl_pct,
      exit_ts, prix_sortie, exit_reason, pnl_pct, hold_hours, is_open)
   with props as (
-    select id, paire,
-           -- 15/08 : inversion AVEUGLE du signal RETIREE. L'ancien prompt Gemini etait anti-predictif ;
-           -- le prompt a ete refait, on trade donc le sens PROPOSE tel quel (le contrarian raisonne
-           -- vit desormais dans le prompt lui-meme). A re-verifier sur les 1eres clotures.
-           lower(side) as side,
-           prix_ref::float8 as e,
+    select id, paire, lower(side) as side, prix_ref::float8 as e,
            coalesce(poids_pct,1)::float8 as m, proposed_at as t0,
-           -- CALIBRAGE SORTIE (15/08) : seuils adaptes au forex (majors ~0,5%/jour, detention 4j).
-           -- TP >= 1,2% / SL >= 0,8% (ratio 1,5:1) -> sorties reellement atteignables (fini le tout-timeout).
            greatest(coalesce(tp_pct, 1.2), 1.2)::float8 as tpp,
-           greatest(coalesce(sl_pct, 0.8), 0.8)::float8 as slp
+           greatest(coalesce(sl_pct, 0.8), 0.8)::float8 as slp,
+           cloturee_at,
+           -- 20/08 : une position qui quitte le livre cible est FERMEE a cet instant.
+           least(proposed_at + (p_max_hold_h||' hours')::interval,
+                 coalesce(cloturee_at, 'infinity'::timestamptz)) as t_fin
     from marees_propositions
+    -- 'remplacee' = doublon de tenue de l'ancien modele append-only, exclu des stats.
     where statut in ('expiree','proposee') and prix_ref > 0
   ),
   sim as (
@@ -2302,7 +2300,7 @@ begin
              else (case when ph.high>=s.sl_price then 'SL' else 'TP' end) end as motif
       from price_history ph
       where ph.symbol=s.paire and ph.interval='1h'
-        and ph.ts > s.t0 and ph.ts <= s.t0 + (p_max_hold_h||' hours')::interval
+        and ph.ts > s.t0 and ph.ts <= s.t_fin
         and ( (s.side='buy'  and (ph.high>=s.tp_price or ph.low<=s.sl_price))
            or (s.side='sell' and (ph.low<=s.tp_price or ph.high>=s.sl_price)) )
       order by ph.ts asc limit 1
@@ -2311,41 +2309,53 @@ begin
   fin as (
     select h.*,
       (select ph.close from price_history ph where ph.symbol=h.paire and ph.interval='1h'
-        and ph.ts <= h.t0 + (p_max_hold_h||' hours')::interval order by ph.ts desc limit 1) as close_maxhold,
+        and ph.ts <= h.t_fin order by ph.ts desc limit 1) as close_fin,
       (select ph.close from price_history ph where ph.symbol=h.paire and ph.interval='1h'
         order by ph.ts desc limit 1) as close_now,
       (select count(*) from price_history ph where ph.symbol=h.paire and ph.interval='1h' and ph.ts > h.t0) as n_bougies,
-      (h.t0 + (p_max_hold_h||' hours')::interval < now()) as fenetre_finie
+      (h.t_fin < now()) as fenetre_finie
     from hit h
   )
   select
     id, paire, side, e, m, t0, tpp, slp,
-    case when hit_motif is not null then hit_ts else null end,
+    case when hit_motif is not null then hit_ts when fenetre_finie then t_fin else null end,
     case when hit_motif='TP' then tp_price when hit_motif='SL' then sl_price
          when n_bougies=0 then null
-         when fenetre_finie then close_maxhold else close_now end,
+         when fenetre_finie then close_fin else close_now end,
     case when hit_motif is not null then hit_motif
          when n_bougies=0 then 'SANS_DONNEES'
-         when fenetre_finie then 'MARCHE' else 'OUVERT' end,
+         when fenetre_finie and cloturee_at is not null and cloturee_at <= t0 + (p_max_hold_h||' hours')::interval
+           then 'FERME'
+         when fenetre_finie then 'MARCHE'
+         else 'OUVERT' end,
     case when hit_motif='TP' then tpp - 2*p_fee_pct
          when hit_motif='SL' then -slp - 2*p_fee_pct
          when n_bougies=0 then null
          else ( case when side='buy'
-                  then (coalesce(case when fenetre_finie then close_maxhold else close_now end,e)/e - 1)*100
-                  else (1 - coalesce(case when fenetre_finie then close_maxhold else close_now end,e)/e)*100 end ) - 2*p_fee_pct end,
-    case when hit_ts is not null then extract(epoch from (hit_ts - t0))/3600 else null end,
+                  then (coalesce(case when fenetre_finie then close_fin else close_now end,e)/e - 1)*100
+                  else (1 - coalesce(case when fenetre_finie then close_fin else close_now end,e)/e)*100 end ) - 2*p_fee_pct end,
+    case when hit_ts is not null then extract(epoch from (hit_ts - t0))/3600
+         when fenetre_finie then extract(epoch from (t_fin - t0))/3600 else null end,
     (hit_motif is null and n_bougies>0 and not fenetre_finie)
   from fin;
 
+  -- 20/08 : le win_rate ne comptait que TP/(TP+SL) et ignorait les sorties au marche,
+  -- dont 16 etaient gagnantes -> il affichait 0 %. Toute cloture compte, au signe du P&L.
   select jsonb_build_object(
     'trades_total', (select count(*) from marees_virtual_trades),
-    'clotures', (select count(*) from marees_virtual_trades where exit_reason in ('TP','SL','MARCHE')),
-    'tp', (select count(*) from marees_virtual_trades where exit_reason='TP'),
-    'sl', (select count(*) from marees_virtual_trades where exit_reason='SL'),
-    'ouvertes', (select count(*) from marees_virtual_trades where is_open),
-    'win_rate', (select round((count(*) filter (where exit_reason='TP'))::numeric/nullif(count(*) filter (where exit_reason in ('TP','SL')),0)*100,1) from marees_virtual_trades),
-    'esperance_pct', (select round((avg(pnl_pct) filter (where exit_reason in ('TP','SL','MARCHE')))::numeric,3) from marees_virtual_trades),
-    'somme_rendements_pct', (select round((sum(pnl_pct) filter (where exit_reason in ('TP','SL','MARCHE')))::numeric,1) from marees_virtual_trades)
+    'clotures',  (select count(*) from marees_virtual_trades where exit_reason in ('TP','SL','MARCHE','FERME')),
+    'tp',        (select count(*) from marees_virtual_trades where exit_reason='TP'),
+    'sl',        (select count(*) from marees_virtual_trades where exit_reason='SL'),
+    'marche',    (select count(*) from marees_virtual_trades where exit_reason='MARCHE'),
+    'ferme',     (select count(*) from marees_virtual_trades where exit_reason='FERME'),
+    'ouvertes',  (select count(*) from marees_virtual_trades where is_open),
+    'gagnants',  (select count(*) from marees_virtual_trades where exit_reason in ('TP','SL','MARCHE','FERME') and pnl_pct > 0),
+    'perdants',  (select count(*) from marees_virtual_trades where exit_reason in ('TP','SL','MARCHE','FERME') and pnl_pct <= 0),
+    'win_rate',  (select round((count(*) filter (where pnl_pct > 0))::numeric
+                    / nullif(count(*) filter (where exit_reason in ('TP','SL','MARCHE','FERME')),0)*100,1)
+                  from marees_virtual_trades where exit_reason in ('TP','SL','MARCHE','FERME')),
+    'esperance_pct', (select round((avg(pnl_pct) filter (where exit_reason in ('TP','SL','MARCHE','FERME')))::numeric,3) from marees_virtual_trades),
+    'somme_rendements_pct', (select round((sum(pnl_pct) filter (where exit_reason in ('TP','SL','MARCHE','FERME')))::numeric,1) from marees_virtual_trades)
   ) into v_res;
   return v_res;
 end $function$
@@ -2353,42 +2363,91 @@ end $function$
 
 
 -- FUNCTION: marees_record_propositions
+-- 20/08 : l'Archimage produit un LIVRE CIBLE COMPLET -- son prompt systeme dit « le miroir aligne
+-- le book reel sur ta cible ; une paire absente de ta cible = position fermee ». Cette semantique
+-- n'etait implementee nulle part : la fonction INSERAIT le livre entier a chaque run. Une position
+-- tenue 34 runs comptait pour 34 trades independants (113 lignes pour 37 positions reelles).
+-- Desormais : tenue = on garde la ligne d'origine, disparition = cloture, nouveaute = insertion.
 CREATE OR REPLACE FUNCTION public.marees_record_propositions(p_run_id text, p_props jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-declare n int; v_lines text; v_resume text;
+declare
+  v_ouvertes int; v_tenues int; v_fermees int; v_nouvelles int;
+  v_lines text; v_resume text;
 begin
-  insert into marees_propositions(run_id, paire, side, poids_pct, confidence, raison, prix_ref, tp_pct, sl_pct, statut, proposed_at)
-  select p_run_id, p.paire, p.side, p.poids_pct, p.confidence, p.raison,
-    coalesce(p.prix_ref, (select ph.close from price_history ph where ph.symbol=p.paire and ph.interval='1h' order by ph.ts desc limit 1)),
-    p.tp_pct, p.sl_pct, 'proposee', now()
-  from (
-    select upper(replace(x->>'paire','/','-')) as paire, lower(x->>'side') as side,
-      nullif(x->>'poids_pct','')::numeric as poids_pct, nullif(x->>'confidence','')::numeric as confidence,
-      x->>'raison' as raison, nullif(x->>'prix_ref','')::double precision as prix_ref,
-      nullif(x->>'tp_pct','')::double precision as tp_pct, nullif(x->>'sl_pct','')::double precision as sl_pct
-    from jsonb_array_elements(coalesce(p_props,'[]'::jsonb)) x
-  ) p
-  where p.paire is not null and p.side in ('buy','sell');
-  get diagnostics n = row_count;
+  create temp table _book on commit drop as
+  select upper(replace(x->>'paire','/','-')) as paire,
+         lower(x->>'side')                   as side,
+         nullif(x->>'poids_pct','')::numeric        as poids_pct,
+         nullif(x->>'confidence','')::numeric       as confidence,
+         x->>'raison'                                as raison,
+         nullif(x->>'prix_ref','')::double precision as prix_ref,
+         nullif(x->>'tp_pct','')::double precision   as tp_pct,
+         nullif(x->>'sl_pct','')::double precision   as sl_pct
+  from jsonb_array_elements(coalesce(p_props,'[]'::jsonb)) x;
 
-  select string_agg(
-    '• '||paire||'  '||case when side='buy' then 'ACHAT ▲' else 'VENTE ▼' end
-    ||'  poids '||rtrim(rtrim(to_char(coalesce(poids_pct,0),'FM990.9'),'0'),'.')||'%'
-    ||'  conf '||round(coalesce(confidence,0)*100)::int||'%'
-    ||'  TP '||rtrim(rtrim(to_char(coalesce(tp_pct,0),'FM990.99'),'0'),'.')||'% / SL '||rtrim(rtrim(to_char(coalesce(sl_pct,0),'FM990.99'),'0'),'.')||'%',
-    E'\n' order by confidence desc nulls last)
-  into v_lines
-  from marees_propositions
-  where run_id = p_run_id and proposed_at >= now() - interval '5 minutes';
+  delete from _book where paire is null or side not in ('buy','sell');
 
-  v_resume := '🌊 **L''Archimage des Marées** — '||n||' proposition'||case when n>1 then 's' else '' end||' forex'
-    || coalesce(E'\n'||v_lines, E'\n_Aucune opportunité nette ce cycle._');
+  -- 1. Les positions ouvertes absentes du nouveau livre cible sont FERMEES.
+  update public.marees_propositions mp
+     set cloturee_at = now()
+   where mp.statut = 'proposee'
+     and mp.cloturee_at is null
+     and not exists (select 1 from _book b where b.paire = mp.paire and b.side = mp.side);
+  get diagnostics v_fermees = row_count;
 
-  return jsonb_build_object('inserted', n, 'run_id', p_run_id, 'resume', v_resume,
+  -- 2. Les lignes deja ouvertes sont TENUES : on ne les reinsere pas, le prix d'entree
+  --    et la date d'ouverture d'origine sont conserves.
+  select count(*) into v_tenues
+  from _book b
+  where exists (select 1 from public.marees_propositions mp
+                 where mp.statut='proposee' and mp.cloturee_at is null
+                   and mp.paire=b.paire and mp.side=b.side);
+
+  -- 3. Les lignes reellement nouvelles sont OUVERTES.
+  insert into public.marees_propositions
+    (run_id, paire, side, poids_pct, confidence, raison, prix_ref, tp_pct, sl_pct, statut, proposed_at)
+  select p_run_id, b.paire, b.side, b.poids_pct, b.confidence, b.raison,
+         coalesce(b.prix_ref, (select ph.close from price_history ph
+                                where ph.symbol=b.paire and ph.interval='1h'
+                                order by ph.ts desc limit 1)),
+         b.tp_pct, b.sl_pct, 'proposee', now()
+  from _book b
+  where not exists (select 1 from public.marees_propositions mp
+                     where mp.statut='proposee' and mp.cloturee_at is null
+                       and mp.paire=b.paire and mp.side=b.side);
+  get diagnostics v_nouvelles = row_count;
+
+  -- Le resume Discord decrit le LIVRE CIBLE COURANT, pas les seules nouveautes.
+  select count(*), string_agg(
+      '• '||paire||'  '||case when side='buy' then 'ACHAT ▲' else 'VENTE ▼' end
+      ||'  poids '||rtrim(rtrim(to_char(coalesce(poids_pct,0),'FM990.9'),'0'),'.')||'%'
+      ||'  conf '||round(coalesce(confidence,0)*100)::int||'%'
+      ||'  TP '||rtrim(rtrim(to_char(coalesce(tp_pct,0),'FM990.99'),'0'),'.')||'% / SL '
+      ||rtrim(rtrim(to_char(coalesce(sl_pct,0),'FM990.99'),'0'),'.')||'%'
+      ||case when proposed_at < now() - interval '5 minutes'
+             then '  (tenue depuis '||to_char(proposed_at,'DD/MM HH24:MI')||')' else '  (nouvelle)' end,
+      E'\n' order by confidence desc nulls last)
+    into v_ouvertes, v_lines
+  from public.marees_propositions
+  where statut='proposee' and cloturee_at is null;
+
+  v_resume := '🌊 **L''Archimage des Marées** — livre cible : '||v_ouvertes||' position'
+    ||case when v_ouvertes>1 then 's' else '' end
+    ||'  ('||v_nouvelles||' ouverte'||case when v_nouvelles>1 then 's' else '' end
+    ||', '||v_tenues||' tenue'||case when v_tenues>1 then 's' else '' end
+    ||', '||v_fermees||' fermée'||case when v_fermees>1 then 's' else '' end||')'
+    || coalesce(E'\n'||v_lines, E'\n_Aucune position ce cycle._');
+
+  return jsonb_build_object(
+    'run_id', p_run_id,
+    'inserted', v_nouvelles,      -- conserve : le module Make lit cette cle
+    'nouvelles', v_nouvelles, 'tenues', v_tenues, 'fermees', v_fermees,
+    'livre_cible', v_ouvertes,
+    'resume', v_resume,
     'resume_json', replace(v_resume, E'\n', E'\\n'));
 end $function$
 
@@ -2406,17 +2465,17 @@ AS $function$
   ),
   ev as (
     select
-      count(*) filter (where exit_reason in ('TP','SL','MARCHE')) as n_eval,
-      count(*) filter (where exit_reason in ('TP','SL','MARCHE') and pnl_pct>0) as wins,
-      count(*) filter (where exit_reason in ('TP','SL','MARCHE') and pnl_pct<=0) as losses,
+      count(*) filter (where exit_reason in ('TP','SL','MARCHE','FERME')) as n_eval,
+      count(*) filter (where exit_reason in ('TP','SL','MARCHE','FERME') and pnl_pct>0) as wins,
+      count(*) filter (where exit_reason in ('TP','SL','MARCHE','FERME') and pnl_pct<=0) as losses,
       count(*) filter (where is_open) as n_open,
-      round(avg(pnl_pct) filter (where exit_reason in ('TP','SL','MARCHE'))::numeric,2) as pnl_moyen
+      round(avg(pnl_pct) filter (where exit_reason in ('TP','SL','MARCHE','FERME'))::numeric,2) as pnl_moyen
     from marees_virtual_trades
   ),
   props as (
     select jsonb_agg(x order by x_proposed_at desc) as arr from (
       select paire, side, poids_pct, confidence, raison, tp_pct, sl_pct, statut, proposed_at as x_proposed_at
-      from marees_propositions order by proposed_at desc limit 15
+      from marees_propositions where statut <> 'remplacee' order by proposed_at desc limit 15
     ) x
   ),
   trades as (
@@ -2440,7 +2499,7 @@ AS $function$
       'maj', (select updated_at from bs)
     ),
     'stats', jsonb_build_object(
-      'n_propositions', (select count(*) from marees_propositions),
+      'n_propositions', (select count(*) from marees_propositions where statut <> 'remplacee'),
       'n_open', (select n_open from ev),
       'n_evaluated', (select n_eval from ev),
       'wins', (select wins from ev),
