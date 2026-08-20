@@ -8,6 +8,38 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-20 — Audit complet des agents : 7 anomalies, dont 3 serieuses
+
+Correspondance Fear & Greed verifiee dans le module 201, au bon endroit. **Pas encore eprouvee** :
+aucun run depuis 23:22, le prochain est a 09:00.
+
+Detail complet : `docs/decisions/AUDIT-AGENTS-2026-08-20.md`.
+
+| # | Agent | Anomalie | Gravite |
+|---|---|---|---|
+| 1 | Sage Risque | **Invente le VIX** : cite 14.2, 17, 18 alors que le reel est 15,84. Meme reference `{{CTX}}` que le module 201 qui etait aveugle. | serieux |
+| 2 | SYL | **Pouvoir d'achat a 0 $**, levier 3,35x. Trois ordres rejetes le 19/08 pour « insufficient buying power ». | serieux |
+| 3 | SYL | **Le short GLD ne peut pas etre solde** : rachat envoye en notionnel (121 titres) pour une position short de 22,85. Rejete 3 fois en 2 jours. | serieux |
+| 4 | Meta-Cerveau | Pondere sur PnL, drawdown et win rate — **ni le levier ni la marge disponible**. SYL recoit 56 % du poids alors qu'il ne peut plus executer. | moyen |
+| 5 | Marees | **17 trades clos, 0 gagnant.** EUR-USD vente, USD-JPY achat, USD-CHF achat : le meme pari dollar-en-hausse, alors que le dollar recule de 1,03 %. Win rate 57 % -> 35,6 %. 68 positions ouvertes, ~40 sur ce meme pari. | serieux |
+| 6 | Alchimiste | 50 propositions sur 7 jours, **toutes expirees**. Dernier ordre reel le 13/08. Pas une panne — le flux attend la validation de Chachou. | a decider |
+| 7 | Sage Memoire | Absent du run de 23:22 (4 Sages sur 5). Une seule occurrence. | a surveiller |
+
+### Verifie et sain
+
+- **Verrous d'univers : 0 violation en 7 jours** (JU/ETF, SYL/actions, GIL/SPY-QQQ, crypto=GIL).
+- **Sage Memoire : chiffres exacts** — win rates au point pres contre `oracle_brain_state`.
+- **Sage Flash** : titres reels et dates.
+- Staking exact 5 runs de suite, garde-fou short actif, clés saines, 80 modules.
+
+### Note de methode
+
+Le « MAREES 57 % » du Sage Memoire semblait faux face aux 35,6 % actuels. Verification faite :
+la mise a jour a eu lieu a 00:55, **apres** le run de 23:22. Le Sage avait raison au moment ou il
+a parle. C'est la chute de Marees qui est reelle, pas une erreur de lecture.
+
+---
+
 ## 2026-08-19 (suite 17) — Les 3 indicateurs sont branches. Le Sage Macro analyse. Un champ reste faux.
 
 Run de 23:22. Maia a tout applique — verifie dans le blueprint : les 4 champs `DXY_TREND`,
