@@ -1,5 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v41 : CORRECTIF D'UN BUG QUE J'AI INTRODUIT EN v39. Le rachat de short soldait TOUJOURS la
+//       position entiere en ignorant le montant demande. Le 20/08 SYL a demande 6 000 $ sur IEF
+//       et 1 361 754 $ ont ete executes (6 ordres de 226 959 $, run 20260820-1747) ; meme cause
+//       sur GLD, 500 $ demandes, 9 394 $ executes. Desormais le montant demande par l'Archimage
+//       fait foi et la taille du short n'est plus qu'un PLAFOND. Un reliquat valant moins de 1 $
+//       ou moins de 1 % du short est solde pour ne pas laisser de poussiere.
 // v40 : PLAFOND DE LEVIER A L'OUVERTURE (3x). Au-dela, plus aucun achat d'ouverture ni aucun
 //       nouveau short. Tout ce qui REDUIT l'exposition reste autorise : rachat de short, vente
 //       d'une position detenue, sorties automatiques, desendettement. Les verrous d'univers
@@ -370,13 +376,30 @@ serve(async (req) => {
       // c'est l'operation qu'il faut justement pouvoir faire quand la marge est saturee.
       if (isBuy && (heldQty[sym] || 0) < 0) {
         if (pending.has(sym)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_ordre_deja_ouvert' }); continue }
-        const _qCover = Math.abs(heldQty[sym] || 0)
+        const _qShortTotal = Math.abs(heldQty[sym] || 0)
         const _pxCover = heldPx[sym] || priceMap[sym] || 0
         const _notionnelDemande = Math.round(numClean(t.notional))
+        if (!(_qShortTotal > 0)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_quantite_nulle' }); continue }
+
+        // v41 — CORRECTIF D'UN BUG QUE J'AI INTRODUIT EN v39.
+        // v39 rachetait TOUJOURS la totalite du short : SYL demandait 6 000 $ sur IEF, le code a
+        // execute 1 361 754 $ (run 20260820-1747). Le montant demande par l'Archimage fait foi ;
+        // la taille du short n'est qu'un PLAFOND, jamais une consigne.
+        let _qCover = _qShortTotal
+        if (_pxCover > 0 && _notionnelDemande > 0) {
+          _qCover = Math.min(_qShortTotal, _notionnelDemande / _pxCover)
+        }
+        // Un reliquat de short minuscule est inutile et couteux a re-traiter : si ce qui resterait
+        // vaut moins de 1 $ ou moins de 1 % du short, on solde la ligne entiere.
+        const _resteQty = _qShortTotal - _qCover
+        const _resteUsd = _resteQty * (_pxCover || 0)
+        if (_resteQty > 0 && (_resteUsd < 1 || _resteQty < _qShortTotal * 0.01)) _qCover = _qShortTotal
         if (!(_qCover > 0)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_quantite_nulle' }); continue }
+
         t.qty = qtyStr(_qCover)
         t.notional = _pxCover > 0 ? Math.max(1, Math.round(_qCover * _pxCover)) : Math.max(1, _notionnelDemande)
         t._cover = true
+        t._cover_partiel = _qCover < _qShortTotal || null
         // trace : ce que le modele demandait avant qu'on le ramene a la taille reelle du short
         if (_notionnelDemande !== t.notional) t._clamped_from = _notionnelDemande
         toExec.push(t)
