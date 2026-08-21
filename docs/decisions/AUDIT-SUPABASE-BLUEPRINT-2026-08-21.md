@@ -228,3 +228,96 @@ toujours vraie — les deux routes s'exécutent à chaque run. Le libellé ment 
 8. **H** — libellés des filtres.
 
 Aucune modification n'a été appliquée pendant cet audit. Lecture seule.
+
+---
+
+# Complément du 21/08 après-midi — trois découvertes
+
+## I. Le `run_id` n'est partagé par aucun module — PROUVÉ
+
+Le module **101** produit la valeur `COLLEGE-{{formatDate(now; "YYYYMMDD-HHmm")}}`.
+
+Sur **3 863 lignes** réparties dans cinq tables, **zéro** ne porte le préfixe `COLLEGE-` :
+
+| Table | Lignes | Avec le préfixe `COLLEGE-` |
+|---|---|---|
+| `oracle_sages_report` | 956 | **0** |
+| `oracle_college_runs` | 275 | **0** |
+| `oracle_college_orders` | 1 572 | **0** |
+| `brain_lessons` | 338 | **0** |
+| `oracle_exec_debug` | 722 | 1 (test manuel) |
+
+Donc `{{101.RUN_ID}}` n'a **jamais** résolu, dans aucun module, depuis le 1er juillet.
+Chaque module retombe sur son propre `ifempty(...; formatDate(now; "YYYYMMDD-HHmm"))` et
+horodate à la minute de SA propre exécution. D'où, pour un même run : les Sages enregistrent
+`20260821-0904` et le Collège `20260821-0905`.
+
+**Cause** : un module `util:SetVariable` s'adresse par `{{101.value}}`, pas par
+`{{101.<nom_de_variable>}}`. Le module **20013** est le seul du scénario à utiliser la bonne
+forme (`{{ifempty(101.value; ...)}}`).
+
+**Modules à corriger** : 211, 401, 960, 981, 982, 10032. Les modules 9995, 10000 et 10001
+passent par `960.data.run_id`, chaîne différente à vérifier ensuite.
+
+**Correction propre** : retirer d'abord le préfixe `COLLEGE-` du module 101 pour rester
+compatible avec les 3 863 lignes existantes, puis pointer tous les consommateurs sur
+`{{101.value}}`.
+
+**Portée** : c'est la même famille de référence que `{{CTX}}` et `{{SAGES}}` (modules 207, 301,
+303, 305). La preuve ci-dessus vaut pour `{{101.RUN_ID}}` uniquement ; pour les deux autres, la
+question reste ouverte — `raw_payload` ne stocke pas le raisonnement des Archimages, donc rien
+ne permet de trancher côté base. À vérifier dans l'Output du module 301 dans Make.
+
+## J. Deux modules LLM sans format de sortie imposé
+
+Relevé exhaustif des dix modules LLM :
+
+| Module | Agent | Modèle | `response_format` |
+|---|---|---|---|
+| 201, 203, 207 | Sages Macro / Technique / Mémoire | gpt-oss-120b | `json_object` |
+| 205 | Sage Risque | mistral-large | `json_object` |
+| 209 | Sage Flash | sonar-pro | `json_schema` |
+| 301 | Archimage JU | claude-sonnet-4-5 | API Anthropic |
+| **303** | **Archimage SYL** | **sonar-pro** | **AUCUN** |
+| 305 | Archimage GIL | mistral-large | `json_object` |
+| 401 | Cerveau | mistral-large | `json_object` |
+| **10012** | **Alchimiste réel** | **sonar-pro** | **AUCUN** |
+
+SYL et l'Alchimiste sont les deux seuls modules où rien n'oblige le modèle à produire du JSON.
+Le module 304 compense en retirant les balises de code, les retours à la ligne et les
+tabulations — un pansement, pas une contrainte. Le 21/08 à 13h29, le run est mort exactement là.
+
+Le module 209 tourne sur le **même modèle** `sonar-pro` avec un `json_schema` imposé et n'a
+jamais échoué : la correction consiste à lui copier ce mécanisme.
+
+Ni 303 ni 10012 n'ont été modifiés le 21/08 — ils sont identiques au caractère près à leur état
+de 11h39. Ce défaut est antérieur.
+
+## K. Les erreurs HTTP des Sages passent en silence
+
+Sur les modules Groq, l'option « Return error if HTTP request fails » (`stopOnHttpError`) est
+**décochée**. Groq peut renvoyer une erreur, la réponse n'a plus de `choices[]`, le contenu est
+vide, `record_sages` n'insère rien — et le scénario continue comme si de rien n'était.
+
+C'était déjà la cause du silence du 15/08 (modèle `llama-3.3-70b-versatile` décommissionné,
+corrigé le 17/08 en basculant sur `openai/gpt-oss-120b`). Le mécanisme n'a jamais été traité :
+seul le symptôme l'a été.
+
+Combiné au fait que `oracle_datasource_health` ne surveille **aucun** des cinq fournisseurs de
+LLM, un Sage peut rester muet des jours sans qu'aucune alerte ne se déclenche. C'est exactement
+ce qui s'est produit pour le Sage Macro, absent de tous les runs du 20/08 09h04 au 21/08 09h04.
+
+## Historique mesuré des Sages ayant répondu
+
+| Période | Sages qui écrivent |
+|---|---|
+| 15/08 12h36 → 17/08 19h33 | Flash seul, puis Flash + Risque — modèle Groq décommissionné |
+| 17/08 19h59 → 19/08 22h18 | **5 sur 5** — après bascule sur `openai/gpt-oss-120b` |
+| 19/08 23h22 | 4 — Mémoire tombe |
+| 20/08 09h04 → 21/08 09h04 | 4 — **Macro absent sur cinq runs consécutifs** |
+| 21/08 13h29 | 2 — les trois modules Groq éteints ensemble |
+
+Le fait que Technique et Mémoire aient répondu normalement pendant que Macro restait muet, sur
+cinq runs, avec la **même** chaîne de modèle, la **même** clé et la **même** URL, exclut un
+décommissionnement comme cause de la panne du Sage Macro. Pour la panne simultanée des trois du
+21/08, l'hypothèse reste ouverte et se tranche en lisant l'Output du module 201 dans Make.
