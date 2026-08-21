@@ -939,6 +939,13 @@ $function$
 
 
 -- FUNCTION: check_circuit_breakers
+-- 21/08 : FORCE_CONTRARIAN restaure et etendu a tous les agents.
+-- La regle d'origine vivait dans le prompt du Sage Memoire (module 207) avant le 13/08 :
+--   « si les 3 dernieres decisions JU sont identiques meme ticker et meme side ET que le PnL est
+--     negatif alors FORCE_CONTRARIAN egal true »
+-- Elle a disparu le 19/08 (commit f65384c) en elargissant le Sage Memoire a 5 agents.
+-- On ne cree AUCUN objet : check_circuit_breakers() et oracle_circuit_breakers existent deja et
+-- sont deja injectees dans les prompts via CTX (110), SAGES (215) et les 3 Archimages. On etend.
 CREATE OR REPLACE FUNCTION public.check_circuit_breakers()
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -946,43 +953,93 @@ CREATE OR REPLACE FUNCTION public.check_circuit_breakers()
  SET search_path TO 'public'
 AS $function$
 declare
-  v_fired int := 0; v_resolved int := 0;
+  v_fired int := 0;
   b record;
+  v_sym text; v_side text; v_n int; v_eval int;
 begin
   for b in
-    select archimage, current_drawdown, consecutive_losses, alpaca_portfolio_value, last_run_id
-    from public.oracle_brain_state where archimage in ('JU','SYL','GIL')
+    select archimage, current_drawdown, consecutive_losses, current_streak_type,
+           win_rate, wins, losses, alpaca_portfolio_value, last_run_id
+    from public.oracle_brain_state
+    where archimage <> 'cerveau'          -- 21/08 : tous les agents, plus seulement JU/SYL/GIL
   loop
-    -- Déclenchements (un seul actif par type/archimage à la fois)
+    ---------------------------------------------------------------- drawdown
     if b.current_drawdown >= 0.08 then
-      if not exists (select 1 from public.oracle_circuit_breakers where archimage=b.archimage and breaker_type='drawdown_8pct' and auto_resolved=false) then
+      if not exists (select 1 from public.oracle_circuit_breakers
+                      where archimage=b.archimage and breaker_type='drawdown_8pct' and auto_resolved=false) then
         insert into public.oracle_circuit_breakers (archimage, run_id, breaker_type, trigger_value, threshold_value, action_taken, capital_protected, notes)
-        values (b.archimage, b.last_run_id, 'drawdown_8pct', round(b.current_drawdown,4), 0.08, 'poids_plancher_0.05', b.alpaca_portfolio_value, 'Drawdown critique : poids réduit au plancher par update-brain');
+        values (b.archimage, b.last_run_id, 'drawdown_8pct', round(b.current_drawdown,4), 0.08, 'poids_plancher_0.05', b.alpaca_portfolio_value,
+                'Drawdown critique : poids reduit au plancher par update-brain');
         v_fired := v_fired + 1;
       end if;
     elsif b.current_drawdown >= 0.05 then
-      if not exists (select 1 from public.oracle_circuit_breakers where archimage=b.archimage and breaker_type='drawdown_5pct' and auto_resolved=false) then
+      if not exists (select 1 from public.oracle_circuit_breakers
+                      where archimage=b.archimage and breaker_type='drawdown_5pct' and auto_resolved=false) then
         insert into public.oracle_circuit_breakers (archimage, run_id, breaker_type, trigger_value, threshold_value, action_taken, capital_protected, notes)
-        values (b.archimage, b.last_run_id, 'drawdown_5pct', round(b.current_drawdown,4), 0.05, 'poids_coupe_moitie', b.alpaca_portfolio_value, 'Drawdown >= 5% : poids coupé de moitié par update-brain');
+        values (b.archimage, b.last_run_id, 'drawdown_5pct', round(b.current_drawdown,4), 0.05, 'poids_coupe_moitie', b.alpaca_portfolio_value,
+                'Drawdown >= 5% : poids coupe de moitie par update-brain');
         v_fired := v_fired + 1;
       end if;
     end if;
+
+    ---------------------------------------------------- pertes consecutives
     if coalesce(b.consecutive_losses,0) >= 5 then
-      if not exists (select 1 from public.oracle_circuit_breakers where archimage=b.archimage and breaker_type='pertes_consecutives_5' and auto_resolved=false) then
+      if not exists (select 1 from public.oracle_circuit_breakers
+                      where archimage=b.archimage and breaker_type='pertes_consecutives_5' and auto_resolved=false) then
         insert into public.oracle_circuit_breakers (archimage, run_id, breaker_type, trigger_value, threshold_value, action_taken, capital_protected, notes)
-        values (b.archimage, b.last_run_id, 'pertes_consecutives_5', b.consecutive_losses, 5, 'prudence_maximale_demandee', b.alpaca_portfolio_value, '5+ runs perdants consécutifs : réduire les tailles et couper les positions perdantes');
+        values (b.archimage, b.last_run_id, 'pertes_consecutives_5', b.consecutive_losses, 5, 'prudence_maximale_demandee', b.alpaca_portfolio_value,
+                '5+ runs perdants consecutifs : reduire les tailles et couper les positions perdantes');
         v_fired := v_fired + 1;
       end if;
     end if;
-    -- Résolutions automatiques quand la condition disparaît
+
+    ------------------------------------- FORCE_CONTRARIAN (restaure du 13/08)
+    -- 3 dernieres decisions identiques (meme symbole ET meme sens) pendant une serie perdante.
+    if b.archimage in ('JU','SYL','GIL') and coalesce(b.current_streak_type,'') = 'loss' then
+      select count(*), max(symbol), max(lower(side))
+        into v_n, v_sym, v_side
+      from (select symbol, side from public.oracle_college_orders
+             where archimage = b.archimage order by created_at desc limit 3) d;
+      if v_n = 3
+         and (select count(distinct symbol) from (select symbol from public.oracle_college_orders
+               where archimage=b.archimage order by created_at desc limit 3) x) = 1
+         and (select count(distinct lower(side)) from (select side from public.oracle_college_orders
+               where archimage=b.archimage order by created_at desc limit 3) y) = 1
+      then
+        if not exists (select 1 from public.oracle_circuit_breakers
+                        where archimage=b.archimage and breaker_type='repetition_identique_perdante' and auto_resolved=false) then
+          insert into public.oracle_circuit_breakers (archimage, run_id, breaker_type, trigger_value, threshold_value, action_taken, capital_protected, notes)
+          values (b.archimage, b.last_run_id, 'repetition_identique_perdante', 3, 3, 'force_contrarian', b.alpaca_portfolio_value,
+                  'FORCE_CONTRARIAN : 3 decisions identiques ('||coalesce(v_side,'?')||' '||coalesce(v_sym,'?')||') pendant une serie perdante. Changer de these ou ne rien faire, ne pas repeter.');
+          v_fired := v_fired + 1;
+        end if;
+      end if;
+    end if;
+
+    ------------------------------------------------- sous-performance durable
+    v_eval := coalesce(b.wins,0) + coalesce(b.losses,0);
+    if v_eval >= 20 and coalesce(b.win_rate,1) < 0.40 then
+      if not exists (select 1 from public.oracle_circuit_breakers
+                      where archimage=b.archimage and breaker_type='win_rate_faible' and auto_resolved=false) then
+        insert into public.oracle_circuit_breakers (archimage, run_id, breaker_type, trigger_value, threshold_value, action_taken, capital_protected, notes)
+        values (b.archimage, b.last_run_id, 'win_rate_faible', round(b.win_rate::numeric,3), 0.40, 'selection_a_revoir', b.alpaca_portfolio_value,
+                'Win rate '||round(b.win_rate::numeric*100,1)||'% sur '||v_eval||' decisions evaluees : le probleme est la SELECTION, pas la frequence. Moins de decisions, plus de conviction.');
+        v_fired := v_fired + 1;
+      end if;
+    end if;
+
+    ------------------------------------------------- resolutions automatiques
     update public.oracle_circuit_breakers set auto_resolved = true, resolved_at = now()
       where archimage = b.archimage and auto_resolved = false
-        and ((breaker_type = 'drawdown_8pct' and b.current_drawdown < 0.08)
-          or (breaker_type = 'drawdown_5pct' and b.current_drawdown < 0.05)
-          or (breaker_type = 'pertes_consecutives_5' and coalesce(b.consecutive_losses,0) < 5));
-    get diagnostics v_resolved = row_count;
+        and ((breaker_type='drawdown_8pct' and b.current_drawdown < 0.08)
+          or (breaker_type='drawdown_5pct' and b.current_drawdown < 0.05)
+          or (breaker_type='pertes_consecutives_5' and coalesce(b.consecutive_losses,0) < 5)
+          or (breaker_type='repetition_identique_perdante' and coalesce(b.current_streak_type,'') <> 'loss')
+          or (breaker_type='win_rate_faible' and coalesce(b.win_rate,1) >= 0.40));
   end loop;
-  return jsonb_build_object('fired', v_fired);
+
+  return jsonb_build_object('fired', v_fired,
+    'actifs', (select count(*) from public.oracle_circuit_breakers where auto_resolved=false));
 end $function$
 
 
