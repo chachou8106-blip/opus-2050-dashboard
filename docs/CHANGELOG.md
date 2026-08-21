@@ -8,6 +8,47 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-21 — AUTOCRITIQUE : les 10 agents savent enfin quand ils se trompent
+
+Verifie module par module dans le blueprint apres passage de Maia, en separant le prompt
+systeme du message user (un premier controle trop grossier confondait les deux, la chaine
+CIRCUIT_BREAKERS figurant aussi dans le texte de la regle elle-meme).
+
+Etat final, 10 modules sur 10 :
+
+| Module | AUTOCRITIQUE (systeme) | COACHING (user) | CIRCUIT_BREAKERS (user) |
+|---|---|---|---|
+| 201 Macro | OUI | OUI | via CTX |
+| 203 Technique | OUI | OUI | via CTX |
+| 205 Risque | OUI | OUI | via CTX |
+| 207 Memoire | OUI | OUI | via CTX |
+| 209 Flash | OUI | OUI | - |
+| 301 JU | OUI | - | OUI |
+| 303 SYL | OUI | - | OUI |
+| 305 GIL | OUI | - | OUI |
+| 10012 Alchimiste | OUI | - | OUI |
+| 20015 Marees | OUI | - | OUI |
+
+Integrite du module 10012 revalidee apres modification (il a ete casse trois fois cette
+semaine) : URL, modele sonar-pro, max_tokens 8000 inchanges ; les 8 regles cles du staking
+toujours presentes, dont « STAKING_DELAIS est du TEXTE BRUT », « GRAM = TON » et « Recopie
+ces trois nombres TELS QUELS » ; references 20022.data.delais_texte et 20023.data.apy_texte
+intactes. Le « blocage » signale par Maia sur 20023.data.apy_texte etait un faux positif de
+son controle de validation : cette reference tourne en production et alimente un staking
+exact depuis cinq runs.
+
+Cote donnees, coupe-circuits actifs qui partiront dans les prompts au prochain run :
+  GIL     drawdown_5pct          0.0626
+  GIL     pertes_consecutives_5  5
+  MAREES  win_rate_faible        0.308   (39 decisions evaluees)
+
+Rappel du reste a faire : remplacer le texte figé FIABILITE_SAGES du module 215 (« Macro/
+Technique/Memoire fiables 68-84% ») par sages_coaching(), qui mesure en direct et donne
+aujourd'hui Macro 62,7% et Risque 53,8% -- le fige contredit le mesure. Ce texte est
+anterieur au 13/08.
+
+---
+
 ## 2026-08-20 (suite 5) — Marees : le livre cible n'etait pas un livre cible
 
 Detail complet : `docs/decisions/MAREES-LIVRE-CIBLE-2026-08-20.md`.
