@@ -203,3 +203,14 @@ where p.source like 'vigie:%'
 --   1 Source (donnees staking)
 -- (Le corps exact du DO block applique se trouve dans la migration Supabase
 --  « vigie_v3_virtuels_et_taches_planifiees ».)
+
+-- ============================================================================
+-- Correctif 21/08/2026 (soir) — emojis Discord de vigie_alert()
+-- ============================================================================
+-- Defaut introduit le meme jour : les emojis etaient ecrits E'\U0001F52D'.
+-- Postgres n'interprete pas ces echappements sur 8 chiffres hexadecimaux, et
+-- Discord affichait le texte brut au lieu du telescope et des ronds de couleur.
+-- Corrige via chr() qui prend le point de code decimal, sans echappement :
+--   chr(128301) = telescope U+1F52D  |  chr(128308) = rond rouge U+1F534
+--   chr(128994) = rond vert  U+1F7E2
+-- (DO block avec garde, applique par la migration « fix_vigie_alert_emojis_discord ».)
