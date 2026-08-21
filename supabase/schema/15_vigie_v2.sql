@@ -167,3 +167,39 @@ select p.id,
        coalesce(p.traite_at, now()) - p.created_at                            as duree
 from public.oracle_problemes p
 where p.source like 'vigie:%'
+
+-- ============================================================================
+-- LA VIGIE v3 — 21/08/2026 : les virtuels et les taches planifiees
+-- ============================================================================
+-- Trois angles morts, decouverts le meme jour :
+--  1) Alchimiste VIRTUEL fige depuis le 17/08 16:12 — alc_rebuild_virtual()
+--     echouait a chaque passage sur
+--       ERROR: duplicate key value violates unique constraint
+--              "alchimiste_virtual_trades_pkey"
+--     Cause : PRIMARY KEY (proposition_id) alors que la reconstruction FIFO peut
+--     produire PLUSIEURS trades pour une meme proposition (sorties partielles).
+--     Mesure apres correction : 54 lignes pour 52 propositions distinctes — deux
+--     propositions produisent bien deux trades chacune. marees_virtual_trades a
+--     les memes colonnes, la meme fonction de rebuild, AUCUNE cle primaire, et
+--     n'echouait jamais. Contrainte retiree, index non unique conserve, table de
+--     sauvegarde bak_20260821_alc_virtual_trades. Rebuild verifie : 54 trades,
+--     15 round-trips clos, win rate 84 %, esperance +1,964 %.
+--  2) Marees VIRTUEL : meme famille, jamais surveille non plus.
+--  3) TACHES PLANIFIEES : le cron echouait toutes les 6 h en silence total.
+--     C'est ce garde-fou qui aurait attrape le bug seul. Au premier scan il a
+--     signale « 4 echec(s) sur 24 h : alc_rebuild_virtual_6h ».
+--
+-- Ces trois composants ne dependent pas d'un run du College : ils ne passent
+-- donc jamais en VEILLE, exactement comme « Donnees staking ».
+-- Le correctif ci-dessous s'ancre sur le commentaire du Planificateur ajoute en
+-- v2 et verifie sa presence avant d'executer quoi que ce soit.
+--
+-- Couverture apres v3 — 17 composants :
+--   5 Sages (Macro, Technique, Risque, Memoire, Flash)
+--   3 Archimages (JU, SYL, GIL)
+--   4 Traders (Alchimiste reel, Alchimiste virtuel, Marees, Marees virtuel)
+--   1 Alchimiste verdict de-stake
+--   3 Signaux (market_phase, Planificateur, Taches planifiees)
+--   1 Source (donnees staking)
+-- (Le corps exact du DO block applique se trouve dans la migration Supabase
+--  « vigie_v3_virtuels_et_taches_planifiees ».)
