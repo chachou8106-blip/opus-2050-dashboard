@@ -1748,8 +1748,17 @@ BEGIN
         'preferred_tickers',     preferred_tickers,
         'forbidden_tickers',     forbidden_tickers,
         'sector_expertise',      sector_expertise,
-        'learnings',             learnings,
-        'mistakes_history',      mistakes_history,
+        -- 20/08 : memoire COMPLETE depuis brain_lessons (append-only) au lieu des 30 entrees
+        -- glissantes de oracle_brain_state, que update-brain rogne a chaque run. Format allege
+        -- {run, bias} : seul 'bias' est lu par les prompts, et CTX alimente les 7 modules --
+        -- livrer run/at/pnl/dd/eval faisait passer CTX a 167 511 caracteres (~42 000 tokens
+        -- injectes SEPT fois). Avec l'allegement : 63 lecons par agent pour un CTX de 93 183.
+        -- COALESCE : MAREES, CRYPTE_JU et cerveau, absents de brain_lessons, sont inchanges.
+        'learnings',             COALESCE((SELECT jsonb_agg(jsonb_build_object('run', bl.run_id, 'bias', bl.bias) ORDER BY bl.at) FROM public.brain_lessons bl WHERE bl.archimage = oracle_brain_state.archimage AND bl.bias IS NOT NULL AND bl.bias <> ''), learnings),
+        -- Historique COMPLET des runs perdants (kind='mistake', analyse ecrite par l'agent
+        -- lui-meme dans 'eval'). Livre a Make depuis toujours, lu par AUCUN prompt : le
+        -- branchement cote Make (champ MES_ERREURS sur 301/303/305) reste a faire via Maia.
+        'mistakes_history',      COALESCE((SELECT jsonb_agg(jsonb_build_object('run', bl.run_id, 'erreur', bl.eval) ORDER BY bl.at) FROM public.brain_lessons bl WHERE bl.archimage = oracle_brain_state.archimage AND bl.kind = 'mistake' AND COALESCE(bl.eval,'') <> ''), mistakes_history),
         'last_decision',         last_decision,
         'alpaca_buying_power',   ROUND(alpaca_buying_power::numeric, 2),
         'alpaca_portfolio_value',ROUND(alpaca_portfolio_value::numeric, 2),
