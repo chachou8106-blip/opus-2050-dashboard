@@ -8,6 +8,682 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-21 — AUTOCRITIQUE : les 10 agents savent enfin quand ils se trompent
+
+Verifie module par module dans le blueprint apres passage de Maia, en separant le prompt
+systeme du message user (un premier controle trop grossier confondait les deux, la chaine
+CIRCUIT_BREAKERS figurant aussi dans le texte de la regle elle-meme).
+
+Etat final, 10 modules sur 10 :
+
+| Module | AUTOCRITIQUE (systeme) | COACHING (user) | CIRCUIT_BREAKERS (user) |
+|---|---|---|---|
+| 201 Macro | OUI | OUI | via CTX |
+| 203 Technique | OUI | OUI | via CTX |
+| 205 Risque | OUI | OUI | via CTX |
+| 207 Memoire | OUI | OUI | via CTX |
+| 209 Flash | OUI | OUI | - |
+| 301 JU | OUI | - | OUI |
+| 303 SYL | OUI | - | OUI |
+| 305 GIL | OUI | - | OUI |
+| 10012 Alchimiste | OUI | - | OUI |
+| 20015 Marees | OUI | - | OUI |
+
+Integrite du module 10012 revalidee apres modification (il a ete casse trois fois cette
+semaine) : URL, modele sonar-pro, max_tokens 8000 inchanges ; les 8 regles cles du staking
+toujours presentes, dont « STAKING_DELAIS est du TEXTE BRUT », « GRAM = TON » et « Recopie
+ces trois nombres TELS QUELS » ; references 20022.data.delais_texte et 20023.data.apy_texte
+intactes. Le « blocage » signale par Maia sur 20023.data.apy_texte etait un faux positif de
+son controle de validation : cette reference tourne en production et alimente un staking
+exact depuis cinq runs.
+
+Cote donnees, coupe-circuits actifs qui partiront dans les prompts au prochain run :
+  GIL     drawdown_5pct          0.0626
+  GIL     pertes_consecutives_5  5
+  MAREES  win_rate_faible        0.308   (39 decisions evaluees)
+
+Rappel du reste a faire : remplacer le texte figé FIABILITE_SAGES du module 215 (« Macro/
+Technique/Memoire fiables 68-84% ») par sages_coaching(), qui mesure en direct et donne
+aujourd'hui Macro 62,7% et Risque 53,8% -- le fige contredit le mesure. Ce texte est
+anterieur au 13/08.
+
+---
+
+## 2026-08-20 (suite 5) — Marees : le livre cible n'etait pas un livre cible
+
+Detail complet : `docs/decisions/MAREES-LIVRE-CIBLE-2026-08-20.md`.
+Sauvegarde prealable : table `bak_20260820_marees_propositions`.
+
+Le prompt systeme de l'Archimage dit « le miroir aligne le book reel sur ta cible ; une paire
+absente de ta cible = position fermee ». **Cette semantique n'etait implementee nulle part** :
+`marees_record_propositions` reinserait le livre entier a chaque run, sans jamais rien cloturer.
+Une position tenue 34 runs comptait pour 34 trades. **113 lignes en base pour 37 positions
+reelles**, et les « 68 positions ouvertes » de l'audit d'hier etaient en fait **4**.
+
+Second defaut independant : `marees_rebuild_virtual` calculait `win_rate = TP/(TP+SL)` et ignorait
+les 28 sorties au marche, **dont 16 gagnantes** -> il affichait 0 %.
+
+Corrections (100 % Supabase) :
+- `marees_record_propositions` : tenue = ligne d'origine conservee (prix d'entree et date
+  d'ouverture inchanges), disparition = `cloturee_at`, nouveaute = insertion. Cle `inserted`
+  conservee, le module Make n'a pas besoin de changer.
+- `marees_rebuild_virtual` : nouveau motif de sortie `FERME` ; le win rate compte toute cloture
+  au signe du P&L.
+- `marees_evaluate_and_learn` et `marees_resume` : prise en compte de `FERME`, exclusion des
+  doublons `remplacee`. Au passage, `jsonb_agg(e ORDER BY ord DESC)` inversait la chronologie
+  des `learnings` a chaque trim au-dela de 30 entrees -> corrige.
+- Historique replie : 76 lignes passent en `remplacee` (conservees, hors statistiques).
+
+Bilan reel apres correction : **37 positions, 35 cloturees, 10 gagnantes / 25 perdantes,
+win rate 28,6 %, somme des rendements −3,3 %** (contre 35,6 % et −12,3 % affiches avant).
+Le win rate est plus mauvais qu'annonce, la perte quatre fois plus petite.
+
+Tests : idempotence (livre identique -> 0 nouvelle, 4 tenues, 0 fermee, table inchangee) et
+chemin fermeture+ouverture dans une transaction annulee par exception (0 ligne de test ecrite).
+
+Deux points **non touches**, qui relevent d'un choix de Chachou : le filtre du module 20014
+s'appelle « [OFF] Marees — mettre ON pour activer » alors que sa condition compare `"ON"` a
+`"ON"` (toujours vraie, l'agent tourne) ; et USD-JPY est tenu depuis 6 jours alors que la
+doctrine vise 2 a 4 jours et que la simulation coupe a 96 h.
+
+---
+
+## 2026-08-20 (suite 4) — L'Alchimiste : pourquoi il ne trade plus depuis le 13/08
+
+Detail complet et prompt Maia : `docs/decisions/PROMPT-5-ALCHIMISTE-2026-08-20.md`.
+
+**50 propositions, 50 expirees, zero validee — depuis la creation de la table le 13/08.**
+`oui_at` est `null` sur les 50.
+
+Correction d'une de mes affirmations : j'allais proposer d'apprendre a l'Alchimiste a VENDRE
+pour se refaire du cash. **Il vend deja, et c'est son geste dominant** — 29 ventes a 17,29 $ de
+ticket moyen contre 21 achats a 2,15 $. Le 19/08 a 13:48 il a propose de lui-meme de vendre 20 $
+de BTC « pour degager du cash utilisable ». Le probleme n'est pas son jugement, c'est son
+debouche.
+
+Les causes, verifiees :
+1. `kill_switch = OFF` dans `ju_crypte_config`. Le module 20013 appelle bien `alc-auto` avec
+   `dry_run:false` ; c'est `alc-auto` qui refuse en premiere ligne. **Le dispositif fonctionne
+   comme prevu.** Per CLAUDE.md, l'armement est la decision de Chachou seul — non touche.
+2. La validation manuelle n'est branchee nulle part : la fonction `alc_process_oui` existe mais
+   **aucun module du scenario ne l'appelle** (0 occurrence dans les 20 327 lignes du blueprint),
+   et le message Discord (module 10031) n'affiche **jamais les propositions** — seulement les
+   resultats d'`alc-auto`, donc rien quand il est bloque.
+3. Le module 10012 utilise `CTX_B64={{base64(CTX)}}` et `SAGES_B64={{base64(SAGES)}}` — les memes
+   references nues que les six autres modules. **Je me corrige** : j'avais ecrit hier que 10012
+   n'etait pas concerne « parce que le staking est exact », mais le staking vient du module 20022,
+   pas de `CTX` — ce raisonnement ne prouvait rien. Indice concordant : sur 50 propositions,
+   **aucune** ne cite un chiffre macro (VIX, SPY, Fed, taux, DXY).
+
+Constat annexe : le portefeuille contient 2,52 $ d'USD **et 22,65 $ d'USDT**. L'Alchimiste ne
+considere que l'USD comme achetable (« ACHETER : uniquement avec du cash USD disponible »), d'ou
+les tickets a 2 $. La paire USDT-USD n'apparait ni dans `revolut_univers_complet` ni dans
+`price_history` : **impossible d'affirmer qu'elle est cotee sur Revolut X**, a verifier dans l'app.
+
+---
+
+## 2026-08-20 (suite 3) — Correctif 4 : `execute-trades` v40, plafond de levier a l'ouverture
+
+Constat verifie sur `/v2/account` le 19/08 : SYL a **0 $ de pouvoir d'achat pour 3,35x de levier**
+(maximum du compte : 4x). Toute nouvelle ouverture partait quand meme vers Alpaca et revenait
+« insufficient buying power » — GLD 413 $, TLT 580 $, IEF 560 $ le 19/08 a 21:16. Le systeme
+depensait des appels et polluait `oracle_trades` avec des rejets previsibles.
+
+Desormais, `execute-trades` calcule avant toute ouverture :
+
+```
+levier = (|long_market_value| + |short_market_value|) / equity
+```
+
+et si `levier >= 3.0` :
+- un **achat** est refuse avec `levier_sature_ouverture_bloquee` ;
+- une **nouvelle vente a decouvert** est refusee avec `levier_sature_short_bloque`.
+
+Deux operations restent autorisees a levier sature, deliberement, parce qu'elles **reduisent**
+l'exposition : la vente d'une position detenue, et le **rachat de short** du correctif v39 — son
+bloc est place avant le controle de levier, exactement pour cette raison.
+
+`levier` et `levier_sature` sont desormais renvoyes dans l'objet `account` de la reponse, donc
+visibles dans les logs sans requete supplementaire.
+
+**Verrous d'univers inchanges** : les 5 occurrences (`univers_crypto_reserve_gil`,
+`univers_etf_reserve_syl`, `univers_action_reserve_ju`, `univers_spy_qqq_interdit_gil`) sont
+evaluees **avant** tout nouveau controle. JU reste aux actions, SYL aux ETF, GIL au large.
+
+---
+
+## 2026-08-20 (suite 2) — Correctifs 2 et 3 : rachat de short, et ponderation qui voit le levier
+
+Les deux sont cote Supabase, aucune intervention Make. **Les verrous d'univers sont inchanges** —
+JU actions, SYL ETF, GIL large — et verifies apres deploiement.
+
+### Correctif 2 — `execute-trades` v39 : rachat de vente a decouvert EN QUANTITE
+
+Un achat sur un ticker deja vendu a decouvert partait en **notionnel**. Alpaca convertissait
+50 000 $ en 121,25 titres alors que la position short n'etait que de 22,85, et refusait l'ordre
+entier : il ne retourne pas une position en un seul ordre. Le short GLD de SYL est reste ouvert,
+rachat rejete **3 fois en 2 jours** — 18/08 14:30 (404,14 pour 24,07), 18/08 19:17 (406,38 pour
+24,07), 19/08 16:41 (121,25 pour 22,85).
+
+Desormais : quand `heldQty < 0`, on envoie la **quantite exacte** du short.
+
+Detail trouve en lisant `placeOrder` mot a mot : la quantite n'etait transmise que pour
+`sell`, `_auto` ou `_short`. Sans ajouter `_cover` a cette condition, la correction aurait ete
+**sans aucun effet** — l'ordre serait reparti en notionnel.
+
+Placement du bloc, volontaire :
+- **apres** les verrous d'univers -> un rachat hors univers reste refuse comme avant ;
+- **avant** le controle `accountFrozen` -> racheter un short REDUIT l'exposition, c'est justement
+  l'operation qu'il faut pouvoir faire quand la marge est saturee ;
+- **apres** le controle marche ouvert -> un ordre `day` sur action ne part pas marche ferme.
+
+### Correctif 3 — `update-brain` v20 : la ponderation regarde le levier et la marge
+
+Elle ne regardait que PnL, drawdown et win rate. Le 19/08, **SYL recevait 56 % du poids** — le plus
+eleve du College — avec **0 $ de pouvoir d'achat et 3,35x de levier**, donc incapable d'executer :
+ses ordres GLD, TLT et IEF ont ete rejetes pour « insufficient buying power ».
+
+Deux penalites ajoutees, lues sur le `/v2/account` deja recupere :
+
+| | seuil | penalite |
+|---|---|---|
+| Levier | >= 3x | x0,5 |
+| Levier | >= 2x | x0,8 |
+| Marge disponible | < 2 % du capital | x0,3 |
+| Marge disponible | < 10 % du capital | x0,7 |
+
+Effet simule sur les chiffres reels du matin :
+
+| Compte | Marge | Levier | Facteur applique |
+|---|---|---|---|
+| JU | 260,8 % | 1,14x | **x1,00** |
+| GIL | 8,9 % | 2,00x | **x0,56** |
+| SYL | 0,0 % | 3,35x | **x0,15** |
+
+Le poids se deplace vers le compte qui peut reellement trader. La penalite se leve d'elle-meme
+des que l'agent se desendette : rien n'est fige.
+
+`levier`, `marge_pct`, `exposition_brute` et `buying_power` sont desormais renvoyes par la fonction
+et journalises dans les notes du Meta-Cerveau.
+
+### Test realise
+
+Appel reel avec un notionnel de **1 $**, trop petit pour produire un ordre. Resultat :
+**0 ordre execute, 0 rejete.**
+
+| Ticker | Verdict | Ce que ca prouve |
+|---|---|---|
+| **AAPL** (SYL) | `univers_action_reserve_ju` | **le verrou d'univers tient** : SYL ne peut toujours pas acheter une action |
+| GLD (SYL) | `us_market_closed_equity_buy` | marche US ferme a 07:35 : le bloc de rachat n'a pas ete atteint |
+
+**Le chemin de rachat n'est donc pas encore eprouve** — il ne peut l'etre qu'a marche ouvert,
+a partir de 15:30 heure francaise. A verifier au run de 15:45.
+
+---
+
+## 2026-08-20 — Audit complet des agents : 7 anomalies, dont 3 serieuses
+
+Correspondance Fear & Greed verifiee dans le module 201, au bon endroit. **Pas encore eprouvee** :
+aucun run depuis 23:22, le prochain est a 09:00.
+
+Detail complet : `docs/decisions/AUDIT-AGENTS-2026-08-20.md`.
+
+| # | Agent | Anomalie | Gravite |
+|---|---|---|---|
+| 1 | Sage Risque | **Invente le VIX** : cite 14.2, 17, 18 alors que le reel est 15,84. Meme reference `{{CTX}}` que le module 201 qui etait aveugle. | serieux |
+| 2 | SYL | **Pouvoir d'achat a 0 $**, levier 3,35x. Trois ordres rejetes le 19/08 pour « insufficient buying power ». | serieux |
+| 3 | SYL | **Le short GLD ne peut pas etre solde** : rachat envoye en notionnel (121 titres) pour une position short de 22,85. Rejete 3 fois en 2 jours. | serieux |
+| 4 | Meta-Cerveau | Pondere sur PnL, drawdown et win rate — **ni le levier ni la marge disponible**. SYL recoit 56 % du poids alors qu'il ne peut plus executer. | moyen |
+| 5 | Marees | **17 trades clos, 0 gagnant.** EUR-USD vente, USD-JPY achat, USD-CHF achat : le meme pari dollar-en-hausse, alors que le dollar recule de 1,03 %. Win rate 57 % -> 35,6 %. 68 positions ouvertes, ~40 sur ce meme pari. | serieux |
+| 6 | Alchimiste | 50 propositions sur 7 jours, **toutes expirees**. Dernier ordre reel le 13/08. Pas une panne — le flux attend la validation de Chachou. | a decider |
+| 7 | Sage Memoire | Absent du run de 23:22 (4 Sages sur 5). Une seule occurrence. | a surveiller |
+
+### Verifie et sain
+
+- **Verrous d'univers : 0 violation en 7 jours** (JU/ETF, SYL/actions, GIL/SPY-QQQ, crypto=GIL).
+- **Sage Memoire : chiffres exacts** — win rates au point pres contre `oracle_brain_state`.
+- **Sage Flash** : titres reels et dates.
+- Staking exact 5 runs de suite, garde-fou short actif, clés saines, 80 modules.
+
+### Note de methode
+
+Le « MAREES 57 % » du Sage Memoire semblait faux face aux 35,6 % actuels. Verification faite :
+la mise a jour a eu lieu a 00:55, **apres** le run de 23:22. Le Sage avait raison au moment ou il
+a parle. C'est la chute de Marees qui est reelle, pas une erreur de lecture.
+
+---
+
+## 2026-08-19 (suite 17) — Les 3 indicateurs sont branches. Le Sage Macro analyse. Un champ reste faux.
+
+Run de 23:22. Maia a tout applique — verifie dans le blueprint : les 4 champs `DXY_TREND`,
+`DXY_VAR20J`, `OR_ARGENT`, `CREDIT_HYG_LQD` sont en fin de CTX, la phrase INDICATEURS est remplacee,
+le message user reste `CTX={{110.value}}`, 80 modules, et aucun correctif de la journee n'a recule.
+
+### Le Sage Macro analyse pour de vrai
+
+| Champ | 14 jours de gel | 22:18 | **23:22** |
+|---|---|---|---|
+| `macro_score` | 55 puis 50 | 60 | **55** |
+| `macro_regime` | NEUTRAL toujours | BULL | **NEUTRAL** |
+| `rate_pressure` | NEUTRAL toujours | NEUTRAL | **HAWKISH** |
+| `news_catalyst` | « CTX est ambigu » | catalyseur reel | **« Oil, inflation, Fed minutes, and AI-driven earnings/capital spending »** |
+| `dxy_trend` | NEUTRAL par defaut | « DXY missing » | **NEUTRAL, calcule** |
+
+Plus aucune mention de « missing ». `yield_curve = NORMAL` reste juste : T10Y 4,71 − T2Y 4,19 = +0,52.
+
+### Une erreur reelle, a corriger
+
+`fear_greed_level = GREED` alors que la donnee dit **46, label « Fear »**. Verifie en appelant
+`collect-market-data` : `fear_greed: 46`, `fear_greed_label: Fear`, `data_quality: 100`.
+
+Cause identifiee : le prompt systeme donne les seuils du VIX (15 / 20 / 25 / 30) mais **aucune table
+de correspondance** pour les 5 valeurs de `fear_greed_level`. Il ne donne que les deux regles
+contrariantes (< 20 achat, > 80 vente). Le modele doit donc deviner le mapping — et se trompe.
+
+`recommended_bias = RISK_ON` decoule de cette erreur : avec un Fear&Greed a 46, rien ne justifie
+un biais risque.
+
+### Sage Memoire absent de ce run
+
+4 Sages sur 5 : Flash, Macro, Risque, Technique. Le Memoire n'a rien ecrit. **Premiere fois sur les
+5 derniers runs** — les 4 precedents avaient bien 5 Sages. Le run n'est pas mort pour autant
+(succes, completude 100 %). A surveiller ; si cela se reproduit, regarder le module 207 cote Groq.
+
+### Etat du run
+
+`success`, completude 100 %, 7 ordres (2 achats, 5 ventes), Discord envoye.
+**Staking : 7 lignes, 150,99 $** — cinquieme run consecutif exact.
+
+---
+
+## 2026-08-19 (suite 16) — Les 3 indicateurs manquants du Sage Macro + verification des runs
+
+### Les runs vont bien : les 3 derniers sont alles au bout
+
+Chachou avait l'impression qu'ils ne terminaient pas. Journal Make :
+
+| Depart | Duree | Operations | Statut |
+|---|---|---|---|
+| 21:15 | 2 min 00 | 76 / 76 | succes |
+| 22:01 | 2 min 09 | 76 / 76 | succes |
+| 22:17 | 2 min 13 | 76 / 76 | succes |
+
+Aucun echec depuis 18:31. Un run complet dure **environ 2 min 15** et la notification n'arrive qu'a
+la toute fin de la chaine — d'ou l'impression d'attente.
+
+### Les 3 indicateurs, cote Supabase (fait et verifie)
+
+Le Sage Macro repondait « DXY missing » : son prompt reclame `dxy_trend`, le ratio or/argent et le
+spread HYG-LQD, **absents des 92 champs de CTX**.
+
+1. **Ingestion** : `HYG`, `LQD`, `UUP` ajoutes au cron `ingest-indices-daily`, et charges sur 30
+   jours immediatement (HYG 252 bougies, LQD 225, UUP 254 ; GLD et SLV rafraichis a 365).
+   `UUP` sert de mandataire cote du dollar index : le DXY n'est pas negociable, donc absent d'Alpaca.
+2. **Vue `v_macro_extra`** :
+
+| Indicateur | Valeur mesuree |
+|---|---|
+| `dxy_trend` | **NEUTRAL** (dollar a -1,03 % sur 20 seances, seuils ±1,5 %) |
+| `ratio_or_argent` | **6,893** |
+| `credit_hyg_lqd_20j_pct` | **+0,10** (leger appetit pour le risque) |
+
+3. **`get_oracle_context()`** expose le bloc `macro_extra` — meme module 105 que CTX utilise deja
+   pour FLASH_INTEL et CIRCUIT_BREAKERS, donc chemin eprouve et aucun nouveau module Make.
+
+### A faire cote Make
+
+`docs/decisions/PROMPT-MAIA-CTX-DXY-OR-ARGENT-CREDIT-2026-08-19.md` : 4 champs a ajouter en fin de
+la variable CTX (module 110) et une phrase a remplacer dans le prompt systeme du 201.
+
+### Reserve honnete
+
+Le niveau absolu de UUP (27,90) **n'est pas** la valeur du DXY. Seuls la tendance et la variation
+sont transmis au Sage ; le niveau brut ne l'est jamais, pour qu'il ne puisse pas le confondre.
+
+---
+
+## 2026-08-19 (suite 15) — RESOLU : le Sage Macro est vivant. C'etait la reference {{CTX}}.
+
+Run de 22:18. Une seule modification depuis le run precedent : dans le message user du module 201,
+`CTX={{CTX}}` remplace par `CTX={{110.value}}` — la reference directe a la sortie du module qui
+construit CTX.
+
+| Champ | Avant (52 runs, 14 jours) | Run de 22:18 |
+|---|---|---|
+| `macro_regime` | `NEUTRAL` **sans exception** | **`BULL`** |
+| `macro_score` | 55 puis 50 — 2 valeurs en 14 j | **60** |
+| `spy_trend` | `FLAT` | **`UP`** |
+| `yield_curve` | `FLAT` | **`NORMAL`** |
+| `urgency` | `LOW` | **`MEDIUM`** |
+| `recommended_bias` | `NEUTRAL` | **`RISK_ON`** |
+| `news_catalyst` | « CTX est ambigu » | **« AI investment, IPO revival, and geopolitics driving mixed risk appetite »** |
+
+`yield_curve = NORMAL` est la preuve la plus nette qu'il calcule desormais : T10Y 4,72 − T2Y 4,19 =
+**+0,53**, et la regle de son propre prompt dit « superieur a 0 = courbe normale ». Il repondait
+`FLAT` par defaut depuis deux semaines.
+
+### Ce que j'ai eu faux, et ce que le detour a apporte
+
+Le gel n'etait **pas** du au modele `sonar-pro` : c'etait la resolution de la variable par nom dans
+ce module precis. Le passage sur Groq n'a pas repare le Sage — mais il a transforme un « CTX est
+ambigu » inexploitable en « Missing keys:VIX,SPY,SPY_CHG,… », et c'est cette liste qui a permis de
+localiser la panne. Le detour n'etait pas inutile ; ma conclusion, si.
+
+### Reste un manque reel, mineur
+
+`news_catalyst` se termine par « ;DXY missing ». C'est exact : **DXY n'est dans aucun des 92 champs
+de CTX**, alors que le prompt systeme reclame `dxy_trend`. Le Sage le signale honnetement au lieu
+d'inventer. Meme situation pour le ratio or/argent et le spread HYG-LQD. A ajouter au module 110 si
+on veut ces trois indicateurs, sinon a retirer du prompt.
+
+### Etat du run
+
+`success`, **completude 100 %**, 6 ordres (2 achats, 4 ventes), 5 Sages OK, Discord envoye.
+**Staking : 7 lignes, 150,99 $** — quatrieme run consecutif exact.
+
+---
+
+## 2026-08-19 (suite 14) — Le Sage Macro ne recoit PAS CTX. Mon diagnostic precedent etait faux.
+
+Run de 22:02. Le module 201 tourne bien sur Groq (verifie dans le blueprint), et sa reponse est
+desormais exploitable :
+
+```
+"news_catalyst": "Missing keys:VIX,SPY,SPY_CHG,FG,T10Y,T2Y,FED,CPI,DXY,GOLD_SILVER_RATIO,HYG_LQD_SPREAD,MACRO_SHOCK"
+```
+
+### Correction : ce n'etait pas le modele
+
+J'ai attribue le gel a `sonar-pro`, modele de recherche web. **C'etait faux.** Le changement de
+modele n'a pas repare le Sage — il a seulement transforme un « CTX est ambigu » inutilisable en une
+liste precise de cles manquantes. C'est ce qui a permis le vrai diagnostic, mais la cause est
+ailleurs.
+
+### Ce qui est etabli
+
+1. **CTX est correctement construit.** Sortie memorisee du module 110 :
+   `DATE=2026-08-19 18:40|VIX=15.84|FED=3.63|CPI=332.813|T10Y=4.72|T2Y=4.19|SPY=…`
+2. **Le module 201 ne le recoit pas.** Il declare manquantes des cles qui sont demonstrablement
+   presentes dans CTX — VIX en tete.
+3. **Le module 203 (Technique), lui, le recoit.** Meme reference `{{CTX}}`, meme fournisseur Groq :
+   **8 valeurs distinctes de `tech_score` (40 a 68) sur 53 runs**, 4 phases de cycle, 3 ETF. Son
+   seul autre champ d'entree est `MACRO`, constant depuis 14 jours — la variation ne peut donc venir
+   que de CTX.
+
+Conclusion : `{{CTX}}` se resout pour le 203 et pas pour le 201. La raison n'est pas etablie, et je
+ne la devinerai pas — l'etape suivante est une experience, pas une theorie.
+
+### Experience proposee (1 caractere de diff)
+
+Module 201, message user : `CTX={{CTX}}` -> `CTX={{110.value}}`, la reference directe a la sortie du
+module qui construit CTX. Si les cles arrivent, le probleme etait la resolution par nom.
+
+### Le reste du run
+
+Statut `success`, completude 90 %. **Staking : 7 lignes, total 150,99 $** — troisieme run consecutif
+juste, le correctif du 10012 tient. Garde-fou short actif, aucun renfort de position perdante.
+
+---
+
+## 2026-08-19 (suite 13) — Sage Macro reellement fige : il tourne sur un moteur de recherche
+
+Alerte Vigie : « 4 Sages FIGES ». Verification sur **14 jours** au lieu des 6 runs de la regle :
+**un seul** Sage est reellement bloque.
+
+| Sage | Runs 14 j | Valeurs distinctes | Verdict |
+|---|---|---|---|
+| **Macro** | 52 | **1** (`NEUTRAL` sans exception) | **fige** |
+| Risque | 53 | 2 | limite |
+| Memoire | 52 | 4 | sain |
+| Flash | 61 | 3 | sain |
+
+`macro_score` = **55 sur tous les runs du 06 au 15/08**, puis **50 depuis le 17/08**. Deux valeurs
+en deux semaines, pendant que le BTC passait de 63 000 a 68 700 $.
+
+### Cause : le mauvais moteur
+
+Croisement sans ambiguite — le seul Sage qui recoit CTX **et** tourne sur un modele de recherche web
+est le seul fige :
+
+| Sage | Endpoint | Modele | CTX | Etat |
+|---|---|---|---|---|
+| **Macro (201)** | **api.perplexity.ai** | **sonar-pro** | oui | **fige** |
+| Flash (209) | api.perplexity.ai | sonar-pro | **non** | sain |
+| Memoire (207) | api.groq.com | gpt-oss-120b | oui | sain |
+| Technique (203) | api.groq.com | gpt-oss-120b | oui | sain |
+| Risque (205) | api.mistral.ai | mistral-large | oui | limite |
+
+`sonar-pro` traite le message comme une **requete de recherche**. On lui envoie 8 421 caracteres de
+champs separes par des barres verticales ; il les cherche sur le web au lieu de les analyser.
+
+Sa sortie l'ecrit noir sur blanc dans `news_catalyst` : « inflation » sur les 48 runs du 06 au 15/08,
+puis **« CTX est ambigu ; aucune donnee macro exploitable » sur 16 runs sur 16 depuis le 17/08**.
+
+### Les donnees etaient parfaites
+
+Module 102, `data_quality = 100` : VIX 15,84 · SPY 770,57 · BTC 68 686 · Fear&Greed 46 · CPI · taux ·
+FX, et un CATALYST reel. CTX bien forme : **92 champs, 8 421 caracteres**. Ni la donnee ni CTX ne
+sont en cause — seulement le moteur qui les lit.
+
+### Correctif Supabase applique : la regle de la Vigie
+
+Elle comparait **un** champ sur **6 runs**. Sur une seance calme, NEUTRAL/LOW/MEDIUM/SYL se repetent
+naturellement : 4 Sages signales pour un seul malade. Desormais deux niveaux —
+**ALERTE** (6 runs, a surveiller) et **FIGE** (12 runs sur 72 h, confirme). `v_vigie_resume` compte
+ALERTE parmi les alertes (niveau ORANGE).
+
+Apres correction, la Vigie dit exactement ce que montrent les mesures : **Macro FIGE**, Flash /
+Memoire / Risque ALERTE, Technique OK.
+
+Le seuil long est a 12 runs et non 20 : a ~5 runs/jour, 72 h n'en contiennent que 16, et 20 n'etait
+jamais atteignable.
+
+### A faire cote Make
+
+`docs/decisions/PROMPT-MAIA-SAGE-MACRO-FIGE-2026-08-19.md` : basculer le module 201 sur Groq
+(URL, en-tete Authorization copie du 207, modele `openai/gpt-oss-120b`, `response_format` en
+`json_object`) et ajouter au prompt systeme une consigne de lecture explicite des cles de CTX.
+
+**Controle de guerison** : `macro_score` doit varier d'un run a l'autre. Deux valeurs en 14 jours,
+c'est le symptome ; un score qui bouge, c'est repare.
+
+### Point ouvert
+
+Le Sage Risque n'a produit que 2 valeurs de `risk_level` en 53 runs. A reexaminer apres la
+reparation du Macro : il recoit `MACRO={{202.macro_regime}}`, donc une partie de son immobilite
+vient peut-etre de ce qu'on lui repete NEUTRAL depuis 14 jours.
+
+---
+
+## 2026-08-19 (suite 12) — Garde-fou : interdiction de renforcer une vente a decouvert perdante
+
+Demande par Chachou apres l'analyse du short MSTR de GIL. **execute-trades v38**, cote Supabase
+uniquement — aucune modification Make.
+
+### Le trou dans la protection existante
+
+```js
+if (pending.has(sym) || (heldMV[sym] || 0) > 0) { ... 'short_blocked_position' }
+```
+
+Ce test bloque l'ouverture d'un short quand une position ACHETEUSE existe. Mais sur un short,
+`market_value` est **negatif** : la condition etait fausse, l'ordre passait, et il **agrandissait**
+la position. Le 19/08, GIL a ainsi renforce deux fois un short MSTR deja a -10 % (14 952 $ a 15:48,
+puis 2 963 $ a 18:41).
+
+### La regle ajoutee
+
+`RENFORT_SHORT_PERTE_MAX = -0.05` : si un short existe deja sur le ticker **et** perd plus de 5 %,
+l'ordre est refuse et journalise sous `renfort_short_perdant_bloque`, avec la perte constatee, le
+seuil et l'exposition.
+
+Ce que le garde-fou **ne bloque pas**, volontairement :
+- l'ouverture d'un **nouveau** short (aucune position en cours) ;
+- le **rachat** (`buy`) qui deboucle une position — c'est un ordre d'achat, il ne passe pas par la ;
+- la vente d'une position **reellement detenue** ;
+- le renfort d'un short **gagnant**.
+
+### Test realise avant mise en service
+
+Appel reel de la fonction avec un notionnel de **1 $** — trop petit pour produire un ordre meme si
+le garde-fou avait echoue. Resultat : **0 ordre execute, 0 rejete**.
+
+| Ticker | Perte latente | Verdict |
+|---|---|---|
+| **MSTR** | **-8,08 %** | **`renfort_short_perdant_bloque`** (exposition -549 942 $) |
+| XLE | — | `short_not_downtrend` (garde momentum anterieure, atteinte avant) |
+| TQQQ | short **gagnant** | garde-fou **franchi**, puis `short_too_small` |
+
+TQQQ prouve le point important : un short en profit reste renforcable. Le garde-fou ne se declenche
+que sur les positions perdantes.
+
+### Effet immediat sur les positions du soir
+
+Bloques au renfort : **GIL XLE** (-10,43 %), **GIL MSTR** (-7,77 %), **SYL SLV** (-7,57 %).
+Les 14 autres ventes a decouvert du systeme restent renforcables.
+
+### Ce qui n'est pas fait
+
+Le levier de SYL (3,3x, 3,04 M$ de shorts obligataires pour 1,05 M$ de capital) n'est pas plafonne.
+C'est une decision de gestion distincte, a arbitrer separement.
+
+---
+
+## 2026-08-19 (suite 11) — Les 4 correctifs demandes par Chachou, appliques et verifies
+
+Suite a « tous les comptes se sont pete la figure aujourd'hui ». Verite etablie en interrogeant
+**Alpaca directement** (`/v2/account` et `/v2/account/portfolio/history`), pas la console.
+
+### Correction d'une erreur de diagnostic de ma part
+
+J'avais annonce deux bugs d'arithmetique dans `v_gains_traders` (« pourcentage calcule sur le gain »,
+« multiplie par le capital entier »). **C'etait faux** : `v_comparaison` rapporte deja le gain cumule
+au capital de depart, et `gain_usd` redonnait exactement la variation en dollars. Le calcul etait bon.
+Le probleme etait **la donnee** : des instantanes pris a l'heure des runs, donc en pleine seance.
+
+### Point 1 — les courbes s'appuient sur la cloture officielle Alpaca
+
+Ecart mesure entre la base et Alpaca sur 7 jours : **-12 925 $ a +32 382 $** les jours normaux
+(simple decalage intra-seance), et **+182 624 $ sur JU le 18/08**.
+
+- Nouvelle table `alpaca_equity_daily` (52-53 jours par compte, du 04/06 au 19/08), alimentee a
+  chaque run par **update-brain v19**, qui lisait deja cet historique sans l'archiver.
+- `v_comparaison` et `v_equity_points` reecrites dessus.
+
+| Affichage « jour » | Avant | Apres | Cloture Alpaca |
+|---|---|---|---|
+| JU | -17,95 % (-179 462 $) | **+0,70 % (+6 999 $)** | 1 047 365 -> 1 054 319 |
+| GIL | -6,93 % (-69 299 $) | **+3,27 % (+32 700 $)** | 1 040 367 -> 1 073 037 |
+| SYL | -2,43 % (-24 299 $) | **-0,65 % (-6 500 $)** | 1 091 405 -> 1 084 884 |
+| AETHER | **-9,10 % (-273 060 $)** | **+1,10 % (+33 199 $)** | — |
+
+### Point 2 — mesures aberrantes neutralisees
+
+Colonne `oracle_performance.fiable` (les lignes sont conservees, jamais supprimees). Marquees false :
+- **4 lignes JU du 18/08** (gain 222 007 a 230 200 $ ; cloture Alpaca : 47 576 $) ;
+- **2 lignes du 07/07** (JU -665 308 $, GIL -871 345 $ : calibration ratee).
+
+Garde-fou ajoute : `v_perf_anomalies` liste toute mesure s'ecartant de plus de 5 % du capital face a
+la cloture Alpaca. **Aucune exclusion automatique** — une vraie chute ne doit jamais etre masquee.
+
+### Point 3 — exposition brute et levier affiches
+
+Nouvelle vue `v_exposition_traders` + section « Exposition reelle & levier » dans la console (b7).
+La somme nette masquait les ventes a decouvert, qui annulent les achats :
+
+| Compte | Achats | Ventes a decouvert | Engage (brut) | Levier |
+|---|---|---|---|---|
+| **SYL** | 401 149 $ | **-3 041 036 $** (TLT, IEF) | 3 442 184 $ | **3,3x — ELEVE** |
+| GIL | 1 003 062 $ | -920 234 $ | 1 923 296 $ | 1,9x |
+| JU | 846 153 $ | -306 600 $ | 1 152 752 $ | 1,1x |
+
+Confirme par Alpaca : SYL `short_market_value` = -3 119 834 $, `multiplier` = 4.
+
+### Point 4 — cost_basis, avg_entry_price et side suivent enfin le courtier
+
+Cause trouvee dans `sync_alpaca_positions` : le `ON CONFLICT ... DO UPDATE SET` **omettait ces trois
+colonnes**. Elles restaient figees a la valeur du tout premier INSERT — d'ou SYL XLF a 0,42 $ avec un
+`cost_basis` de 149 497 $ (facteur 388 611), et JU META marque `long` avec une quantite de -59.
+
+Apres correction et resynchronisation des 76 positions : **0 ligne incoherente** sur cost_basis,
+**0 ligne** ou `side` contredit le signe de la quantite.
+
+### Ce qui reste, et qui n'est pas un bug
+
+GIL porte un short MSTR de **-558 353 $** en perte latente de **-52 485 $ (-10,4 %)**, renforce deux
+fois le 19/08 (sell 14 952 $ puis 2 963 $) — un `sell` sur un titre non detenu augmente la vente a
+decouvert. Encadrer ce comportement est une **decision de gestion qui appartient a Chachou**, pas une
+correction technique.
+
+---
+
+## 2026-08-19 (suite 10) — RÉSOLU : le dé-staking est enfin exact, et les runs ne meurent plus
+
+Run manuel de **18:40 (16:40 UTC)** — **76 opérations sur 76**, succès. Les deux correctifs appliqués
+par Maia sont dans le blueprint (relu à 16:43) et produisent le résultat attendu.
+
+### Module 205 (Sage Risque) — le run ne meurt plus
+
+`max_tokens` 800 → **2000**, et la clause LANGUE bornée à 200 caractères par champ texte.
+Effet mesuré : la sortie du Sage Risque passe de **2 951 à 985 caractères**, soit environ 275 tokens
+pour un plafond de 2 000 — une marge de 7×, contre une marge négative auparavant.
+
+Historique de la panne : 4 échecs `ParseJSON` à 19 opérations sur 76 (18/08 16:31, 19/08 07:04,
+19/08 10:13, 19/08 16:31). Les runs qui passaient ne le devaient à aucun correctif : la sortie
+retombait simplement sous le plafond (965 à 3 009 caractères pour une limite à ~2 900).
+
+**À noter comme erreur de méthode de ma part** : j'ai affirmé le matin du 19/08 que « le correctif
+max_tokens 2000 tient », en me fondant sur la réussite des runs au lieu de lire la valeur dans le
+blueprint. Elle valait 800. Un correctif n'est acquis que lorsqu'il est **lu** dans le blueprint.
+
+### Module 10012 (Alchimiste) — les 21 valeurs sont exactes
+
+Retour au texte brut (`STAKING_DELAIS=` sans Base64), les 3 phrases du prompt système, plus une
+consigne ajoutée : une ligne par devise présente, sans omission.
+
+| Devise | montant_usd | attendu | apy_staking_pct | delai_deblocage_jours |
+|---|---|---|---|---|
+| SOL | 90,27 | 90,27 ✅ | 6,16 ✅ | 3 ✅ |
+| ETH | 27,02 | 27,02 ✅ | 2,45 ✅ | 5 ✅ |
+| KSM | 14,67 | 14,67 ✅ | 10,47 ✅ | 7 ✅ |
+| TON | 7,91 | 7,91 ✅ | 17,67 ✅ | 2 ✅ |
+| ATOM | 5,87 | 5,87 ✅ | 21,06 ✅ | 21 ✅ |
+| OSMO | 4,91 | 4,91 ✅ | 5,39 ✅ | 14 ✅ |
+| TRX | 0,34 | 0,34 ✅ | 3,26 ✅ | 14 ✅ |
+
+Total **150,99 $** contre **150,98 $** déclarés par Revolut. 7 devises sur 7, 21 valeurs sur 21.
+
+### Chronologie complète du feuilleton dé-staking
+
+| Run | Configuration 10012 | Montants | Délais |
+|---|---|---|---|
+| 17/08 → 18/08 | Base64 + clé 20022 corrompue | inventés (TON 787 $ pour 7,91 $) | 0 |
+| 19/08 10:28 | Base64, clé réparée | faux | 0 |
+| 19/08 11:11 | texte brut, séparateur `\|` | 0 | 0 |
+| 19/08 11:56 | texte brut, séparateur `;` | **7/7 exacts** | **7/7 exacts** |
+| 19/08 12:00 | Base64 (revert) | 0 | exacts |
+| 19/08 15:48 | Base64 | 5 devises, 1 fausse, ETH+TON perdus | exacts |
+| 19/08 18:40 | texte brut + consigne « sans omission » | **7/7 exacts** | **7/7 exacts** |
+
+### Reste du run
+
+5 Sages `ok`, 3 Archimages ont répondu, `data_completeness` 100 %, phase DEFENSIVE,
+10 ordres passés (1 achat, 9 ventes), Discord envoyé, aucun circuit breaker.
+80 modules avant / 80 après ; module 20022 intact (clé valide, URL en alias).
+
+### Point ouvert
+
+Trois correctifs validés se sont retrouvés absents du scénario au cours de la journée : la clé JWT du
+20022 (deux fois, sur deux caractères différents du jeton), le `max_tokens` du 205, et le mapping du
+10012. La cause n'est pas identifiée. **Règle retenue : revérifier le blueprint après chaque
+sauvegarde et avant chaque run** ; ne jamais considérer un correctif comme acquis parce qu'un run a
+réussi. Si le phénomène se reproduit, exporter le blueprint qui fonctionne et le conserver comme
+référence restaurable d'un bloc.
+
+Détail : `docs/decisions/PROMPT-MAIA-205-ET-10012-2026-08-19-SOIR.md`.
+
+---
+
 ## 2026-08-19 (suite 9) — MON ERREUR : le passage en texte brut a cassé les montants du dé-staking
 
 Chachou : « je ne vois plus le staking et il n'y a plus les montants, je pense qu'elle a cassé quelque chose ».

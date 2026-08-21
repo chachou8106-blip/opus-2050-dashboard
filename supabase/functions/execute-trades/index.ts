@@ -1,5 +1,30 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v41 : CORRECTIF D'UN BUG QUE J'AI INTRODUIT EN v39. Le rachat de short soldait TOUJOURS la
+//       position entiere en ignorant le montant demande. Le 20/08 SYL a demande 6 000 $ sur IEF
+//       et 1 361 754 $ ont ete executes (6 ordres de 226 959 $, run 20260820-1747) ; meme cause
+//       sur GLD, 500 $ demandes, 9 394 $ executes. Desormais le montant demande par l'Archimage
+//       fait foi et la taille du short n'est plus qu'un PLAFOND. Un reliquat valant moins de 1 $
+//       ou moins de 1 % du short est solde pour ne pas laisser de poussiere.
+// v40 : PLAFOND DE LEVIER A L'OUVERTURE (3x). Au-dela, plus aucun achat d'ouverture ni aucun
+//       nouveau short. Tout ce qui REDUIT l'exposition reste autorise : rachat de short, vente
+//       d'une position detenue, sorties automatiques, desendettement. Les verrous d'univers
+//       (JU actions, SYL ETF, GIL large) sont inchanges et evalues avant.
+// v39 : RACHAT DE VENTE A DECOUVERT EN QUANTITE. Un achat sur un ticker deja vendu a decouvert
+//       partait en NOTIONNEL : Alpaca convertissait 50 000 $ en 121,25 titres alors que la position
+//       short n'etait que de 22,85, et refusait l'ordre entier (il ne retourne pas une position en
+//       un seul ordre). Le short GLD de SYL est reste ouvert, rachat rejete 3 fois en 2 jours :
+//       18/08 14:30 (404,14 pour 24,07), 18/08 19:17 (406,38 pour 24,07), 19/08 16:41 (121,25 pour
+//       22,85). On envoie desormais la QUANTITE exacte de la position short.
+//       Les VERROUS D'UNIVERS sont inchanges et restent evalues AVANT ce bloc : JU actions,
+//       SYL ETF, GIL large. Un rachat hors univers reste donc refuse comme avant.
+// v38 : GARDE-FOU RENFORT SHORT PERDANT — un `sell` sur un titre non detenu ouvre OU AGRANDIT une
+//       vente a decouvert. Le systeme moyennait donc a la baisse sur une position deja perdante :
+//       le 19/08/2026, GIL portait un short MSTR de -558 353 $ a -10,4 % de perte latente, et l'a
+//       renforce deux fois dans la journee (14 952 $ puis 2 963 $). Desormais, si un short existe
+//       deja sur le ticker et perd plus de RENFORT_SHORT_PERTE_MAX, l'ordre est refuse et journalise.
+//       N'empeche NI l'ouverture d'un nouveau short, NI le rachat (buy) qui debouclerait la position,
+//       NI la vente d'une position reellement detenue.
 // v37 : VERROU ACTIONS/ETF — chaque archimage reste dans sa voie à l'ACHAT. JU (actions individuelles)
 //       ne peut plus acheter d'ETF ; SYL (paniers ETF) ne peut plus acheter d'action individuelle.
 //       GIL est EXEMPTÉ (son univers CRYPTO_TACTICAL_DERIVATIVES est large : proxies, ETF tactiques,
@@ -38,6 +63,13 @@ const POUSSIERE_SEUIL_USD = 2
 const MAX_NOTIONAL_PER_ORDER = 190000
 const DUST_QTY_MIN = 1e-8
 const DUST_USD_MIN = 1
+// Perte latente au-dela de laquelle un short existant ne peut plus etre renforce (-5 %).
+const RENFORT_SHORT_PERTE_MAX = -0.05
+// Levier brut (longs + |shorts| rapportes au capital) au-dela duquel on n'OUVRE plus rien.
+// Alpaca plafonne a 4x. Le 20/08/2026, SYL etait a 3,35x avec 0 $ de pouvoir d'achat : ses ordres
+// GLD, TLT et IEF ont ete rejetes pour « insufficient buying power ». Ne bloque JAMAIS ce qui
+// REDUIT l'exposition : rachat de short, vente d'une position detenue, sorties automatiques.
+const LEVIER_MAX_OUVERTURE = 3.0
 
 const CRYPTO_EXCLUSIF_GIL = ['BTCUSD','ETHUSD','SOLUSD','AVAXUSD','LINKUSD','XRPUSD','DOGEUSD','LTCUSD']
 const INTERDIT_GIL = ['SPY','QQQ']
@@ -171,7 +203,9 @@ async function placeOrder(alpacaKey: string, alpacaSecret: string, order: any, m
     const _advanced = false
 
     const _sellQty = numClean(order.qty)
-    if (_sellQty > 0 && (order.side.toLowerCase() === 'sell' || order._auto || order._short)) {
+    // v39 : order._cover ajoute — sans lui, la quantite d'un rachat de short serait ignoree
+    // et l'ordre repartirait en notionnel, c'est-a-dire exactement le bug corrige.
+    if (_sellQty > 0 && (order.side.toLowerCase() === 'sell' || order._auto || order._short || order._cover)) {
       delete body.notional
       body.qty = qtyStr(_sellQty)
     }
@@ -180,7 +214,7 @@ async function placeOrder(alpacaKey: string, alpacaSecret: string, order: any, m
     const data = await resp.json()
     if (resp.ok) console.log('ORDER_OK ' + JSON.stringify({ t: order.ticker, raw_qty: order.qty, qty: body.qty||null, notional: body.notional||null, type: body.type, cls: 'simple', alpaca: data.status, chunk: order._chunk || null }))
     else console.log('ORDER_REJECT ' + JSON.stringify({ t: order.ticker, raw_qty: order.qty, body, alpaca: data }))
-    return { ticker: order.ticker, side: order.side, notional: notional, order_type: body.type, order_class: 'simple', qty: body.qty || null, raw_qty_in: (order.qty != null ? String(order.qty) : null), auto: order._auto || null, short: order._short || null, plpc: order._plpc != null ? order._plpc : null, chunk: order._chunk || null, status: resp.ok ? 'accepted' : 'rejected', alpaca_id: data.id || null, alpaca_status: data.status || null, error: resp.ok ? null : (data.message || data.code || 'error') }
+    return { ticker: order.ticker, side: order.side, notional: notional, order_type: body.type, order_class: 'simple', qty: body.qty || null, raw_qty_in: (order.qty != null ? String(order.qty) : null), auto: order._auto || null, short: order._short || null, cover: order._cover || null, plpc: order._plpc != null ? order._plpc : null, chunk: order._chunk || null, status: resp.ok ? 'accepted' : 'rejected', alpaca_id: data.id || null, alpaca_status: data.status || null, error: resp.ok ? null : (data.message || data.code || 'error') }
   } catch(e) { return { ticker: order.ticker, status: 'error', error: String(e), raw_qty_in: (order.qty != null ? String(order.qty) : null) } }
 }
 
@@ -220,14 +254,22 @@ serve(async (req) => {
     const cash = acct ? Number(acct.cash) : null
     const equity = acct ? (Number(acct.equity) || Number(acct.portfolio_value) || 0) : 0
     const exposureCap = equity > 0 ? equity * EXPOSURE_PCT : EXPOSURE_FALLBACK
+    // v40 : levier brut du compte, lu sur le meme /v2/account.
+    const _longMV = acct ? Math.abs(Number(acct.long_market_value) || 0) : 0
+    const _shortMV = acct ? Math.abs(Number(acct.short_market_value) || 0) : 0
+    const levierCompte = equity > 0 ? (_longMV + _shortMV) / equity : 0
+    const levierSature = levierCompte >= LEVIER_MAX_OUVERTURE
     const marketOpen = clock ? !!clock.is_open : true
     const heldMV: Record<string, number> = {}
     const heldQty: Record<string, number> = {}
     const heldPx: Record<string, number> = {}
+    const heldPlpc: Record<string, number> = {}
     if (Array.isArray(positions)) for (const p of positions) {
       const s = normSym(p.symbol)
       heldMV[s] = Number(p.market_value) || 0
       heldQty[s] = Number(p.qty) || 0
+      const _plpc = Number(p.unrealized_plpc)
+      if (isFinite(_plpc)) heldPlpc[s] = _plpc
       const px = Number(p.current_price) || (Number(p.qty) ? Math.abs((Number(p.market_value)||0) / Number(p.qty)) : 0)
       heldPx[s] = px || 0
     }
@@ -327,6 +369,50 @@ serve(async (req) => {
       }
 
       if (isBuy && !isCryptoT && !marketOpen) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'us_market_closed_equity_buy' }); continue }
+
+      // v39 — RACHAT D'UNE VENTE A DECOUVERT : on solde en QUANTITE, jamais en notionnel.
+      // Place APRES les verrous d'univers (lignes plus haut), donc un rachat hors univers reste
+      // refuse. Place AVANT le controle accountFrozen : racheter un short REDUIT l'exposition,
+      // c'est l'operation qu'il faut justement pouvoir faire quand la marge est saturee.
+      if (isBuy && (heldQty[sym] || 0) < 0) {
+        if (pending.has(sym)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_ordre_deja_ouvert' }); continue }
+        const _qShortTotal = Math.abs(heldQty[sym] || 0)
+        const _pxCover = heldPx[sym] || priceMap[sym] || 0
+        const _notionnelDemande = Math.round(numClean(t.notional))
+        if (!(_qShortTotal > 0)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_quantite_nulle' }); continue }
+
+        // v41 — CORRECTIF D'UN BUG QUE J'AI INTRODUIT EN v39.
+        // v39 rachetait TOUJOURS la totalite du short : SYL demandait 6 000 $ sur IEF, le code a
+        // execute 1 361 754 $ (run 20260820-1747). Le montant demande par l'Archimage fait foi ;
+        // la taille du short n'est qu'un PLAFOND, jamais une consigne.
+        let _qCover = _qShortTotal
+        if (_pxCover > 0 && _notionnelDemande > 0) {
+          _qCover = Math.min(_qShortTotal, _notionnelDemande / _pxCover)
+        }
+        // Un reliquat de short minuscule est inutile et couteux a re-traiter : si ce qui resterait
+        // vaut moins de 1 $ ou moins de 1 % du short, on solde la ligne entiere.
+        const _resteQty = _qShortTotal - _qCover
+        const _resteUsd = _resteQty * (_pxCover || 0)
+        if (_resteQty > 0 && (_resteUsd < 1 || _resteQty < _qShortTotal * 0.01)) _qCover = _qShortTotal
+        if (!(_qCover > 0)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'rachat_short_quantite_nulle' }); continue }
+
+        t.qty = qtyStr(_qCover)
+        t.notional = _pxCover > 0 ? Math.max(1, Math.round(_qCover * _pxCover)) : Math.max(1, _notionnelDemande)
+        t._cover = true
+        t._cover_partiel = _qCover < _qShortTotal || null
+        // trace : ce que le modele demandait avant qu'on le ramene a la taille reelle du short
+        if (_notionnelDemande !== t.notional) t._clamped_from = _notionnelDemande
+        toExec.push(t)
+        continue
+      }
+
+      // v40 — PLAFOND DE LEVIER. Place APRES le bloc de rachat ci-dessus : un rachat de short
+      // reduit l'exposition et doit toujours passer, meme a levier sature.
+      if (isBuy && levierSature) {
+        skipped.push({ ticker: t.ticker, side: t.side, reason: 'levier_sature_ouverture_bloquee',
+          levier: Math.round(levierCompte*100)/100, plafond: LEVIER_MAX_OUVERTURE })
+        continue
+      }
       if (isBuy && accountFrozen) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'account_frozen_buying_power' }); continue }
       if (isBuy && pending.has(sym)) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'duplicate_open_order' }); continue }
       if (isBuy && (heldMV[sym] || 0) >= exposureCap) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'max_ticker_exposure', held: heldMV[sym], cap: Math.round(exposureCap) }); continue }
@@ -352,6 +438,24 @@ serve(async (req) => {
         if (!marketOpen) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_market_closed' }); continue }
         if (_px <= 0) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_no_price' }); continue }
         if (pending.has(sym) || (heldMV[sym] || 0) > 0) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_blocked_position' }); continue }
+        // v40 — un nouveau short AUGMENTE l'exposition brute : interdit a levier sature.
+        if (levierSature) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'levier_sature_short_bloque',
+            levier: Math.round(levierCompte*100)/100, plafond: LEVIER_MAX_OUVERTURE })
+          continue
+        }
+        // v38 — GARDE-FOU : interdiction de renforcer un short deja perdant.
+        // heldMV est NEGATIF sur un short, donc le test ci-dessus ne l'attrapait pas : l'ordre
+        // passait et agrandissait la position. On refuse desormais si la perte latente depasse
+        // le seuil. Ouvrir un nouveau short (aucune position) reste autorise.
+        const _qShort = heldQty[sym] || 0
+        const _plShort = heldPlpc[sym]
+        if (_qShort < 0 && _plShort !== undefined && _plShort <= RENFORT_SHORT_PERTE_MAX) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'renfort_short_perdant_bloque',
+            perte_pct: Math.round(_plShort*10000)/100, seuil_pct: Math.round(RENFORT_SHORT_PERTE_MAX*10000)/100,
+            exposition_usd: Math.round(heldMV[sym] || 0) })
+          continue
+        }
         const _wantS = Math.round(Number(t.notional) || 0)
         const _concShort = (concentration[sym]?.short) || 0
         const _pctEffS = _concShort >= 2 ? MAX_ORDER_PCT / 2 : MAX_ORDER_PCT
@@ -435,7 +539,7 @@ serve(async (req) => {
     if (toExecFinal.length === 0) {
       console.log('RUN_EMPTY ' + JSON.stringify({ archimage, run_id, market_open: marketOpen, total: allTrades.length, skipped: skipped.length, skipped_detail: skipped }))
       await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: allTrades.length, accepted: 0, rejected: 0, skipped: skipped.length, payload: { skipped_detail: skipped, results: [] } })
-      return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: 0, rejected: 0, skipped: skipped.length, skipped_detail: skipped, take_profit: 0, stop_loss: 0, deleverage_sells: 0, results: [], message: marketOpen ? 'Aucune action (achats filtres momentum/risque, aucune sortie declenchee)' : 'Marche US ferme: run crypto uniquement' }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, levier: Math.round(levierCompte*100)/100, levier_sature: levierSature, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: 0, rejected: 0, skipped: skipped.length, skipped_detail: skipped, take_profit: 0, stop_loss: 0, deleverage_sells: 0, results: [], message: marketOpen ? 'Aucune action (achats filtres momentum/risque, aucune sortie declenchee)' : 'Marche US ferme: run crypto uniquement' }), { headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     const tradesToExec = toExecFinal.slice(0, 60)
@@ -447,9 +551,10 @@ serve(async (req) => {
     const slCount = executed.filter(e => e.auto === 'stop_loss' && e.status === 'accepted').length
     const deleverageCount = executed.filter(e => e.auto === 'deleverage' && e.status === 'accepted').length
     const shortCount = executed.filter(e => e.short && e.status === 'accepted').length
+    const coverCount = executed.filter(e => e.cover && e.status === 'accepted').length
 
     console.log('RUN_DONE ' + JSON.stringify({ archimage, run_id, market_open: marketOpen, cash, buying_power: buyingPower, total: allTrades.length, accepted, rejected, skipped: skipped.length }))
-    await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: allTrades.length, accepted, rejected, skipped: skipped.length, payload: { skipped_detail: skipped, results: executed.map(e => ({ t:e.ticker, side:e.side, raw_qty: (e.raw_qty_in != null ? e.raw_qty_in : null), qty:e.qty, notional:e.notional, type:e.order_type, status:e.status, alpaca:e.alpaca_status, err:e.error, clamped_from: (e._clamped_from != null ? e._clamped_from : null), short: (e.short || null), mom: (e._mom != null ? e._mom : null), chunk: (e.chunk || null) })) } })
+    await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: allTrades.length, accepted, rejected, skipped: skipped.length, payload: { skipped_detail: skipped, results: executed.map(e => ({ t:e.ticker, side:e.side, raw_qty: (e.raw_qty_in != null ? e.raw_qty_in : null), qty:e.qty, notional:e.notional, type:e.order_type, status:e.status, alpaca:e.alpaca_status, err:e.error, clamped_from: (e._clamped_from != null ? e._clamped_from : null), short: (e.short || null), cover: (e.cover || null), mom: (e._mom != null ? e._mom : null), chunk: (e.chunk || null) })) } })
 
     if (SUPABASE_KEY) {
       const ordersToSave = executed.filter(e => e.status === 'accepted').map(e => ({ run_id, archimage: archimage || 'ND', symbol: e.ticker, side: e.side, asset_class: e.asset_type || 'etf', notional: e.notional, broker: 'alpaca', broker_order_id: e.alpaca_id || null, broker_status: e.alpaca_status || 'accepted', validated: true }))
@@ -458,7 +563,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: accepted, rejected, skipped: skipped.length, skipped_detail: skipped, take_profit: tpCount, stop_loss: slCount, deleverage_sells: deleverageCount, shorts: shortCount, results: executed }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, levier: Math.round(levierCompte*100)/100, levier_sature: levierSature, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: accepted, rejected, skipped: skipped.length, skipped_detail: skipped, take_profit: tpCount, stop_loss: slCount, deleverage_sells: deleverageCount, shorts: shortCount, covers: coverCount, results: executed }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch(e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }

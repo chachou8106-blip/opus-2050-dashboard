@@ -402,99 +402,62 @@ CREATE OR REPLACE VIEW public.v_alc_virtuel_resume AS
 -- ============================================================
 -- VIEW: v_comparaison
 -- ============================================================
+-- Reecrite le 19/08/2026 : JU/SYL/GIL proviennent des clotures officielles Alpaca
+-- (alpaca_equity_daily) et non plus des instantanes intra-seance de oracle_performance,
+-- qui derivaient de -12 925 $ a +32 382 $ par jour (et +182 624 $ sur JU le 18/08).
 CREATE OR REPLACE VIEW public.v_comparaison AS
- WITH d0 AS (
-         SELECT '2026-06-05'::date AS start
-        ), sp AS (
-         SELECT p.archimage AS serie,
-            date_trunc('day'::text, p.evaluated_at)::date AS jour,
-            (array_agg(p.actual_pnl ORDER BY p.evaluated_at DESC))[1] AS pnl
-           FROM oracle_performance p,
-            d0
-          WHERE (p.archimage = ANY (ARRAY['JU'::text, 'SYL'::text, 'GIL'::text])) AND p.evaluated_at >= d0.start
-          GROUP BY p.archimage, (date_trunc('day'::text, p.evaluated_at)::date)
-        ), strat AS (
-         SELECT sp.serie,
-            sp.jour,
-            round(sp.pnl / NULLIF(bs.baseline_equity, 0::numeric) * 100::numeric, 3) AS ret
-           FROM sp
-             JOIN oracle_brain_state bs ON bs.archimage = sp.serie
-        ), opus AS (
-         SELECT 'OPUS'::text AS serie,
-            strat.jour,
-            round(avg(strat.ret), 3) AS ret
-           FROM strat
-          GROUP BY strat.jour
-        ), alc_d AS (
-         SELECT date_trunc('day'::text, alchimiste_virtual_trades.exit_ts)::date AS jour,
-            sum(alchimiste_virtual_trades.pnl_pct / 100.0::double precision * alchimiste_virtual_trades.montant) AS dpnl,
-            sum(alchimiste_virtual_trades.montant) AS ddep
-           FROM alchimiste_virtual_trades,
-            d0
-          WHERE NOT alchimiste_virtual_trades.is_open AND alchimiste_virtual_trades.exit_ts IS NOT NULL AND alchimiste_virtual_trades.exit_ts >= d0.start
-          GROUP BY (date_trunc('day'::text, alchimiste_virtual_trades.exit_ts)::date)
-        ), alc AS (
-         SELECT 'ALCHIMISTE'::text AS serie,
-            alc_d.jour,
-            round((sum(alc_d.dpnl) OVER (ORDER BY alc_d.jour) / NULLIF(sum(alc_d.ddep) OVER (ORDER BY alc_d.jour), 0::double precision) * 100::double precision)::numeric, 3) AS ret
-           FROM alc_d
-        ), mar_d AS (
-         SELECT date_trunc('day'::text, marees_virtual_trades.exit_ts)::date AS jour,
-            sum(marees_virtual_trades.pnl_pct / 100.0::double precision * marees_virtual_trades.montant) AS dpnl,
-            sum(marees_virtual_trades.montant) AS ddep
-           FROM marees_virtual_trades,
-            d0
-          WHERE NOT marees_virtual_trades.is_open AND marees_virtual_trades.exit_ts IS NOT NULL AND marees_virtual_trades.exit_ts >= d0.start
-          GROUP BY (date_trunc('day'::text, marees_virtual_trades.exit_ts)::date)
-        ), mar AS (
-         SELECT 'MAREES'::text AS serie,
-            mar_d.jour,
-            round((sum(mar_d.dpnl) OVER (ORDER BY mar_d.jour) / NULLIF(sum(mar_d.ddep) OVER (ORDER BY mar_d.jour), 0::double precision) * 100::double precision)::numeric, 3) AS ret
-           FROM mar_d
-        ), bench_d AS (
-         SELECT ph.symbol AS serie,
-            date_trunc('day'::text, ph.ts)::date AS jour,
-            (array_agg(ph.close ORDER BY ph.ts DESC))[1] AS close
-           FROM price_history ph,
-            d0
-          WHERE ph."interval" = '1h'::text AND ph.ts >= d0.start AND (ph.symbol = ANY (ARRAY['SPY'::text, 'QQQ'::text, 'DIA'::text, 'IWM'::text, 'GLD'::text, 'SLV'::text, 'URTH'::text, 'EEM'::text, 'EFA'::text, 'EWQ'::text, 'FEZ'::text, 'USO'::text, 'BTC-USD'::text, 'ETH-USD'::text, 'SOL-USD'::text, 'BNB-USD'::text, 'XRP-USD'::text]))
-          GROUP BY ph.symbol, (date_trunc('day'::text, ph.ts)::date)
-        ), bench0 AS (
-         SELECT bench_d.serie,
-            (array_agg(bench_d.close ORDER BY bench_d.jour))[1] AS c0
-           FROM bench_d
-          GROUP BY bench_d.serie
-        ), bench AS (
-         SELECT b.serie,
-            b.jour,
-            round((b.close / NULLIF(b0.c0, 0::numeric) - 1::numeric) * 100::numeric, 3) AS ret
-           FROM bench_d b
-             JOIN bench0 b0 USING (serie)
-        )
- SELECT strat.serie,
-    strat.jour,
-    strat.ret
-   FROM strat
-UNION ALL
- SELECT opus.serie,
-    opus.jour,
-    opus.ret
-   FROM opus
-UNION ALL
- SELECT alc.serie,
-    alc.jour,
-    alc.ret
-   FROM alc
-UNION ALL
- SELECT mar.serie,
-    mar.jour,
-    mar.ret
-   FROM mar
-UNION ALL
- SELECT bench.serie,
-    bench.jour,
-    bench.ret
-   FROM bench
+ WITH d0 AS (SELECT '2026-06-05'::date AS start),
+ strat AS (
+   SELECT e.archimage AS serie, e.jour,
+          round((e.equity - bs.baseline_equity) / NULLIF(bs.baseline_equity, 0) * 100::numeric, 3) AS ret
+     FROM alpaca_equity_daily e
+     JOIN oracle_brain_state bs ON bs.archimage = e.archimage
+     CROSS JOIN d0
+    WHERE e.jour >= d0.start AND bs.baseline_equity IS NOT NULL
+ ), opus AS (
+   SELECT 'OPUS'::text AS serie, strat.jour, round(avg(strat.ret), 3) AS ret
+     FROM strat GROUP BY strat.jour
+ ), alc_d AS (
+   SELECT date_trunc('day'::text, alchimiste_virtual_trades.exit_ts)::date AS jour,
+          sum(alchimiste_virtual_trades.pnl_pct / 100.0::double precision * alchimiste_virtual_trades.montant) AS dpnl,
+          sum(alchimiste_virtual_trades.montant) AS ddep
+     FROM alchimiste_virtual_trades, d0
+    WHERE NOT alchimiste_virtual_trades.is_open AND alchimiste_virtual_trades.exit_ts IS NOT NULL AND alchimiste_virtual_trades.exit_ts >= d0.start
+    GROUP BY (date_trunc('day'::text, alchimiste_virtual_trades.exit_ts)::date)
+ ), alc AS (
+   SELECT 'ALCHIMISTE'::text AS serie, alc_d.jour,
+          round((sum(alc_d.dpnl) OVER (ORDER BY alc_d.jour) / NULLIF(sum(alc_d.ddep) OVER (ORDER BY alc_d.jour), 0::double precision) * 100::double precision)::numeric, 3) AS ret
+     FROM alc_d
+ ), mar_d AS (
+   SELECT date_trunc('day'::text, marees_virtual_trades.exit_ts)::date AS jour,
+          sum(marees_virtual_trades.pnl_pct / 100.0::double precision * marees_virtual_trades.montant) AS dpnl,
+          sum(marees_virtual_trades.montant) AS ddep
+     FROM marees_virtual_trades, d0
+    WHERE NOT marees_virtual_trades.is_open AND marees_virtual_trades.exit_ts IS NOT NULL AND marees_virtual_trades.exit_ts >= d0.start
+    GROUP BY (date_trunc('day'::text, marees_virtual_trades.exit_ts)::date)
+ ), mar AS (
+   SELECT 'MAREES'::text AS serie, mar_d.jour,
+          round((sum(mar_d.dpnl) OVER (ORDER BY mar_d.jour) / NULLIF(sum(mar_d.ddep) OVER (ORDER BY mar_d.jour), 0::double precision) * 100::double precision)::numeric, 3) AS ret
+     FROM mar_d
+ ), bench_d AS (
+   SELECT ph.symbol AS serie, date_trunc('day'::text, ph.ts)::date AS jour,
+          (array_agg(ph.close ORDER BY ph.ts DESC))[1] AS close
+     FROM price_history ph, d0
+    WHERE ph."interval" = '1h'::text AND ph.ts >= d0.start
+      AND (ph.symbol = ANY (ARRAY['SPY','QQQ','DIA','IWM','GLD','SLV','URTH','EEM','EFA','EWQ','FEZ','USO','BTC-USD','ETH-USD','SOL-USD','BNB-USD','XRP-USD']))
+    GROUP BY ph.symbol, (date_trunc('day'::text, ph.ts)::date)
+ ), bench0 AS (
+   SELECT bench_d.serie, (array_agg(bench_d.close ORDER BY bench_d.jour))[1] AS c0
+     FROM bench_d GROUP BY bench_d.serie
+ ), bench AS (
+   SELECT b.serie, b.jour, round((b.close / NULLIF(b0.c0, 0::numeric) - 1::numeric) * 100::numeric, 3) AS ret
+     FROM bench_d b JOIN bench0 b0 USING (serie)
+ )
+ SELECT serie, jour, ret FROM strat
+ UNION ALL SELECT serie, jour, ret FROM opus
+ UNION ALL SELECT serie, jour, ret FROM alc
+ UNION ALL SELECT serie, jour, ret FROM mar
+ UNION ALL SELECT serie, jour, ret FROM bench
 ;
 
 -- ============================================================
@@ -594,22 +557,22 @@ CREATE OR REPLACE VIEW public.v_dernier_prix AS
 -- ============================================================
 -- VIEW: v_equity_points
 -- ============================================================
+-- Reecrite le 19/08/2026 : meme correction que v_comparaison. L'echelle reste le GAIN
+-- (et non l'equity) pour ne pas changer l'echelle des graphiques de la console.
 CREATE OR REPLACE VIEW public.v_equity_points AS
- SELECT oracle_performance.archimage AS trader,
-    oracle_performance.evaluated_at AS ts,
-    oracle_performance.actual_pnl AS equity
-   FROM oracle_performance
-  WHERE oracle_performance.actual_pnl IS NOT NULL
+ SELECT e.archimage AS trader,
+        (e.jour + time '20:00')::timestamptz AS ts,
+        (e.equity - bs.baseline_equity) AS equity
+   FROM alpaca_equity_daily e
+   JOIN oracle_brain_state bs ON bs.archimage = e.archimage
+  WHERE bs.baseline_equity IS NOT NULL
 UNION ALL
- SELECT 'ALCHIMISTE'::text AS trader,
-    revolut_portfolio_daily.snapshot_at AS ts,
-    revolut_portfolio_daily.total_usd AS equity
+ SELECT 'ALCHIMISTE'::text, revolut_portfolio_daily.snapshot_at, revolut_portfolio_daily.total_usd
    FROM revolut_portfolio_daily
   WHERE revolut_portfolio_daily.total_usd >= 300::numeric
 UNION ALL
- SELECT 'MAREES'::text AS trader,
-    marees_virtual_trades.exit_ts AS ts,
-    sum(marees_virtual_trades.pnl_pct / 100.0::double precision * marees_virtual_trades.montant) OVER (ORDER BY marees_virtual_trades.exit_ts)::numeric AS equity
+ SELECT 'MAREES'::text, marees_virtual_trades.exit_ts,
+        sum(marees_virtual_trades.pnl_pct / 100.0::double precision * marees_virtual_trades.montant) OVER (ORDER BY marees_virtual_trades.exit_ts)::numeric
    FROM marees_virtual_trades
   WHERE COALESCE(marees_virtual_trades.is_open, false) = false AND marees_virtual_trades.exit_ts IS NOT NULL
 ;
@@ -1319,3 +1282,111 @@ SELECT COALESCE(
   FROM lignes l
   LEFT JOIN alc_staking_apy    a ON upper(a.devise) = l.devise
   LEFT JOIN alc_staking_delais d ON upper(d.devise) = l.devise;
+
+
+-- ============================================================
+-- VIEW: v_exposition_traders   (ajoutee le 19/08/2026)
+-- ============================================================
+-- La console additionnait les market_value : les ventes a decouvert etant negatives,
+-- elles annulaient les achats et le risque reel n'apparaissait pas. Au 19/08/2026,
+-- SYL portait 3,1 M$ de ventes a decouvert obligataires pour 1,05 M$ de capital.
+CREATE OR REPLACE VIEW public.v_exposition_traders AS
+WITH p AS (
+  SELECT archimage,
+         sum(market_value) FILTER (WHERE market_value > 0) AS longs,
+         sum(market_value) FILTER (WHERE market_value < 0) AS shorts,
+         sum(abs(market_value))                            AS brute,
+         sum(market_value)                                 AS nette,
+         count(*) FILTER (WHERE market_value < 0 AND abs(qty) > 1e-6) AS nb_shorts,
+         count(*) FILTER (WHERE market_value > 0 AND abs(qty) > 1e-6) AS nb_longs
+    FROM oracle_positions_live
+   GROUP BY archimage
+)
+SELECT b.archimage,
+       round(b.alpaca_portfolio_value, 0)               AS capital,
+       round(COALESCE(p.longs, 0), 0)                   AS achats,
+       round(COALESCE(p.shorts, 0), 0)                  AS ventes_a_decouvert,
+       round(COALESCE(p.brute, 0), 0)                   AS exposition_brute,
+       round(COALESCE(p.nette, 0), 0)                   AS exposition_nette,
+       round(COALESCE(p.brute, 0) / NULLIF(b.alpaca_portfolio_value, 0), 2) AS levier,
+       COALESCE(p.nb_longs, 0)                          AS nb_positions_achat,
+       COALESCE(p.nb_shorts, 0)                         AS nb_positions_decouvert,
+       CASE
+         WHEN COALESCE(p.brute,0) / NULLIF(b.alpaca_portfolio_value,0) >= 3 THEN 'ELEVE'
+         WHEN COALESCE(p.brute,0) / NULLIF(b.alpaca_portfolio_value,0) >= 2 THEN 'MOYEN'
+         ELSE 'MODERE'
+       END                                              AS niveau_levier,
+       b.alpaca_last_synced                             AS synchronise_le
+  FROM oracle_brain_state b
+  LEFT JOIN p ON p.archimage = b.archimage
+ WHERE b.alpaca_portfolio_value > 0
+;
+
+-- ============================================================
+-- VIEW: v_perf_anomalies   (ajoutee le 19/08/2026)
+-- ============================================================
+-- Garde-fou : liste les mesures de oracle_performance qui contredisent la cloture Alpaca
+-- de plus de 5 % du capital. Aucune exclusion automatique -- a examiner puis marquer
+-- fiable = false si confirme.
+CREATE OR REPLACE VIEW public.v_perf_anomalies AS
+ SELECT p.archimage,
+        (p.evaluated_at AT TIME ZONE 'UTC') AS mesure_le,
+        round(bs.baseline_equity + p.actual_pnl, 0) AS equity_mesuree,
+        round(e.equity, 0) AS equity_alpaca,
+        round(bs.baseline_equity + p.actual_pnl - e.equity, 0) AS ecart_usd,
+        round(100 * abs(bs.baseline_equity + p.actual_pnl - e.equity) / NULLIF(bs.baseline_equity, 0), 2) AS ecart_pct_capital,
+        p.fiable,
+        p.notes
+   FROM oracle_performance p
+   JOIN oracle_brain_state bs ON bs.archimage = p.archimage AND bs.baseline_equity IS NOT NULL
+   JOIN alpaca_equity_daily e ON e.archimage = p.archimage AND e.jour = (p.evaluated_at AT TIME ZONE 'UTC')::date
+  WHERE abs(bs.baseline_equity + p.actual_pnl - e.equity) > 0.05 * bs.baseline_equity
+;
+
+
+-- ============================================================
+-- VIEW: v_macro_extra   (ajoutee le 19/08/2026)
+-- ============================================================
+-- Le prompt du Sage Macro reclamait dxy_trend, le ratio or/argent et le spread de credit
+-- HYG-LQD. Aucun des trois n'existait dans les 92 champs de CTX : le Sage repondait
+-- « DXY missing » — honnetement, mais sans pouvoir conclure.
+-- UUP (Invesco DB US Dollar Index Bullish) sert de mandataire cote du dollar index ;
+-- HYG, LQD et UUP ont ete ajoutes au cron ingest-indices-daily le meme jour.
+CREATE OR REPLACE VIEW public.v_macro_extra AS
+WITH d AS (
+  SELECT symbol, (array_agg(close ORDER BY ts DESC))[1] AS dernier
+    FROM price_history
+   WHERE symbol IN ('UUP','GLD','SLV','HYG','LQD') AND "interval" = '1h'
+   GROUP BY symbol
+),
+ref AS (
+  SELECT symbol, (array_agg(close ORDER BY ts DESC))[1] AS ancien
+    FROM price_history
+   WHERE symbol IN ('UUP','GLD','SLV','HYG','LQD') AND "interval" = '1h'
+     AND ts <= now() - interval '20 days'
+   GROUP BY symbol
+),
+v AS (
+  SELECT (SELECT dernier FROM d WHERE symbol='UUP') AS uup,
+         (SELECT ancien  FROM ref WHERE symbol='UUP') AS uup0,
+         (SELECT dernier FROM d WHERE symbol='GLD') AS gld,
+         (SELECT dernier FROM d WHERE symbol='SLV') AS slv,
+         (SELECT dernier FROM d WHERE symbol='HYG') AS hyg,
+         (SELECT ancien  FROM ref WHERE symbol='HYG') AS hyg0,
+         (SELECT dernier FROM d WHERE symbol='LQD') AS lqd,
+         (SELECT ancien  FROM ref WHERE symbol='LQD') AS lqd0
+)
+SELECT round(uup, 4) AS uup,
+       round(100 * (uup / NULLIF(uup0, 0) - 1), 2) AS dxy_var_20j_pct,
+       CASE
+         WHEN uup IS NULL OR uup0 IS NULL THEN 'INCONNU'
+         WHEN 100 * (uup / NULLIF(uup0,0) - 1) >=  1.5 THEN 'STRONG'
+         WHEN 100 * (uup / NULLIF(uup0,0) - 1) <= -1.5 THEN 'WEAK'
+         ELSE 'NEUTRAL'
+       END AS dxy_trend,
+       round(gld / NULLIF(slv, 0), 3) AS ratio_or_argent,
+       round(hyg, 2) AS hyg,
+       round(lqd, 2) AS lqd,
+       round(100 * (hyg / NULLIF(hyg0,0) - lqd / NULLIF(lqd0,0)), 2) AS credit_hyg_lqd_20j_pct
+  FROM v
+;

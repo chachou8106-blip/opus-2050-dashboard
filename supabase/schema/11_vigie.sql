@@ -20,7 +20,7 @@
 create table if not exists public.vigie_status (
   composant       text primary key,
   categorie       text not null,               -- 'Sage' | 'Archimage' | 'Trader' | 'Signal'
-  etat            text not null,               -- 'OK' | 'PANNE' | 'FIGE' | 'MUET' | 'VEILLE'
+  etat            text not null,               -- 'OK' | 'ALERTE' | 'PANNE' | 'FIGE' | 'MUET' | 'VEILLE'
   detail          text,
   derniere_sortie timestamptz,
   run_auditee     timestamptz,
@@ -38,7 +38,9 @@ declare
   v_veille boolean;
   v_sage  record;
   v_cnt   int; v_ndist int; v_nrows int; v_last timestamptz; v_mints timestamptz; v_etat text; v_detail text;
-  k_stag  int := 6;      -- nb de runs consécutifs identiques => FIGÉ
+  k_stag  int := 6;      -- fenêtre courte => ALERTE (peut refléter un marché stable)
+  k_long  int := 12;     -- fenêtre longue (72 h) => FIGÉ confirmé
+  v_ndist_long int; v_nrows_long int;
   -- garde de récence : on ne juge la stagnation que si les k_stag runs sont récents
   -- (< 12h), sinon un composant qui vient de « ressusciter » après une panne serait
   -- faussement noté FIGÉ (ses vieilles lignes d'avant-panne fausseraient la variance).
@@ -90,9 +92,24 @@ begin
         into v_ndist, v_nrows, v_mints
       from (select sage_output, created_at from oracle_sages_report
             where sage_name = sages[i][1] order by created_at desc limit k_stag) t;
-      if v_nrows >= k_stag and v_ndist = 1 and v_mints >= now() - interval '12 hours' then
+      -- 19/08/2026 : DEUX NIVEAUX. Sur 6 runs et une séance calme, NEUTRAL/LOW/MEDIUM/SYL se
+      -- répètent naturellement : ce seuil seul a signalé 4 Sages alors qu'un seul était bloqué.
+      -- Fenêtre longue de 12 runs sur 72 h : une valeur unique sur cette durée ne s'explique
+      -- plus par un marché stable. Mesure du 19/08 sur 72 h — Macro 16 runs / 1 valeur (figé),
+      -- Mémoire 16/2, Risque 17/2, Flash 25/3 (sains).
+      select count(distinct (sage_output->>sages[i][2])), count(*)
+        into v_ndist_long, v_nrows_long
+      from (select sage_output from oracle_sages_report
+            where sage_name = sages[i][1] and created_at >= now() - interval '72 hours'
+            order by created_at desc limit k_long) t;
+      if v_nrows_long >= k_long and v_ndist_long = 1 then
         v_etat := 'FIGE';
-        v_detail := format('%s=%s sur %s runs', sages[i][2],
+        v_detail := format('%s=%s identique sur %s runs et 72 h', sages[i][2],
+                    (select sage_output->>sages[i][2] from oracle_sages_report
+                     where sage_name = sages[i][1] order by created_at desc limit 1), v_nrows_long);
+      elsif v_nrows >= k_stag and v_ndist = 1 and v_mints >= now() - interval '12 hours' then
+        v_etat := 'ALERTE';
+        v_detail := format('%s=%s sur %s runs — a surveiller, peut refleter un marche stable', sages[i][2],
                     (select sage_output->>sages[i][2] from oracle_sages_report
                      where sage_name = sages[i][1] order by created_at desc limit 1), k_stag);
       else
@@ -190,7 +207,7 @@ begin
   select jsonb_build_object(
     'scanned', true, 'run_auditee', v_run.run_at, 'veille', v_veille,
     'panne', (select count(*) from vigie_status where etat='PANNE'),
-    'fige',  (select count(*) from vigie_status where etat in ('FIGE','MUET'))
+    'fige',  (select count(*) from vigie_status where etat in ('FIGE','MUET','ALERTE'))
   ) into v_res;
   return v_res;
 end $function$;
@@ -202,13 +219,13 @@ select
   case
     when (select count(*) from s) = 0 then 'INCONNU'
     when exists(select 1 from s where etat='PANNE') then 'ROUGE'
-    when exists(select 1 from s where etat in ('FIGE','MUET')) then 'ORANGE'
+    when exists(select 1 from s where etat in ('FIGE','MUET','ALERTE')) then 'ORANGE'
     when (select count(*) from s) = (select count(*) from s where etat='VEILLE') then 'VEILLE'
     else 'VERT'
   end                                                             as niveau,
   (select count(*) from s where etat='OK')                        as nb_ok,
   (select count(*) from s where etat='PANNE')                     as nb_panne,
-  (select count(*) from s where etat in ('FIGE','MUET'))          as nb_alerte,
+  (select count(*) from s where etat in ('FIGE','MUET','ALERTE'))          as nb_alerte,
   (select count(*) from s)                                        as nb_total,
   (select string_agg(composant||' ('||etat||')', ', ' order by composant)
      from s where etat not in ('OK','VEILLE'))                    as problemes,
