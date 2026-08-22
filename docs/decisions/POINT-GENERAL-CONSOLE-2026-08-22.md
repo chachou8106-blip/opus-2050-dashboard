@@ -230,3 +230,65 @@ Ces points relèvent du scénario Make ou de la stratégie, pas de l'affichage :
   dans le navigateur, mais c'est le point lent de la console.
 - `dashboard.html:518` code en dur l'identifiant de scénario `6183820` (autre fichier, non utilisé
   par les 8 onglets).
+
+---
+
+## Troisième passe — la console de tests (23/08, 00h30)
+
+> « La console AETHER a été faite avec trois fichiers à la base, index, suivi, dashboard, et
+> **dans AETHER c'est la console de test où il y a des soucis** ! »
+
+Les deux passes précédentes lisaient la page *chargée*. La console de tests ne s'exécute
+**qu'au clic** : aucun de ses 26 rendus n'avait donc jamais été vu. Un second banc d'essai
+(`docs/outils/audit-console-tests.mjs`) clique les 26 boutons dans Chromium, avec les vraies
+réponses d'`oracle-tests` récupérées une par une via `net.http_post`, et contrôle chaque modale.
+
+### Ce qui n'allait pas, et qui est corrigé
+
+| Action | Ce qui s'affichait | Ce qui s'affiche maintenant |
+|---|---|---|
+| Courbes d'equity | les 54 points du S&P déversés en tableau, puis « ARCHIMAGES (1) » **vide** — un dictionnaire de listes n'entre pas dans une ligne de tableau | les 4 séries alignées sur le même axe de dates, rendement final de chacune en tête |
+| Kelly réel | 4 sections d'un agent chacune, en-têtes répétés 4 fois | un tableau, l'agent en première colonne |
+| Précision directionnelle | idem, 3 sections | idem + libellé « Précision directionnelle » au lieu de `accuracy` |
+| État de l'apprentissage | la ligne `cerveau` d'`oracle_brain_state` listée **comme un 4ᵉ Archimage à 0 % de réussite** — c'est l'enregistrement collectif, 0 run, aucun trade | sortie de la table, affichée pour ce qu'elle est : « Doctrine du Collège » |
+| Chiffres d'accueil | `77022` et `3076756` sans unité ; libellés bruts « leads count », « alpha moyen pct » | `$77 022`, `$3 076 756`, libellés en français |
+| Cerveaux (accueil + apprentissage) | `dd_broker 0.006` à côté de `drawdown courant 0,59 %` — la même grandeur dans deux unités ; `dd_source` affichant le nom d'une colonne | les trois drawdowns en pourcent, source retenue en clair |
+| Rejeu des archimages | « Calculé le **20:35** » — une date rendue en heure seule | « 22 août 20:35 » |
+| Santé des sources, retours d'apprentissage | idem, heure sans jour | jour + heure partout |
+| Ordre des colonnes | dépendait de la source : le nom de l'agent arrivait en 3ᵉ colonne, derrière son taux de réussite | colonnes d'identité triées en tête |
+
+Résultat : **26 actions sur 26 rendues, aucune vide, aucune brute, aucune erreur JavaScript.**
+
+### Deux faux positifs de mon propre banc d'essai — signalés ici pour ne pas y revenir
+
+- `/NaN/i` attrapait « décisions **gagnan**tes » : les circuit breakers ont été déclarés cassés
+  trois fois alors que leur rendu était juste.
+- Les 26 actions tirées **en rafale** font dépasser à `dashboard_snapshot()` le
+  `statement_timeout` de 8 s : l'action `snapshot` revenait avec 7 indicateurs sans valeur.
+  Appelée seule, elle renvoie ses 27 lignes. Rien à corriger dans `oracle-tests`.
+
+### Deux constats de fond, **non corrigés**, qui demandent ton accord
+
+**1. `dashboard_snapshot()` met 4,16 s à froid, le rôle `anon` coupe à 3 s.**
+Mesuré : 4 162 ms cache froid, 125 ms cache chaud. `SNAPF()` (aether.html:613) avale l'échec
+(`.catch(()=>null)`) : au premier chargement de la journée, la console peut donc afficher
+« Cerveau indisponible » et des tuiles vides **sans le dire**. C'est le candidat le plus
+probable derrière « plein de choses ne fonctionnent plus » vu au hasard des visites.
+Deux pistes : alléger la fonction, ou la faire servir depuis un cache rafraîchi par pg_cron.
+
+**2. Les courbes d'equity des Archimages sont décalées d'un jour par rapport au S&P 500.**
+Le tableau aligné le rend visible : `alpaca_equity_daily` ne contient **que des mardis à
+samedis**, jamais de lundi — 5 lignes par semaine, mais décalées d'un cran.
+
+    2026-08-14 ven  1 054 147,29
+    2026-08-15 SAM  1 052 645,60   <- valeur différente : ce n'est pas un report du vendredi
+    2026-08-18 mar  1 047 364,59   <- pas de lundi 17
+
+`update-brain/index.ts:89` date chaque point avec `new Date(ts*1000).toISOString().slice(0,10)`,
+c'est-à-dire **en UTC**. Si Alpaca horodate ses barres 1D à minuit UTC du lendemain de séance,
+lundi→mardi et vendredi→samedi : ce que l'on observe, exactement. La conversion en
+`America/New_York` rendrait la vraie date de séance.
+
+Je **ne l'ai pas corrigé** : cela réécrirait 52 jours × 3 comptes d'historique réel sur une
+hypothèse que je ne peux pas confronter à l'API Alpaca depuis ce conteneur (le proxy la bloque).
+Le correctif tient en une ligne et le rattrapage en une migration — dis-moi et je les prépare.

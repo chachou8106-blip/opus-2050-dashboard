@@ -684,32 +684,57 @@ const LBL={sage:'Sage',evalue:'Signaux évalués',corrects:'Signaux corrects',ta
  max_notional_per_trade:'Plafond par ordre',max_single_position_pct:'Plafond par position',cash_floor_pct:'Plancher de liquidités',
  crypto_max_pct:'Plafond crypto',drawdown_alert:'Alerte drawdown',hedge_recommendation:'Couverture conseillée',
  use_bracket_orders:'Ordres encadrés',take_profit_multiplier:'Multiplicateur de gain',evaluations:'Évaluations',
- memory_summary:'Synthèse mémoire',portfolio_rationale:'Raisonnement portefeuille',prophet_vision:'Vision',rationale:'Raisonnement'};
+ memory_summary:'Synthèse mémoire',portfolio_rationale:'Raisonnement portefeuille',prophet_vision:'Vision',rationale:'Raisonnement',
+ // chiffres d'accueil : les clés brutes (« alpha moyen pct », « leads count ») partaient telles quelles
+ agent:'Agent',accuracy:'Précision directionnelle',jours:'Jours de vie',depuis:'Depuis le',gain_total:'Gain total',leads_count:'Inscrits à la liste',
+ valeur_totale:'Valeur totale des comptes',capital_engage:'Capital de départ engagé',win_rate_moyen:'Taux de réussite moyen',
+ alpha_moyen_pct:'Alpha moyen vs S&P',spy_periode_pct:'S&P 500 sur la période',rendement_moyen_pct:'Rendement moyen',
+ brains:'État des cerveaux',cerveau:'Cerveau',
+ // les trois mesures de drawdown portaient le même nom à l'écran
+ dd_broker:'Drawdown courtier',dd_applicatif:'Drawdown applicatif',dd_resolu:'Drawdown retenu',
+ dd_source:'Source retenue',alpaca_drawdown_from_peak:'Drawdown Alpaca (brut)',baseline_equity:'Capital de départ',
+ spy:'S&P 500',archimages:'Archimages',depart:'Départ',pct:'Rendement cumulé',d:'Jour'};
 const lbl=k=>LBL[k]||(String(k).charAt(0).toUpperCase()+String(k).slice(1)).replace(/_/g,' ');
-const PCTK=/(_pct|taux|win_rate|accuracy|completude|completeness|drawdown|kelly|correlation|beta)/i;
+// dd_broker / dd_applicatif / dd_resolu sont des drawdowns exprimés en fraction (0,0059) : sans
+// eux dans PCTK, les cerveaux affichaient « 0.006 » là où la colonne voisine disait « 0,59 % ».
+const PCTK=/(_pct|taux|win_rate|accuracy|completude|completeness|drawdown|kelly|correlation|beta|^dd_(broker|applicatif|resolu)$)/i;
 // Les champs affichés avec un « $ » sont listés un par un. Une regex fourre-tout attrapait
 // « montant », qui vaut des DOLLARS chez l'Alchimiste mais un POIDS DE PORTEFEUILLE EN POURCENT
 // chez Marées (2 · 2,5 · 4 · 4,5) : ses positions forex s'affichaient « $2,5 ». Un nom de champ
 // ne suffit pas à connaître l'unité — il faut la déclarer.
-const USDK=/(^|_)(pnl_usd|pnl_reel_usd|gain_usd|cout_estime_usd|notional|notional_total|notional_validated|executed_notional|market_value|cost_basis|unrealized_pl|alpaca_portfolio_value|alpaca_buying_power|baseline_equity|cumulative_pnl|equity|valeur_usd|valo_usd|valeur_live_usd|valeur_snapshot_usd|total_usd|total_live_usd|total_snapshot_usd|ecart_depuis_snapshot_usd|capital|achats|ventes_a_decouvert|exposition_brute|exposition_nette|expo_ouverte|prix_ref|prix_entree|prix_actuel|prix_live|fill_price|avg_entry_price|current_price)($|_)/i;
+const USDK=/(^|_)(pnl_usd|pnl_reel_usd|gain_usd|cout_estime_usd|notional|notional_total|notional_validated|executed_notional|market_value|cost_basis|unrealized_pl|alpaca_portfolio_value|alpaca_buying_power|baseline_equity|cumulative_pnl|equity|valeur_usd|valo_usd|valeur_live_usd|valeur_snapshot_usd|total_usd|total_live_usd|total_snapshot_usd|ecart_depuis_snapshot_usd|capital|achats|ventes_a_decouvert|exposition_brute|exposition_nette|expo_ouverte|prix_ref|prix_entree|prix_actuel|prix_live|fill_price|avg_entry_price|current_price|gain_total|valeur_totale|capital_engage)($|_)/i;
 // Champs qui ressemblent à des montants mais n'en sont pas : on les affiche en nombre nu.
 const NONUSD=/^(montant|poids_pct|poids|expo_poids|size_pct_portfolio)$/i;
+// Certaines colonnes contiennent un NOM DE COLONNE comme valeur (dd_source dit quelle mesure de
+// drawdown a été retenue). « alpaca_drawdown_from_peak » affiché tel quel ne veut rien dire.
+const VAL_LISIBLE={alpaca_drawdown_from_peak:'courtier (Alpaca)',current_drawdown:'applicatif',
+ max_drawdown:'applicatif (max)',dd_broker:'courtier (Alpaca)',dd_applicatif:'applicatif'};
 function fval(k,v){
  if(v==null||v==='')return '<span style="color:var(--mute)">—</span>';
+ if(/(^|_)source$/i.test(k)&&VAL_LISIBLE[v])return esc(VAL_LISIBLE[v]);
  if(typeof v==='boolean')return v?'<span class="up">oui</span>':'<span style="color:var(--mute)">non</span>';
  if(typeof v==='number'||(!isNaN(v)&&String(v).trim()!==''&&typeof v!=='object')){
   const n=Number(v);
   if(/^(created_at|computed_at|checked_at|evaluated_at|fired_at|quand|last_synced|at)$/.test(k))return esc(String(v));
-  if(PCTK.test(k)){const p=(Math.abs(n)<=1&&/win_rate|kelly|drawdown|correlation|beta|accuracy/i.test(k))?n*100:n;
+  if(PCTK.test(k)){const p=(Math.abs(n)<=1&&/win_rate|kelly|drawdown|correlation|beta|accuracy|^dd_/i.test(k))?n*100:n;
    return '<span class="'+(p>0?'up':p<0?'down':'')+'">'+(Number.isInteger(p)?p:p.toFixed(2))+' %</span>';}
   if(NONUSD.test(k))return '<span class="mono">'+(Number.isInteger(n)?n:n.toFixed(2))+'</span>';
   if(USDK.test(k))return fmt$(n);
   return '<span class="mono">'+(Number.isInteger(n)?n:n.toFixed(3).replace(/0+$/,'').replace(/\.$/,''))+'</span>';}
- if(/^(created_at|computed_at|checked_at|evaluated_at|fired_at|quand)$/.test(k))return '<span class="mono" style="font-size:11px">'+esc(hm(v)||String(v))+'</span>';
+ // Une date affichée en heure seule (« Calculé le 20:35 ») ne dit pas de quel jour il s'agit :
+ // le rejeu des archimages semblait calculé ce soir, la santé des sources vérifiée à 10:50 sans
+ // dire quel jour. On donne toujours le jour ET l'heure.
+ if(/^(created_at|computed_at|checked_at|evaluated_at|fired_at|quand|last_synced|snapshot_at|updated_at|run_at)$/.test(k)){
+  const j=dj(v),hh=hm(v);
+  return '<span class="mono" style="font-size:11px">'+esc(j&&hh?(j+' '+hh):(j||hh||String(v)))+'</span>';}
  return esc(String(v));}
 function autoTable(rows){
  const cols=[...new Set(rows.flatMap(r=>Object.keys(r)))].filter(c=>rows.some(r=>r[c]!=null&&r[c]!==''&&typeof r[c]!=='object'));
  if(!cols.length)return '';
+ // L'ordre des clés dépend de la source (Postgres réordonne le JSON) : le nom de l'agent se
+ // retrouvait en 3e colonne, derrière son taux de réussite. On ramène l'identifiant devant.
+ const TETE=['agent','archimage','sage','trader','source_name','composant','indicateur','ticker','symbol','paire','run_id','jour','d','date','breaker_type'];
+ cols.sort((x,y)=>{const a=TETE.indexOf(x),b=TETE.indexOf(y);return (a<0?99:a)-(b<0?99:b);});
  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="tbl"><thead><tr>'+cols.map(c=>'<th>'+esc(lbl(c))+'</th>').join('')+'</tr></thead><tbody>'
   +rows.slice(0,60).map(r=>'<tr>'+cols.map(c=>'<td>'+fval(c,r[c])+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'
   +(rows.length>60?'<div class="note" style="margin-top:8px">'+rows.length+' lignes au total · 60 affichées.</div>':'');}
@@ -721,6 +746,13 @@ function autoRender(d,depth){depth=depth||0;
   if(typeof d[0]!=='object')return '<div style="font-size:13px;color:var(--dim);line-height:1.7">'+d.map(x=>esc(String(x))).join('<br>')+'</div>';
   return autoTable(d);}
  if(typeof d!=='object')return '<div style="font-size:13.5px;color:var(--dim)">'+esc(String(d))+'</div>';
+ // Un objet « agent → mesures » (Kelly réel, précision directionnelle) était rendu comme une
+ // section par agent contenant un tableau d'UNE ligne, en-têtes répétés quatre fois. C'est un
+ // tableau, l'agent en première colonne.
+ const vv=Object.values(d);
+ if(depth<2&&vv.length>1&&vv.every(v=>v&&typeof v==='object'&&!Array.isArray(v)
+    &&Object.values(v).every(x=>x==null||typeof x!=='object')))
+  return autoTable(Object.entries(d).map(([k,v])=>Object.assign({agent:k},v)));
  const scal=[],arrs=[],txts=[];
  Object.keys(d).forEach(k=>{const v=d[k];
   if(v==null)return;
@@ -792,7 +824,90 @@ function renderArchimage(nom,d){
     return '<tr><td>'+esc(x.ticker||'—')+'</td><td>'+(sh?'<span class="tag sell">VENTE</span>':'<span class="tag buy">ACHAT</span>')+'</td><td>'+fmt$(num(x.market_value))+'</td><td class="'+((num(x.unrealized_pl)||0)>=0?'up':'down')+'">'+fmt$(num(x.unrealized_pl))+'</td><td>'+sgn(num(x.unrealized_pl_pct))+'</td></tr>';}).join('')
    +'</tbody></table></div>';}
  return h;}
+const FERMER='<div class="btnrow" style="justify-content:flex-end;margin-top:16px"><button class="btn" onclick="document.querySelector(\'.modal\').classList.remove(\'on\')">Fermer</button></div>';
+
+/* Mise en forme par test. autoRender() traite tout de la même façon, ce qui donnait :
+   — « coaching » affiché comme une longue phrase brute, alors que c'est une liste de cinq notes ;
+   — « breakers » avec une colonne trigger_value mélangeant trois unités (0,308 = un win rate de
+     30,8 %, 0,0626 = un drawdown de 6,26 %, 5 = un nombre de pertes d'affilée) ;
+   — les backtests affichant « +726 % » pour GIL sans dire que c'est un rejeu et non un résultat,
+     à côté d'un onglet qui le donne à −3,61 % en réel.
+   Ces trois-là ont donc leur propre rendu ; le reste passe par autoRender comme avant. */
+function rendreTest(a,d){
+ if(d==null)return autoRender(d);
+ if(a==='coaching'){
+  const txt=typeof d==='string'?d:(d&&d.sages_coaching)||'';
+  const parts=String(txt).split('|').map(s=>s.trim()).filter(Boolean);
+  if(!parts.length)return autoRender(d);
+  return '<div class="chart-sub" style="margin-bottom:10px">Ce que le système renvoie à ses propres Sages au prochain run, calculé sur leur taux de réussite mesuré.</div>'
+   +parts.map(p=>{const m=p.match(/^(\w+)=([\d.]+)pct\s+(\S+)\s+(.*)$/);
+    if(!m)return '<div class="tl"><div class="bd"><div class="t">'+esc(p)+'</div></div></div>';
+    const tx=Number(m[2]),niv=m[3];
+    const cls=niv==='FIABLE'?'ok':(niv==='FAIBLE'?'ko':'');
+    return '<div class="tl"><span class="dot '+(cls||'')+'">'+(niv==='FIABLE'?'✓':niv==='FAIBLE'?'!':'~')+'</span><div class="bd">'
+     +'<div class="t"><b style="color:var(--ink)">'+esc(m[1])+'</b> — <b class="'+(tx>=60?'up':tx<50?'down':'')+'">'+tx.toFixed(1)+' %</b> · '+esc(niv)+'</div>'
+     +'<div class="m">'+esc(m[4])+'</div></div></div>';}).join('');}
+ if(a==='breakers'){
+  const rows=Array.isArray(d)?d:[];
+  if(!rows.length)return '<div style="color:var(--mute);font-size:13px">Aucun coupe-circuit actif — rien à signaler.</div>';
+  // trigger_value n'a de sens qu'avec son type : on le formate en conséquence.
+  const fmtTrig=(t,v)=>{const n=num(v);if(n==null)return '—';
+   if(/drawdown/i.test(t))return (n*100).toFixed(2)+' % de perte depuis le plus haut';
+   if(/win_rate/i.test(t))return (n<=1?(n*100).toFixed(1):n.toFixed(1))+' % de décisions gagnantes';
+   if(/consecutive|repetition/i.test(t))return n+' d\'affilée';
+   return String(v);};
+  return '<div class="chart-sub" style="margin-bottom:10px">Coupe-circuits déclenchés et non encore résolus.</div>'
+   +rows.map(r=>'<div class="tl"><span class="dot ko">!</span><div class="bd">'
+    +'<div class="t"><b style="color:var(--ink)">'+esc(r.archimage||'—')+'</b> — '+esc(String(r.breaker_type||'').replace(/_/g,' '))+'</div>'
+    +'<div class="m">'+esc(fmtTrig(r.breaker_type,r.trigger_value))+' · action : '+esc(String(r.action_taken||'—').replace(/_/g,' '))
+    +(r.fired_at?' · '+esc(dj(r.fired_at)+' '+(hm(r.fired_at)||'')):'')+'</div></div></div>').join('');}
+ if(a==='equity'){
+  // La réponse est { depart, spy:[{d,pct}], archimages:{ JU:[…], SYL:[…], GIL:[…] } }.
+  // autoRender déversait les 54 points du S&P en tableau puis s'arrêtait sur « ARCHIMAGES (1) »
+  // vide, parce qu'un dictionnaire de listes n'entre pas dans une ligne de tableau.
+  // On aligne les quatre séries sur le même axe de dates : c'est ce que la courbe compare.
+  const S=(d&&d.archimages)||{},spy=Array.isArray(d&&d.spy)?d.spy:[];
+  const series=[['S&P 500',spy]].concat(Object.keys(S).map(n=>[n,Array.isArray(S[n])?S[n]:[]]));
+  if(!series.some(s=>s[1].length))return autoRender(d);
+  const der=s=>s.length?num(s[s.length-1].pct):null;
+  let h='<div class="chart-sub" style="margin-bottom:10px">Rendement cumulé depuis le '
+   +esc(dj(d.depart)||String(d.depart||'—'))+', en pourcentage du capital de départ, un point par jour de bourse.</div>';
+  h+='<div class="mstat">'+series.map(([n,s])=>{const v=der(s);
+   return '<div class="s"><b class="'+(v>0?'up':v<0?'down':'')+'">'+pct2(v)+'</b><span>'+esc(n)+' · '+s.length+' points</span></div>';}).join('')+'</div>';
+  const jours=[...new Set(series.flatMap(([,s])=>s.map(p=>p.d)))].sort();
+  const maps=series.map(([n,s])=>[n,new Map(s.map(p=>[p.d,p.pct]))]);
+  h+='<div class="msec">Les 20 derniers jours <span style="text-transform:none;letter-spacing:0;font-weight:500">('+jours.length+' jours au total)</span></div>';
+  h+='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="tbl"><thead><tr><th>Jour</th>'
+   +maps.map(([n])=>'<th>'+esc(n)+'</th>').join('')+'</tr></thead><tbody>'
+   +jours.slice(-20).map(j=>'<tr><td class="mono">'+esc(j)+'</td>'
+     +maps.map(([,m])=>'<td>'+(m.has(j)?sgn(num(m.get(j))):'<span style="color:var(--mute)">—</span>')+'</td>').join('')+'</tr>').join('')
+   +'</tbody></table></div>';
+  return h;}
+ if(a==='learning'&&d&&Array.isArray(d.cerveaux)){
+  // oracle_brain_state contient une ligne « cerveau » qui n'est pas un agent : c'est
+  // l'enregistrement collectif (0 run, pas de trade). Listée avec les autres, elle affichait
+  // un quatrième Archimage à 0 % de réussite et 0 % de drawdown, qui n'existe pas.
+  const meta=d.cerveaux.find(c=>String(c.archimage||'').toLowerCase()==='cerveau');
+  let h='';
+  if(meta&&meta.current_bias)h+='<div class="msec">Doctrine du Collège</div>'
+   +'<div style="font-size:13px;color:var(--dim);line-height:1.65;white-space:pre-wrap;word-break:break-word">'+esc(String(meta.current_bias))+'</div>';
+  h+=autoRender({cerveaux:d.cerveaux.filter(c=>c!==meta),feedback:d.feedback});
+  return h;}
+ if(a==='bt_alchimiste'||a==='bt_exits'||a==='bt_archimages'){
+  return '<div class="note" style="margin-bottom:12px;border-color:rgba(234,200,115,.35)">'
+   +'<b>Ceci est un rejeu, pas un résultat.</b> Chaque combinaison est recalculée sur l\'historique en supposant '
+   +'que le capital est réengagé en entier à chaque trade. Les rendements composés qui en sortent '
+   +'(plusieurs centaines de %) ne sont pas comparables aux performances des onglets Stratégies et '
+   +'Portefeuilles, qui mesurent l\'argent réellement engagé.</div>'+autoRender(d);}
+ return autoRender(d);}
+
 const TEST_INFO={sages:['📊 Scores des 5 Sages','Chaque Sage est confronté au mouvement réel du marché 24 h après son signal.'],
+ alchimiste:['⚗ Alchimiste — état complet','Portefeuille virtuel de validation, réglages en production et dernier backtest.'],
+ marees:['🌊 Marées — état complet','Propositions forex, trades récents et état de son cerveau.'],
+ positions:['💼 Positions vivantes','Toutes les lignes ouvertes chez le courtier, achats et ventes à découvert.'],
+ runs:['🕐 Runs récents','Les 40 derniers passages du Collège, avec leur phase de marché.'],
+ equity:['📉 Courbes d\'equity','Séries de rendement des trois Archimages et du S&P 500.'],
+ hero:['🎯 Chiffres d\'accueil','Les totaux affichés en haut de la page, avec leur détail par agent.'],
  coaching:['🎓 Coaching injecté','Les consignes que le système renvoie à ses propres agents pour corriger leurs biais.'],
  bt_alchimiste:['⚗ Backtest de l\'Alchimiste','Rejeu de toutes les combinaisons take-profit / stop-loss sur l\'historique réel.'],
  bt_exits:['📈 Backtest des sorties crypto','Quel couple TP/SL aurait le mieux fonctionné sur les sorties crypto.'],
@@ -1749,9 +1864,31 @@ function rOps(){
  if(D.scen&&$('scenChip')){const on=!!D.scen.maitre_on;$('scenChip').className='chip '+(on?'ok':'warn');$('scenChip').textContent=on?'● Planning actif':'● Coupé';
   const m=document.querySelector('#opsContent .mono');}
  if(D.ks!=null&&$('ksChip')){$('ksChip').className='chip '+(D.ks?'ok':'warn');$('ksChip').style.color=D.ks?'var(--red)':'';$('ksChip').textContent=D.ks?'● ARMÉ — ordres réels ACTIFS':'● Désarmé';}
- // console de tests (12 actions réelles)
- $('tests').innerHTML=[["📊","Scores des 5 Sages","sages"],["🎓","Coaching injecté","coaching"],["⚗","Backtest Alchimiste","bt_alchimiste"],["📈","Backtest sorties crypto","bt_exits"],["🏆","Rejeu des archimages","bt_archimages"],["⚖","Kelly réel","kelly"],["🧭","Précision directionnelle","directional"],["🚨","Circuit breakers","breakers"],["💸","Coûts de friction","friction"],["🟢","Santé des sources","sante_sources"],["🧠","État de l'apprentissage","learning"],["📸","Snapshot complet","snapshot"]]
-  .map(t=>'<div class="test" data-test="'+t[2]+'" style="cursor:pointer"><span class="ti">'+t[0]+'</span><div><b>'+t[1]+'</b><div class="d">action réelle · oracle-tests</div></div></div>').join('');}
+ // Console de tests. Elle n'exposait que 12 des 21 actions d'oracle-tests : l'Alchimiste, les
+ // Marées, les dossiers des Archimages et des Sages, les positions, les runs et la courbe
+ // d'equity étaient absents — d'où « je ne vois pas les archimages, l'alchimiste et Marées ».
+ // Les entrées avec paramètre (dossier d'un agent) le passent par data-param.
+ const TESTS_LIST=[
+  ["📊","Scores des 5 Sages","sages"],["🎓","Coaching injecté","coaching"],
+  ["⚗","Alchimiste — état complet","alchimiste"],["🌊","Marées — état complet","marees"],
+  ["👑","Dossier Archimage JU","archimage_detail","archimage","JU"],
+  ["🌙","Dossier Archimage SYL","archimage_detail","archimage","SYL"],
+  ["⚖️","Dossier Archimage GIL","archimage_detail","archimage","GIL"],
+  ["🌍","Dossier Sage Macro","sage_detail","sage","Macro"],
+  ["📐","Dossier Sage Technique","sage_detail","sage","Technique"],
+  ["⚡","Dossier Sage Flash","sage_detail","sage","Flash"],
+  ["🛡","Dossier Sage du Risque","sage_detail","sage","Risque"],
+  ["📜","Dossier Sage de la Mémoire","sage_detail","sage","Memoire"],
+  ["💼","Positions vivantes","positions"],["🕐","Runs récents","runs"],["📉","Courbes d'equity","equity"],
+  ["🎯","Chiffres d'accueil","hero"],
+  ["⚗","Backtest Alchimiste","bt_alchimiste"],["📈","Backtest sorties crypto","bt_exits"],
+  ["🏆","Rejeu des archimages","bt_archimages"],["⚖","Kelly réel","kelly"],
+  ["🧭","Précision directionnelle","directional"],["🚨","Circuit breakers","breakers"],
+  ["💸","Coûts de friction","friction"],["🟢","Santé des sources","sante_sources"],
+  ["🧠","État de l'apprentissage","learning"],["📸","Snapshot complet","snapshot"]];
+ $('tests').innerHTML=TESTS_LIST
+  .map(t=>'<div class="test" data-test="'+t[2]+'"'+(t[3]?' data-pk="'+t[3]+'" data-pv="'+esc(t[4])+'"':'')
+   +' style="cursor:pointer"><span class="ti">'+t[0]+'</span><div><b>'+esc(t[1])+'</b><div class="d">action réelle · oracle-tests</div></div></div>').join('');}
 
 /* ---------- Face ID réel (Journal + Commandes) ---------- */
 async function unlockTech(){
@@ -1807,10 +1944,16 @@ document.addEventListener('click',async e=>{
   const j2=await KS({action:'on',pin});if(j2&&j2.ok){D.ks=true;rOps();toast('🔴 ARMÉ');}else toast('❌ '+((j2&&j2.error)||'PIN incorrect'));
   return;}
  const tst=e.target.closest('[data-test]');
- if(tst){const a=tst.dataset.test;const inf=TEST_INFO[a]||[tst.textContent.trim(),''];
-  openModal(modalHead(inf[0],inf[1])+'<div id="testOut" style="margin-top:6px;color:var(--mute);font-size:13px">⏳ Lecture en direct sur Supabase…</div>');
-  const d=await TESTS(a);
-  if($('testOut'))$('testOut').innerHTML=autoRender(d)+'<div class="note" style="margin-top:14px">Données lues en direct dans Supabase — aucune valeur mise en cache.</div>';
+ if(tst){const a=tst.dataset.test;const pk=tst.dataset.pk,pv=tst.dataset.pv;
+  const params=pk?{[pk]:pv}:{};
+  const titre=tst.querySelector('b')?tst.querySelector('b').textContent:a;
+  const inf=TEST_INFO[a]||[titre,''];
+  openModal(modalHead(pk?titre:inf[0],inf[1])+'<div id="testOut" style="margin-top:6px;color:var(--mute);font-size:13px">⏳ Lecture en direct sur Supabase…</div>');
+  const d=await TESTS(a,params);
+  // Les dossiers d'agents ont leur propre mise en page, bien plus lisible qu'un tableau brut.
+  if(a==='archimage_detail'){$('mbox').innerHTML=renderArchimage(pv,d)+FERMER;return;}
+  if(a==='sage_detail'){$('mbox').innerHTML=renderSage(pv,d)+FERMER;return;}
+  if($('testOut'))$('testOut').innerHTML=rendreTest(a,d)+'<div class="note" style="margin-top:14px">Données lues en direct dans Supabase — aucune valeur mise en cache.</div>';
   return;}
  const dx=e.target.closest('[data-dx]');
  if(dx){toast('📤 Flux mt5-bridge prêt (mode '+dx.dataset.dx+') — voir docs/DARWINEX-CONNEXION.md');return;}

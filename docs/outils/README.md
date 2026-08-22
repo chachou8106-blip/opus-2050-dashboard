@@ -25,6 +25,25 @@ extraites de Supabase (dans `mock/`), puis liste :
   alors qu'il fonctionne.
 - **Appeler `unlockedOK()`** pour les onglets Journal et Ops : masquer le
   cadenas ne charge pas leurs données, et leurs tuiles paraissent vides.
+- **Chercher `NaN` en respectant la casse** : `/NaN/i` attrape « décisions
+  gag**nan**tes » et fait passer pour cassé un rendu parfaitement correct
+  (les circuit breakers ont été signalés « BRUT » trois fois pour cette raison).
+- **Ne pas tirer les mocks à travers `content::jsonb`** : Postgres réordonne
+  les clés d'un objet JSON, donc l'ordre des colonnes observé dans le banc
+  d'essai n'est pas celui du navigateur. Corollaire utile : `autoTable()` trie
+  désormais les colonnes d'identité en tête, l'ordre ne dépend plus de la source.
+- **Ne pas déclencher les 26 actions d'`oracle-tests` en rafale** : les appels
+  concurrents font dépasser le `statement_timeout` de 8 s à
+  `dashboard_snapshot()`, et l'action `snapshot` revient avec des indicateurs
+  sans valeur. Appelée seule, elle renvoie ses 27 lignes. Un défaut a été
+  diagnostiqué à tort avant cette vérification.
+
+### Console de tests
+
+`tests.mjs` (même dossier de travail) clique les **26 boutons** de la console de
+tests et vérifie, pour chaque modale, qu'elle n'est ni vide, ni brute, ni en
+erreur. C'est le seul moyen de voir ces rendus : ils ne s'exécutent qu'au clic,
+et l'audit de page ne les atteint jamais.
 
 ### Utilisation
 
