@@ -268,7 +268,9 @@ svg{max-width:100%}
     <button data-t="journal">Journal <span class="lockico">🔒</span></button>
     <button data-t="ops">Commandes <span class="lockico">🔒</span></button>
   </nav>
-  <div class="status"><span class="pulse"></span> Collège actif</div>
+  <!-- « Collège actif » était écrit en dur : le bandeau affirmait que le Collège tournait même
+       scénario coupé. rEtatCollege() y met l'état réel, lu sur v_scenario_etat et le dernier run. -->
+  <div class="status" id="statutCollege"><span class="pulse"></span> <span id="statutTxt">état…</span></div>
   <div class="lock" title="Zone protégée par Face ID">🔓</div>
 </div></header>
 
@@ -331,7 +333,7 @@ svg{max-width:100%}
 <section class="tab" id="strat">
   <div class="eyebrow">Cinq stratégies spécialisées</div>
   <h1 class="display">Chaque agent, <em>son terrain de chasse</em>.</h1>
-  <p class="lede">Actions US, paniers ETF, crypto au comptant, forex, tactique contrarian — des stratégies décorrélées, chacune avec sa mémoire et son biais. Rendement, drawdown, réussite et Sharpe, recalculés chaque jour.</p>
+  <p class="lede">Actions US, paniers ETF, crypto au comptant, forex, tactique contrarian — des stratégies aux terrains distincts, chacune avec sa mémoire et son biais — leur corrélation réelle est mesurée plus bas. Rendement, drawdown, réussite et Sharpe, recalculés chaque jour.</p>
   <div class="bento" style="margin-top:22px" id="strats"></div>
 
   <div class="sect"><div class="sect-h">Métriques clés — juin → août 2026</div>
@@ -382,7 +384,8 @@ svg{max-width:100%}
   <div class="sect"><div class="sect-h">Les Archimages · état du Cerveau</div><div class="bento" id="archi"></div></div>
   <div class="sect"><div class="sect-h">Traders spécialistes</div>
     <div class="bento">
-      <div class="card mini c6"><div class="h"><span class="dot" style="color:var(--s-alch);background:var(--s-alch)"></span><div><div class="nm">Alchimiste</div><div class="rl">Crypto au comptant · Revolut X (RÉEL)</div></div><span class="badge reel" style="margin-left:auto">Réel</span></div><div class="kv"><span class="k">Valeur réelle</span><span class="v" style="color:var(--gold-hi)" id="tsAlcV">—</span></div><div class="kv"><span class="k">Win rate réel</span><span class="v" id="tsAlcW">—</span></div><div class="kv"><span class="k">Verdict staking</span><span class="v" id="tsAlcS">—</span></div></div>
+      <div class="card mini c6"><div class="h"><span class="dot" style="color:var(--s-alch);background:var(--s-alch)"></span><div><div class="nm">Alchimiste</div><div class="rl">Crypto au comptant · Revolut X (RÉEL)</div></div><span class="badge reel" style="margin-left:auto">Réel</span></div><div class="kv"><span class="k">Valeur réelle</span><span class="v" style="color:var(--gold-hi)" id="tsAlcV">—</span></div><!-- ce chiffre vient du portefeuille VIRTUEL de validation, pas du compte Revolut X -->
+<div class="kv"><span class="k">Win rate (virtuel)</span><span class="v" id="tsAlcW">—</span></div><div class="kv"><span class="k">Verdict staking</span><span class="v" id="tsAlcS">—</span></div></div>
       <div class="card mini c6"><div class="h"><span class="dot" style="color:var(--s-mar);background:var(--s-mar)"></span><div><div class="nm">🌊 Marées</div><div class="rl">Forex · EUR-USD, GBP-JPY… (validation)</div></div><span class="badge val" style="margin-left:auto">Validation</span></div><div class="kv"><span class="k">Positions ouvertes</span><span class="v" id="tsMarP">—</span></div><div class="kv"><span class="k">Trades clos</span><span class="v" id="tsMarT">—</span></div><div class="kv"><span class="k">Destination réel</span><span class="v" style="color:var(--gold)">Darwinex</span></div></div>
     </div>
   </div>
@@ -428,7 +431,7 @@ svg{max-width:100%}
     </div>
     <div class="card pad" style="margin-top:14px">
       <div class="chart-title">Les réglages ne sortent pas d'un chapeau — heatmap du backtest</div>
-      <div class="chart-sub" style="margin-bottom:10px">Rendement composé (%) de chaque combinaison Take-Profit × Stop-Loss, recalculé toutes les 6 h. La case dorée est le réglage en production (TP 5 % / SL 4 %).</div>
+      <div class="chart-sub" style="margin-bottom:10px">Rendement composé (%) de chaque combinaison Take-Profit × Stop-Loss, recalculé toutes les 6 h. La case dorée est le réglage en production, lu dans <b>ju_crypte_config</b> : <span id="btProd">—</span>.</div>
       <div class="scroll"><div id="heatmap" style="display:grid;grid-template-columns:auto repeat(5,1fr);gap:3px;min-width:420px"></div></div>
     </div>
   </div>
@@ -462,7 +465,7 @@ svg{max-width:100%}
     <div><div class="vk">Verdict</div><div class="vv">Calcul en cours…</div><div class="vs">Les quatre portes sont mesurées en direct sur les comptes Alpaca.</div></div>
   </div>
   <div class="bento" style="margin-top:14px">
-    <div class="card c7 pad"><div class="sect-h gold" style="margin-top:0">Les gates du 2 août</div><div id="gates"></div></div>
+    <div class="card c7 pad"><div class="sect-h gold" style="margin-top:0">Les quatre portes du passage au réel</div><div id="gates"></div></div>
     <div class="card c5 pad"><div class="sect-h gold" style="margin-top:0">Performance par période</div><div class="btnrow" id="perTabs" style="margin:0 0 8px"></div><table class="tbl"><tbody id="perBody"></tbody></table></div>
   </div>
   <div class="sect"><div class="sect-h gold">L'Alchimiste — capital réel (Revolut X)</div><div class="bento" id="alcReel"></div></div>
@@ -597,7 +600,11 @@ svg{max-width:100%}
    Règle : AUCUNE donnée inventée — sans donnée, on affiche « — ».            */
 /* Version affichée en bas de page : si elle ne bouge pas après une mise à jour,
    c'est que le navigateur sert une copie en cache (recharge forcée / vider le cache). */
-const BUILD="2026-08-19 · b7";
+// Ce tag sert à détecter qu'un navigateur sert une copie en cache : s'il ne change pas après
+// une mise en ligne, la page affichée est l'ancienne. Il était resté au 19/08 pendant que la
+// console était modifiée les 22 et 23 — donc impossible de savoir si ce qu'on voyait à l'écran
+// était la version corrigée ou la précédente. À INCRÉMENTER À CHAQUE MISE EN LIGNE.
+const BUILD="2026-08-23 · b11";
 const SB="https://smddzybxebwhfnitxuyp.supabase.co";
 const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtZGR6eWJ4ZWJ3aGZuaXR4dXlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODk4NzksImV4cCI6MjA5NTQ2NTg3OX0.ppjgF79OokQ-2jE8UCp26U-E-YZPcmf6TNnYEKHGKSM";
 const HD={"Content-Type":"application/json","apikey":ANON,"Authorization":"Bearer "+ANON};
@@ -680,7 +687,13 @@ const LBL={sage:'Sage',evalue:'Signaux évalués',corrects:'Signaux corrects',ta
  memory_summary:'Synthèse mémoire',portfolio_rationale:'Raisonnement portefeuille',prophet_vision:'Vision',rationale:'Raisonnement'};
 const lbl=k=>LBL[k]||(String(k).charAt(0).toUpperCase()+String(k).slice(1)).replace(/_/g,' ');
 const PCTK=/(_pct|taux|win_rate|accuracy|completude|completeness|drawdown|kelly|correlation|beta)/i;
-const USDK=/(pnl|value|valeur_|_usd|equity|notional|montant)/i;
+// Les champs affichés avec un « $ » sont listés un par un. Une regex fourre-tout attrapait
+// « montant », qui vaut des DOLLARS chez l'Alchimiste mais un POIDS DE PORTEFEUILLE EN POURCENT
+// chez Marées (2 · 2,5 · 4 · 4,5) : ses positions forex s'affichaient « $2,5 ». Un nom de champ
+// ne suffit pas à connaître l'unité — il faut la déclarer.
+const USDK=/(^|_)(pnl_usd|pnl_reel_usd|gain_usd|cout_estime_usd|notional|notional_total|notional_validated|executed_notional|market_value|cost_basis|unrealized_pl|alpaca_portfolio_value|alpaca_buying_power|baseline_equity|cumulative_pnl|equity|valeur_usd|valo_usd|valeur_live_usd|valeur_snapshot_usd|total_usd|total_live_usd|total_snapshot_usd|ecart_depuis_snapshot_usd|capital|achats|ventes_a_decouvert|exposition_brute|exposition_nette|expo_ouverte|prix_ref|prix_entree|prix_actuel|prix_live|fill_price|avg_entry_price|current_price)($|_)/i;
+// Champs qui ressemblent à des montants mais n'en sont pas : on les affiche en nombre nu.
+const NONUSD=/^(montant|poids_pct|poids|expo_poids|size_pct_portfolio)$/i;
 function fval(k,v){
  if(v==null||v==='')return '<span style="color:var(--mute)">—</span>';
  if(typeof v==='boolean')return v?'<span class="up">oui</span>':'<span style="color:var(--mute)">non</span>';
@@ -689,7 +702,8 @@ function fval(k,v){
   if(/^(created_at|computed_at|checked_at|evaluated_at|fired_at|quand|last_synced|at)$/.test(k))return esc(String(v));
   if(PCTK.test(k)){const p=(Math.abs(n)<=1&&/win_rate|kelly|drawdown|correlation|beta|accuracy/i.test(k))?n*100:n;
    return '<span class="'+(p>0?'up':p<0?'down':'')+'">'+(Number.isInteger(p)?p:p.toFixed(2))+' %</span>';}
-  if(USDK.test(k))return (n>=0?'':'')+fmt$(n);
+  if(NONUSD.test(k))return '<span class="mono">'+(Number.isInteger(n)?n:n.toFixed(2))+'</span>';
+  if(USDK.test(k))return fmt$(n);
   return '<span class="mono">'+(Number.isInteger(n)?n:n.toFixed(3).replace(/0+$/,'').replace(/\.$/,''))+'</span>';}
  if(/^(created_at|computed_at|checked_at|evaluated_at|fired_at|quand)$/.test(k))return '<span class="mono" style="font-size:11px">'+esc(hm(v)||String(v))+'</span>';
  return esc(String(v));}
@@ -750,9 +764,11 @@ function renderSage(nom,d){
  h+='<div class="note" style="margin-top:14px">Chaque signal est confronté au mouvement réel du marché 24 h plus tard. Le taux de réussite pondère ensuite son influence dans le Collège.</div>';
  return h;}
 function renderArchimage(nom,d){
- const R={JU:['Actions individuelles — grandes valeurs US','var(--s-ju)'],SYL:['ETF — secteurs, international, macro, obligations','var(--s-syl)'],GIL:['Contrarian — crypto, proxies et couvertures','var(--s-gil)']}[nom]||['',''];
+ const R={JU:['Actions individuelles — grandes valeurs US','var(--s-ju)'],SYL:['ETF — secteurs, international, macro, obligations','var(--s-syl)'],GIL:['Contrarian — secteurs et indices US, avec couvertures','var(--s-gil)']}[nom]||['',''];
  if(!d||d.error)return modalHead('Archimage '+nom,R[0])+'<div class="note" style="margin-top:14px">Dossier indisponible.</div>';
- const b=num(d.alpaca_portfolio_value),p=num(d.cumulative_pnl),wr=num(d.win_rate),dd=num(d.current_drawdown),mdd=num(d.max_drawdown);
+ const b=num(d.alpaca_portfolio_value),bl=num(d.baseline_equity),
+  // gain = valeur constatee - capital de depart, comme partout ailleurs dans la page.
+  p=(bl&&b!=null)?b-bl:num(d.cumulative_pnl),wr=num(d.win_rate),dd=num(d.current_drawdown),mdd=num(d.max_drawdown);
  let h=modalHead('Archimage '+nom,R[0]);
  h+='<div class="mstat">'
   +'<div class="s"><b>'+fmt$(b)+'</b><span>Valeur du compte</span></div>'
@@ -899,7 +915,7 @@ function rKpis(){const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);
   ['<span style="color:'+(best?SCOL[best.trader]:'var(--ink)')+'">'+(best?pctF(+best.rendement_pct):'—')+'</span>','Meilleure stratégie',best?SNAME[best.trader]+' · simulation':'—'],
   [sgn(avg),'Rendement moyen','3 archimages · sim.'],
   [sh!=null?sh:'—','Ratio de Sharpe','AETHER · recalculé chaque jour'],
-  ['<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>','Valeur réelle · live',(ec==null?'Revolut X':( (ec>=0?'▲ +':'▼ ')+Math.abs(ec).toFixed(2)+' $ depuis 8h'))]
+  ['<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>','Valeur réelle · live',(ec==null?'Revolut X':( (ec>=0?'▲ +':'▼ ')+Math.abs(ec).toFixed(2)+' $ depuis le relevé du matin'))]
  ].map(t=>'<div class="card kpi c3"><span class="lab">'+t[1]+'</span><span class="val" style="font-size:26px">'+t[0]+'</span><span class="sub">'+t[2]+'</span></div>').join('');}
 
 function gatesCalc(){const h=D.hero;if(!h||!Array.isArray(h.brains)||!h.brains.length)return null;
@@ -1201,7 +1217,7 @@ function raisonsTxt(x){const r=x&&(x.raisons_skip||x.raisons||x.reasons);
 function rArchi(){const c=(D.snap&&Array.isArray(D.snap.cerveau))?D.snap.cerveau.filter(x=>['JU','SYL','GIL'].includes(x.archimage)):[];
  if(!c.length){$('archi').innerHTML='<div class="c12" style="color:var(--mute);font-size:13px">Cerveau indisponible (dashboard_snapshot).</div>';$('poids').innerHTML='';return;}
  $('archi').innerHTML=c.map(a=>{const wr=num(a.win_rate);const w=poidsOf(a);
-  return '<div class="card mini c4"><div class="h"><span class="dot" style="color:'+SCOL[a.archimage]+';background:'+SCOL[a.archimage]+'"></span><div><div class="nm">'+a.archimage+'</div><div class="rl">'+esc(DESCS[a.archimage]?.m||'')+'</div></div><span class="chip ok" style="margin-left:auto">apprend ✓</span></div>'
+  return '<div class="card mini c4"><div class="h"><span class="dot" style="color:'+SCOL[a.archimage]+';background:'+SCOL[a.archimage]+'"></span><div><div class="nm">'+a.archimage+'</div><div class="rl">'+esc(DESCS[a.archimage]?.m||'')+'</div></div><span class="chip'+((a.wins!=null&&a.losses!=null)?' ok':'')+'" style="margin-left:auto">'+((a.wins!=null&&a.losses!=null)?(num(a.wins)+num(a.losses))+' évaluations':'en attente')+'</span></div>'
   +'<div class="kv" style="align-items:flex-start;gap:12px"><span class="k" style="flex:0 0 34%">Doctrine</span><span class="v" style="font-family:var(--sans);font-size:11.5px;text-align:right;white-space:normal;line-height:1.45">'+esc(doctrineOf(a))+'</span></div>'
   +'<div class="kv"><span class="k">% gagnantes</span><span class="v">'+(wr!=null?(wr*100).toFixed(0)+' %':'—')+'</span></div>'
   +'<div class="kv"><span class="k">Bilan (V/D)</span><span class="v">'+(a.wins??'—')+'-'+(a.losses??'—')+'</span></div>'
@@ -1410,7 +1426,30 @@ function rClassement(c){const el=$('comparatif');if(!el)return;
   +'. Les trois comptes Alpaca sont en simulation (paper trading) ; seul l\'Alchimiste engage du capital réel. Marées est suivi en pourcentage : il n\'a pas de capital propre. Performances passées, sans garantie sur l\'avenir.</div>';}
 
 /* --- Traders spécialistes (Collège) --- */
+/* État réel du Collège, affiché dans le bandeau du haut. Il annonçait « Collège actif » en dur,
+   quel que soit l'état du scénario — donc « actif » même à l'arrêt depuis deux jours. */
+function rEtatCollege(){const el=$('statutTxt');if(!el)return;
+ const on=D.scen?.maitre_on;                       // planning armé côté Supabase
+ const min=num(D.snap?.stats?.minutes_depuis_dernier_run);
+ const box=$('statutCollege');
+ let txt,cls='';
+ if(min!=null&&min<=180){txt='Collège actif';}
+ else if(on===false){txt='Scénario coupé';cls='warn';}
+ else if(min!=null){const h=Math.floor(min/60);
+  txt='Dernier run il y a '+(h>=24?Math.floor(h/24)+' j':h>=1?h+' h':Math.round(min)+' min');cls='warn';}
+ else {txt='État indisponible';cls='warn';}
+ el.textContent=txt;
+ if(box)box.style.opacity=cls?'.75':'';}
+
+/* Réglage TP/SL en production : il était écrit « TP 5 % / SL 4 % » dans le texte de la heatmap.
+   Ces deux valeurs vivent dans ju_crypte_config et sont déjà servies par oracle-tests. */
+function rBtProd(){const el=$('btProd');if(!el)return;const a=D.alch||{};
+ const tp=num(a.tp_pct),sl=num(a.sl_pct);
+ el.textContent=(tp!=null&&sl!=null)?('TP '+tp+' % / SL '+sl+' %'):'réglage indisponible';}
+
 function rSpec(){const alc=D.suivi?.alc_reel_live?.resume||{};const mar=D.suivi?.marees_virtuel?.resume||{};
+ // D.alch.win_rate est le win rate du portefeuille VIRTUEL de validation : la carte le
+ // présentait comme « Win rate réel ». Le libellé dit maintenant ce que le chiffre est.
  const wr=D.alch&&D.alch.win_rate!=null?num(D.alch.win_rate).toFixed(1)+' %':'—';
  const vig=D.suivi?.vigie?.detail?.find(x=>x.composant==='Alchimiste verdict');
  if($('tsAlcV'))$('tsAlcV').textContent=fmt$(num(alc.total_live_usd));
@@ -1442,15 +1481,20 @@ function rapportHTML(){
  const alc=D.suivi?.alc_reel_live?.resume||{};const G=gatesCalc();
  const opus=cmpPts('OPUS'),spy=cmpPts('SPY');
  const opusR=opus.length?opus[opus.length-1].y:null,spyR=spy.length?spy[spy.length-1].y:null;
- const tot=c.reduce((s,x)=>s+(num(x.baseline_equity)||0)+(num(x.cumulative_pnl)||0),0)+(num(alc.total_live_usd)||0);
- const gain=c.reduce((s,x)=>s+(num(x.cumulative_pnl)||0),0);
+ // Le rapport remis aux investisseurs calculait encore la valeur des comptes par
+ // baseline + cumulative_pnl, alors que la console lit la valeur constatée chez le courtier.
+ // Le document et l'écran annonçaient donc des montants différents pour les mêmes comptes.
+ const totAlp=c.reduce((s,x)=>s+(num(x.alpaca_portfolio_value)||0),0);
+ const baseAlp=c.reduce((s,x)=>s+(num(x.baseline_equity)||0),0);
+ const tot=totAlp+(num(alc.total_live_usd)||0);
+ const gain=totAlp-baseAlp;
  const auj=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
  const pc=v=>v==null?'—':(v>0?'+':'')+Number(v).toFixed(2)+' %';
  const dol=v=>v==null?'—':(v<0?'−':'')+'$'+Math.abs(Number(v)).toLocaleString('fr-FR',{maximumFractionDigits:0});
  const COL={JU:'#2f7fd4',SYL:'#1f9d6b',GIL:'#c9971f',OPUS:'#5b4fd6',SPY:'#8b93a3',ALCHIMISTE:'#c9407e'};
  const kpi=(v,l,cl)=>'<div class="k"><b'+(cl?' class="'+cl+'"':'')+'>'+v+'</b><span>'+l+'</span></div>';
- const lignes=c.map(a=>{const b=num(a.baseline_equity),p=num(a.cumulative_pnl);
-  return {k:a.archimage,val:(b!=null&&p!=null)?b+p:null,r:(b&&p!=null)?p/b*100:null,wr:a.win_rate!=null?num(a.win_rate)*100:null,dd:a.current_drawdown!=null?num(a.current_drawdown)*100:null};})
+ const lignes=c.map(a=>{const b=num(a.baseline_equity),v=num(a.alpaca_portfolio_value);
+  return {k:a.archimage,val:v,r:(b&&v!=null)?(v-b)/b*100:null,wr:a.win_rate!=null?num(a.win_rate)*100:null,dd:a.current_drawdown!=null?num(a.current_drawdown)*100:null};})
   .sort((x,y)=>(y.r||-1e9)-(x.r||-1e9));
  const jrn=(D.journal?.journal||[]).slice(0,6);
  const NOM={JU:'JU — actions US',SYL:'SYL — paniers ETF',GIL:'GIL — contrarian'};
@@ -1731,7 +1775,7 @@ async function unlockedOK(){sessionStorage.setItem('aeu','1');
  // charge les données privées
  const [j,scen,ks,snapPriv]=await Promise.all([INBOX({action:'journal'}),SCEN({action:'status'}),KS({action:'status'}),D.snap?null:SNAPF()]);
  if(j&&j.ok)D.journal=j;if(scen&&scen.ok)D.scen=scen.etat;if(ks&&ks.ok)D.ks=!!ks.arme;if(snapPriv)D.snap=snapPriv;
- safe('journal',rJournal);safe('ops',rOps);}
+ safe('journal',rJournal);safe('ops',rOps);safe('etat',rEtatCollege);}
 
 /* ---------- Actions réelles (scénario / kill-switch / tests / copilote / problème) ---------- */
 document.addEventListener('click',async e=>{
@@ -1836,7 +1880,7 @@ async function boot(){
  $('grTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)safe('gr2',()=>rGr(b.dataset.g));});rGr('mois');});
  safe('sages',rSages);safe('archi',rArchi);safe('indiv',()=>rIndiv('Mois'));
  safe('pfc',rPfControls);safe('pf',rPf);safe('alc',rAlc);safe('fee',()=>$('alcFee').addEventListener('input',()=>safe('alc',rAlc)));safe('heat',rHeat);safe('tables',rTables);
- safe('reel',rReel);safe('spec',rSpec);safe('sort',sortable);
+ safe('reel',rReel);safe('spec',rSpec);safe('sort',sortable);safe('etat',rEtatCollege);safe('btprod',rBtProd);
  if($('buildTag'))$('buildTag').textContent='build '+BUILD+' · données réelles · actualisation 2 min';
  if(SAFE_ERRS.length){console.warn('AETHER erreurs:',SAFE_ERRS);toast('⚠️ '+SAFE_ERRS.length+' panneau(x) en erreur — voir console navigateur');}
  if(sessionStorage.getItem('aeu')==='1')unlockedOK();
