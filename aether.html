@@ -279,16 +279,20 @@ svg{max-width:100%}
   <h1 class="display">Le capital, géré par <em>une intelligence autonome</em>.</h1>
   <p class="lede">Un collège d'agents spécialisés — cinq Sages, trois Archimages, l'Alchimiste et les Marées — qui orchestre plusieurs stratégies, apprend de chaque décision et se corrige seul. Voici son état vivant.</p>
 
+  <!-- Etat d'attente : rKpis() remplit ces 4 cartes au chargement. Elles portaient « +9.4 % »,
+       « +6.4 % », « 1.32 » et « $847.69 » en dur — des valeurs d'une date passée, fausses
+       aujourd'hui, qui s'affichaient le temps du chargement. Plus aucun chiffre en dur ici. -->
   <div class="bento" id="kpisTop" style="margin-top:22px">
-    <div class="card kpi c3"><span class="lab">Meilleure stratégie</span><span class="val" style="color:var(--s-syl)">+9.4 %</span><span class="sub">SYL · Paniers ETF</span></div>
-    <div class="card kpi c3"><span class="lab">Rendement moyen</span><span class="val up">+6.4 %</span><span class="sub">3 archimages · sim.</span></div>
-    <div class="card kpi c3"><span class="lab">Ratio de Sharpe</span><span class="val">1.32</span><span class="sub">≈ S&amp;P 500 · ≫ Bitcoin</span></div>
-    <div class="card kpi c3"><span class="lab">Valeur réelle · live</span><span class="val" style="color:var(--gold-hi);font-size:24px;padding-top:4px">$847.69</span><span class="sub up">▲ +1.6 % · Revolut X</span></div>
+    <div class="card kpi c3"><span class="lab">Meilleure stratégie</span><span class="val">—</span><span class="sub">mesure en cours…</span></div>
+    <div class="card kpi c3"><span class="lab">Rendement moyen</span><span class="val">—</span><span class="sub">3 archimages · sim.</span></div>
+    <div class="card kpi c3"><span class="lab">Ratio de Sharpe</span><span class="val">—</span><span class="sub">AETHER · recalculé chaque jour</span></div>
+    <div class="card kpi c3"><span class="lab">Valeur réelle · live</span><span class="val" style="color:var(--gold-hi);font-size:24px;padding-top:4px">—</span><span class="sub">Revolut X</span></div>
   </div>
 
+  <!-- Idem : rVerdict() recalcule les 4 portes. Le « 3/4 » et la phrase sur le drawdown étaient figés. -->
   <div class="verdict no" style="margin-top:14px" id="verdictTop">
-    <div class="gauge"><div class="g">3<span style="color:var(--mute);font-size:19px">/4</span></div><div class="gk">gates réel</div></div>
-    <div><div class="vk">Prêt à lancer le réel ?</div><div class="vv">Pas encore</div><div class="vs">3 des 4 garde-fous franchis. Le drawdown doit repasser sous 5 % avant d'engager le moindre euro.</div></div>
+    <div class="gauge"><div class="g">—<span style="color:var(--mute);font-size:19px">/4</span></div><div class="gk">gates réel</div></div>
+    <div><div class="vk">Prêt à lancer le réel ?</div><div class="vv">Calcul en cours…</div><div class="vs">Les quatre garde-fous sont mesurés en direct sur les comptes Alpaca.</div></div>
     <a href="#" onclick="go('reel');return false" style="margin-left:auto"><span class="chip gold">Voir les gates →</span></a>
   </div>
 
@@ -301,7 +305,9 @@ svg{max-width:100%}
       <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="chart-title">Trajectoire du portefeuille AETHER</div><div class="chart-sub">Capital agrégé · base 0 % · choisis la période</div></div><span class="chip live">● live</span></div>
       <div class="btnrow" id="ovPer" style="margin-top:10px"></div>
       <div class="chartbox" id="ovChart" style="margin-top:8px"></div>
-      <div class="legend"><span><i style="background:var(--s-opus)"></i>AETHER <b>+11.8%</b></span><span><i style="background:var(--mute)"></i>S&amp;P 500 <b>+3.1%</b></span><span><i style="background:#5a5470"></i>Bitcoin <b>−4.6%</b></span></div>
+      <!-- Legende remplie par rOv() : elle portait « +11.8% / +3.1% / −4.6% » en dur, jamais
+           recalcules depuis l'ecriture de la page — trois chiffres faux en permanence. -->
+      <div class="legend" id="ovLegend"></div>
     </div>
     <div class="card c4 pad"><div class="chart-title">Gains par trader</div><div class="chart-sub" style="margin-bottom:4px">Aujourd'hui · en euros</div><table class="tbl"><tbody id="gains"></tbody></table></div>
   </div>
@@ -444,9 +450,12 @@ svg{max-width:100%}
   <h1 class="display">Quatre garde-fous <em>avant le premier euro</em>.</h1>
   <p class="lede">Le passage au réel n'est pas une décision d'humeur : quatre critères objectifs doivent être au vert, simultanément et durablement. Tant qu'un seul reste rouge, le système reste en simulation.</p>
 
+  <!-- Etat d'attente uniquement : rVerdict() recalcule les 4 portes au chargement et remplace ce bloc.
+       Il portait « 3/4 » et « drawdown de 6.4 % », valeurs figées à une date passée qui s'affichaient
+       le temps du chargement — donc un chiffre faux à l'écran. Plus aucune valeur en dur ici. -->
   <div class="verdict no" style="margin-top:22px" id="verdictReel">
-    <div class="gauge"><div class="g">3<span style="color:var(--mute);font-size:19px">/4</span></div><div class="gk">critères</div></div>
-    <div><div class="vk">Verdict</div><div class="vv">Pas encore</div><div class="vs">Le drawdown de <b style="color:var(--gold-hi)">6.4 %</b> doit repasser sous 5 % avant de réactiver « Trading Algo » et lancer la réplication.</div></div>
+    <div class="gauge"><div class="g">—<span style="color:var(--mute);font-size:19px">/4</span></div><div class="gk">critères</div></div>
+    <div><div class="vk">Verdict</div><div class="vv">Calcul en cours…</div><div class="vs">Les quatre portes sont mesurées en direct sur les comptes Alpaca.</div></div>
   </div>
   <div class="bento" style="margin-top:14px">
     <div class="card c7 pad"><div class="sect-h gold" style="margin-top:0">Les gates du 2 août</div><div id="gates"></div></div>
@@ -867,7 +876,12 @@ const BENCH=[["SPY","S&P 500","#6ea0ff"],["QQQ","Nasdaq 100","#4f8cff"],["DIA","
 const CLR={};Object.keys(SCOL).forEach(k=>CLR[SNAME[k]]=SCOL[k]);BENCH.forEach(b=>CLR[b[1]]=b[2]);
 const KEYOF={};Object.keys(SNAME).forEach(k=>KEYOF[SNAME[k]]=k);BENCH.forEach(b=>KEYOF[b[1]]=b[0]);
 function cmpPts(key){const a=(D.suivi&&D.suivi.comparaison&&D.suivi.comparaison[key])||[];return a.map(p=>({x:p.j,y:num(p.r)})).filter(p=>p.y!=null);}
-function eqPts(key){const a=(D.suivi&&D.suivi.equity&&D.suivi.equity[key])||[];return a.map(p=>({x:p.t,y:num(p.v)})).filter(p=>p.y!=null);}
+// on conserve pct : le rendement chaîné calculé par la vue, apports de capital déduits.
+function eqPts(key){const a=(D.suivi&&D.suivi.equity&&D.suivi.equity[key])||[];return a.map(p=>({x:p.t,y:num(p.v),pct:p.pct==null?null:num(p.pct)})).filter(p=>p.y!=null);}
+// Performance du portefeuille RÉEL Revolut X depuis l'origine, apports déduits (v_alc_reel_jour).
+// À ne pas confondre avec le rendement du portefeuille virtuel de validation, qui porte le même nom.
+function rendementReelAlchimiste(){const a=(D.suivi&&D.suivi.equity&&D.suivi.equity.ALCHIMISTE)||[];
+ for(let i=a.length-1;i>=0;i--){if(a[i].pct!=null)return num(a[i].pct);}return null;}
 
 /* ================= RENDUS ================= */
 function rKpis(){const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);
@@ -907,12 +921,18 @@ function rVerdict(){const G=gatesCalc();
 
 function rTotaux(){const c=(D.snap&&Array.isArray(D.snap.cerveau))?D.snap.cerveau.filter(x=>['JU','SYL','GIL'].includes(x.archimage)):[];
  const alc=num(D.suivi?.alc_reel_live?.resume?.total_live_usd);
- const tot=c.length?c.reduce((s,x)=>s+(num(x.baseline_equity)||0)+(num(x.cumulative_pnl)||0),0)+(alc||0):null;
- const gain=c.length?c.reduce((s,x)=>s+(num(x.cumulative_pnl)||0),0):null;
+ // La valeur d'un compte est celle lue chez le courtier (alpaca_portfolio_value), pas
+ // baseline + cumulative_pnl : ces deux colonnes sont écrites à des instants différents
+ // et la somme s'écartait de 690 $ de la valeur réelle. Le gain en découle, jamais l'inverse.
+ const val=c.length?c.reduce((s,x)=>s+(num(x.alpaca_portfolio_value)||0),0):null;
+ const base=c.length?c.reduce((s,x)=>s+(num(x.baseline_equity)||0),0):null;
+ const tot=val!=null?val+(alc||0):null;
+ const gain=(val!=null&&base)?val-base:null;
  const npos=Array.isArray(D.positions)?D.positions.length:null;
  const runs=c.length?Math.max(...c.map(x=>num(x.total_runs)||0)):null;
+ const g=gain!=null?(gain>=0?'+':'−')+fmt$(Math.abs(gain)):'—';
  $('totaux').innerHTML=[[tot!=null?fmt$(tot):'—','Valeur totale · 3 Alpaca + Revolut X',''],
-  [gain!=null?('+'+fmt$(gain).replace('$','$')):'—','Gain cumulé (papier) · GIL+JU+SYL','up'],
+  [g,'Gain cumulé (papier) · GIL+JU+SYL',gain!=null?(gain>=0?'up':'down'):''],
   [npos!=null?npos:'—','Positions ouvertes · 3 comptes Alpaca',''],
   [runs!=null?runs:'—','Runs automatiques exécutés','']]
   .map(t=>'<div class="card kpi c3"><span class="lab">'+t[1]+'</span><span class="val '+t[2]+'" style="font-size:23px">'+t[0]+'</span></div>').join('');}
@@ -943,9 +963,15 @@ function rTimeline(){const runs=Array.isArray(D.runs)?D.runs.slice(0,40).reverse
 
 /* --- Stratégies --- */
 const DESCS={ALCHIMISTE:{t:"Alchimiste",m:"Cryptomonnaies — au comptant",b:["reel","Réel imminent"],d:"Analyse en continu des cryptos et prend des positions de court terme, AU COMPTANT. Seule stratégie du système à engager de l'argent RÉEL (Revolut X), sous contrôles de risque stricts."},
- SYL:{t:"SYL · Paniers ETF",m:"ETF — secteurs, international, macro, obligations",b:["sim","Simulation"],d:"Ne trade QUE des paniers (ETF) : secteurs US, zones internationales, matières premières, obligations. La stratégie la plus solide du portefeuille à ce jour."},
+ // Descriptions alignées sur la composition RÉELLEMENT constatée le 21/08/2026 dans
+ // oracle_positions_live. GIL était présenté comme « Crypto, proxies & couvertures » alors
+ // qu'il détient 1 397 372 $ d'actions et d'ETF pour 56 $ de crypto (une ligne ETHUSD, soit
+ // 0,004 % du portefeuille). La phrase « la stratégie la plus solide du portefeuille à ce
+ // jour » a été retirée de SYL : un classement fige dans le texte ce que les chiffres disent
+ // déjà, et devient faux sans que personne ne le remarque.
+ SYL:{t:"SYL · Paniers ETF",m:"ETF — larges, sectoriels, obligataires",b:["sim","Simulation"],d:"Ne trade QUE des paniers (ETF) : indices larges, secteurs US, obligations d'État et d'entreprise, métaux. Prend aussi des positions vendeuses pour se couvrir."},
  JU:{t:"JU · Actions US",m:"Actions individuelles — grandes valeurs US",b:["sim","Simulation"],d:"Sélectionne des actions américaines liquides. Approche disciplinée, orientée tendance, avec gestion systématique du risque."},
- GIL:{t:"GIL · Tactique Contrarian",m:"Crypto, proxies & couvertures",b:["sim","Simulation"],d:"Le franc-tireur du collège, à l'univers volontairement large — souvent à contre-pied de JU et SYL pour couvrir le portefeuille."},
+ GIL:{t:"GIL · Tactique Contrarian",m:"Secteurs & indices US, avec couvertures",b:["sim","Simulation"],d:"Le franc-tireur du collège : ETF sectoriels, indices à levier et grandes valeurs, souvent à contre-pied de JU et SYL pour couvrir le portefeuille."},
  MAREES:{t:"Marées · Devises",m:"Marché des changes (forex)",b:["val","Validation"],d:"Opère sur les principales paires de devises. Encore en validation précoce — Darwinex visé pour le réel."}};
 function sparkReal(key){const pts=cmpPts(key).slice(-30);if(pts.length<2)return '<div style="height:40px"></div>';
  const w=100,h=40,vs=pts.map(p=>p.y),mn=Math.min(...vs),mx=Math.max(...vs),c=SCOL[key];
@@ -956,8 +982,16 @@ function rStrats(){const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);cons
  const order=['ALCHIMISTE','SYL','JU','GIL','MAREES'];window._SPK=[];
  $('strats').innerHTML=order.map(k=>{const ds=DESCS[k],p=P[k]||{};const alc=k==='ALCHIMISTE'?(D.suivi?.alc_reel_live?.resume||{}):null;
   const figs=[];
-  if(alc&&num(alc.total_live_usd)!=null)figs.push(['<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>','Valeur réelle']);
-  figs.push([sgn(num(p.rendement_pct)),'Rendement']);
+  // La carte Alchimiste affichait « Valeur réelle 1 004 $ » puis « Rendement +17,42 % » : on
+  // lisait donc que ces 1 004 $ avaient fait +17,42 %. Faux — 17,42 % est la performance du
+  // portefeuille VIRTUEL de validation ; le portefeuille réel Revolut X a fait +55,9 % (apports
+  // déduits). Les deux chiffres existent, ils sont désormais nommés séparément.
+  if(alc&&num(alc.total_live_usd)!=null){
+   figs.push(['<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>','Valeur réelle']);
+   const rr=rendementReelAlchimiste();
+   if(rr!=null)figs.push([sgn(rr),'Rendement réel']);
+   figs.push([sgn(num(p.rendement_pct)),'Rendement virtuel']);
+  } else figs.push([sgn(num(p.rendement_pct)),'Rendement']);
   figs.push([p.drawdown_max_pct!=null?dn('−'+Math.abs(num(p.drawdown_max_pct)).toFixed(1)+' %'):'—','Drawdown max']);
   figs.push([p.reussite_pct!=null?num(p.reussite_pct).toFixed(0)+' %':'—','Réussite']);
   figs.push([SH[k]!=null?SH[k]:'—','Sharpe']);
@@ -967,7 +1001,79 @@ function rStrats(){const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);cons
  // Métriques clés
  $('keys').innerHTML='<thead><tr><th>Stratégie</th><th>Marché</th><th>Rendement</th><th>Drawdown</th><th>Réussite</th><th>Sharpe</th><th>Statut</th></tr></thead><tbody>'+
   order.map(k=>{const ds=DESCS[k],p=P[k]||{};return '<tr><td><span class="tname"><i style="background:'+SCOL[k]+'"></i>'+SNAME[k]+'</span></td><td style="font-family:var(--sans);color:var(--dim)">'+ds.m+'</td><td>'+sgn(num(p.rendement_pct))+'</td><td>'+(p.drawdown_max_pct!=null?'−'+Math.abs(num(p.drawdown_max_pct)).toFixed(1)+' %':'—')+'</td><td>'+(p.reussite_pct!=null?num(p.reussite_pct).toFixed(0)+' %':'—')+'</td><td>'+(SH[k]??'—')+'</td><td style="font-family:var(--sans)">'+esc(p.statut||ds.b[1])+'</td></tr>';}).join('')+'</tbody>';
- $('risque').innerHTML=[["Coupe-circuit","Le kill-switch peut suspendre instantanément une stratégie qui dérive."],["Pas d'effet de levier","Au comptant (Revolut X) — aucune liquidation forcée possible."],["Diversification","Cinq stratégies décorrélées sur des marchés différents."],["Réallocation continue","Le Méta-Cerveau retire du capital aux stratégies en perte."],["Drawdown surveillé","La perte depuis le plus haut est suivie en permanence."],["Validation avant le réel","Chaque stratégie passe par la simulation avant l'argent réel."]].map(x=>'<div class="c4"><div class="rcard"><div class="rt">'+x[0]+'</div><div class="rd">'+x[1]+'</div></div></div>').join('');}
+ rGardeFous();}
+
+/* --- Garde-fous : mesurés, jamais affirmés ---------------------------------
+   Ce panneau contenait six phrases écrites en dur, dont deux que les données
+   démentent :
+     « Pas d'effet de levier — au comptant, aucune liquidation forcée possible »
+        SYL est à 2,00× de levier sur Alpaca, avec 1 735 687 $ de ventes à
+        découvert pour 1 067 424 $ de capital. La phrase n'est vraie que du
+        portefeuille Revolut X, pas du collège.
+     « Cinq stratégies décorrélées sur des marchés différents »
+        Mesuré sur les rendements QUOTIDIENS des 53 jours communs : JU/SYL 0,43,
+        GIL/JU 0,42, GIL/SYL 0,10 — moyenne 0,32. Partiellement corrélées, donc,
+        et pas cinq mais trois : l'Alchimiste et Marées n'ont pas assez d'historique
+        commun pour être inclus. (Corréler les rendements CUMULÉS aurait donné 0,81
+        pour JU/SYL : deux courbes qui montent se ressemblent toujours. C'est le
+        rendement période par période qui mesure une dépendance réelle.)
+   Chaque carte affiche désormais la mesure du jour, avec sa source. Une vitrine
+   d'abonnés ne peut pas affirmer ce qu'elle ne mesure pas. ------------------ */
+function correlationMoyenne(){
+ const C=D.suivi?.comparaison||{};const AG=['JU','SYL','GIL'];
+ const quot=k=>{const s=C[k];if(!Array.isArray(s)||s.length<3)return null;
+  const m={};for(let i=1;i<s.length;i++){const a=num(s[i-1].r),b=num(s[i].r);
+   if(a!=null&&b!=null)m[s[i].j]=(100+b)/(100+a)-1;}return m;};
+ const M={};AG.forEach(k=>{const q=quot(k);if(q)M[k]=q;});
+ const cles=Object.keys(M);if(cles.length<2)return null;
+ const cor=(x,y)=>{const j=Object.keys(x).filter(d=>d in y);if(j.length<5)return null;
+  const ax=j.map(d=>x[d]),ay=j.map(d=>y[d]);
+  const mx=ax.reduce((s,v)=>s+v,0)/ax.length,my=ay.reduce((s,v)=>s+v,0)/ay.length;
+  let num_=0,dx=0,dy=0;for(let i=0;i<j.length;i++){const a=ax[i]-mx,b=ay[i]-my;num_+=a*b;dx+=a*a;dy+=b*b;}
+  return (dx&&dy)?num_/Math.sqrt(dx*dy):null;};
+ const vals=[];for(let i=0;i<cles.length;i++)for(let k=i+1;k<cles.length;k++){
+  const c=cor(M[cles[i]],M[cles[k]]);if(c!=null)vals.push({p:cles[i]+'/'+cles[k],c});}
+ if(!vals.length)return null;
+ vals.sort((a,b)=>b.c-a.c);
+ return {moy:vals.reduce((s,v)=>s+v.c,0)/vals.length,max:vals[0],n:vals.length};
+}
+function rGardeFous(){const el=$('risque');if(!el)return;
+ const expo=Array.isArray(D.expo)?D.expo:[];
+ const lev=expo.length?expo.reduce((a,b)=>(num(a.levier)||0)>(num(b.levier)||0)?a:b):null;
+ const ks=D.snap?.stats?.kill_switch;
+ const cor=correlationMoyenne();
+ const brains=D.hero?.brains||[];
+ const ddMax=brains.length?Math.max(...brains.map(b=>(num(b.current_drawdown)||0)*100)):null;
+ const poids=(D.snap?.cerveau||[]).filter(c=>['JU','SYL','GIL'].includes(c.archimage))
+   .map(c=>c.archimage+' '+Math.round((num(c.poids)||0)*100)+' %').join(' · ');
+ const G=gatesCalc();
+ const cartes=[
+  // Sémantique vérifiée dans revolut-x-trade : l'envoi réel exige kill_switch === 'ON'.
+  // « OFF » veut donc dire verrou EN PLACE, aucun ordre réel ne part — l'inverse de ce que
+  // le mot suggère au premier regard. On écrit la conséquence, pas le code interne.
+  ["Coupe-circuit", ks!=null
+    ? (String(ks).toUpperCase()==='ON'
+        ? 'Exécution réelle <b>ARMÉE</b> sur Revolut X. Le coupe-circuit peut la suspendre instantanément.'
+        : 'Exécution réelle <b>verrouillée</b> (kill-switch sur '+esc(String(ks))+') : aucun ordre ne part sur le compte réel.')
+    : 'Kill-switch : état indisponible.', 'ju_crypte_config'],
+  ["Effet de levier", lev
+    ? 'Le plus exposé est <b>'+esc(lev.archimage)+' à '+num(lev.levier).toFixed(2)+'×</b> ('+esc(lev.niveau_levier||'—')+'). Le portefeuille réel Revolut X, lui, est au comptant.'
+    : 'Levier : mesure indisponible.', 'v_exposition_traders'],
+  ["Corrélation mesurée", cor
+    ? 'Sur les rendements quotidiens, corrélation moyenne entre archimages : <b>'+cor.moy.toFixed(2)+'</b> — la plus forte, '+esc(cor.max.p)+', à <b>'+cor.max.c.toFixed(2)+'</b>. Ils se diversifient en partie, sans être indépendants.'
+    : 'Corrélation : pas encore assez de points communs pour la mesurer.', 'v_comparaison'],
+  ["Réallocation continue", poids
+    ? 'Poids attribués par le Méta-Cerveau selon les résultats : <b>'+esc(poids)+'</b>.'
+    : 'Poids : indisponibles.', 'oracle_brain_state'],
+  ["Drawdown surveillé", ddMax!=null
+    ? 'Perte depuis le plus haut, la plus élevée du collège : <b>'+ddMax.toFixed(2)+' %</b>, lue chez le courtier.'
+    : 'Drawdown : mesure indisponible.', 'alpaca_drawdown_from_peak'],
+  ["Validation avant le réel", G
+    ? '<b>'+G.gates.filter(g=>g.ok).length+' des 4</b> portes franchies. Tant qu\'elles ne le sont pas toutes, le collège reste en simulation.'
+    : 'Portes : mesure indisponible.', 'onglet Réel']
+ ];
+ el.innerHTML=cartes.map(x=>'<div class="c4"><div class="rcard"><div class="rt">'+x[0]+'</div><div class="rd">'+x[1]
+  +'<div style="margin-top:6px;font-family:var(--mono);font-size:10.5px;color:var(--mute)">source : '+esc(x[2])+'</div></div></div></div>').join('');}
 
 /* --- Marchés --- */
 let CMP_PER='Mois';const activeSet=new Set(['AETHER','SYL','JU','GIL','Alchimiste','Marées','S&P 500','Bitcoin']);
@@ -992,10 +1098,18 @@ function drawCmp(){const box=$('cmpChart');const act=[...activeSet].filter(n=>cm
     +'</div><div style="text-align:right;color:var(--mute);font-size:10.5px;margin-top:5px">'+lus.length+' série'+(lus.length>1?'s':'')+' affichée'+(lus.length>1?'s':'')+' · '+(PSET[CMP_PER]&&PSET[CMP_PER].t||CMP_PER)+'</div>'
   : '<span style="color:var(--mute)">Aucune série sélectionnée.</span>';}
 function rOv(per){const box=$('ovChart');
+ const sAe=slicePer(cmpPts('OPUS'),per),sSp=slicePer(cmpPts('SPY'),per),sBt=slicePer(cmpPts('BTC-USD'),per);
  lineChart(box,{W:760,H:220,fmt:pctF,x0line:true,series:[
-  {name:'AETHER',color:'var(--s-opus)',pts:slicePer(cmpPts('OPUS'),per),width:2.8,iris:true,area:true},
-  {name:'S&P 500',color:'#8FA3B0',pts:slicePer(cmpPts('SPY'),per),width:1.6,dash:'2 5'},
-  {name:'Bitcoin',color:'#8a84a0',pts:slicePer(cmpPts('BTC-USD'),per),width:1.6}]});}
+  {name:'AETHER',color:'var(--s-opus)',pts:sAe,width:2.8,iris:true,area:true},
+  {name:'S&P 500',color:'#8FA3B0',pts:sSp,width:1.6,dash:'2 5'},
+  {name:'Bitcoin',color:'#8a84a0',pts:sBt,width:1.6}]});
+ // La legende affiche le rendement REEL de la periode selectionnee, recalcule a chaque
+ // changement de periode, au lieu des trois valeurs qui y etaient figees.
+ if($('ovLegend')){
+  const fin=s=>{if(!s||!s.length)return null;const d=num(s[0].y),f=num(s[s.length-1].y);
+   return (d==null||f==null)?null:((100+f)/(100+d)-1)*100;};
+  $('ovLegend').innerHTML=[['AETHER','var(--s-opus)',fin(sAe)],['S&P 500','var(--mute)',fin(sSp)],['Bitcoin','#5a5470',fin(sBt)]]
+   .map(t=>'<span><i style="background:'+t[1]+'"></i>'+t[0]+' <b>'+(t[2]==null?'—':pctF(t[2]))+'</b></span>').join('');}}
 function rStats(){const a=D.suivi?.avance?.OPUS||{},s=D.suivi?.stats?.OPUS||{},sh=D.suivi?.sharpe?.OPUS;
  const cp=cmpPts('OPUS');const ret=cp.length?cp[cp.length-1].y:null;
  let annu=null;if(cp.length>1&&ret!=null){const days=(new Date(cp[cp.length-1].x)-new Date(cp[0].x))/86400000;if(days>=1)annu=(Math.pow(1+ret/100,365/days)-1)*100;}
@@ -1105,16 +1219,42 @@ function rPfControls(){const T=['JU','SYL','GIL','ALCHIMISTE','MAREES'];
  $('pfMetric').addEventListener('click',e=>{const b=e.target.closest('.btn');if(b){pfSel.metric=b.dataset.m;hi();rPf();}});
  $('pfPeriod').addEventListener('click',e=>{const b=e.target.closest('.btn');if(b){pfSel.period=b.dataset.p2;hi();rPf();}});
  hi();}
+// Rendement d'une fenêtre de la courbe de valeur. Quand la vue fournit un rendement chaîné
+// (colonne rendement_pct, apports déduits — cas du portefeuille réel Revolut X qui a reçu
+// 100 $ le 07/07 et 2,52 $ le 14/08), c'est LUI qui fait foi. Le calcul brut (fin−début)/début
+// compterait ces dépôts comme de la performance : il annonçait +84,1 % là où la gestion a
+// réellement produit +55,9 %. On ne retombe sur le calcul brut que si la vue ne dit rien.
+function rendementFenetre(raw){
+ if(!raw||raw.length<2)return null;
+ const a=raw[0],b=raw[raw.length-1];
+ if(a.pct!=null&&b.pct!=null)return ((100+b.pct)/(100+a.pct)-1)*100;
+ return (a.y?((b.y-a.y)/a.y*100):null);
+}
 function rPf(){const {trader,metric,period}=pfSel;const raw=slicePer(eqPts(trader),period);
- // Les Marées n'ont pas (encore) de série de valeur : on affiche ce qui existe vraiment plutôt qu'un cadre vide.
- if(!raw.length){const m=D.suivi?.marees_virtuel?.resume||{};const est=trader==='MAREES';
-  $('pfChart').innerHTML='<div style="padding:26px 14px;text-align:center"><div style="font-size:26px;margin-bottom:8px">'+(est?'🌊':'📉')+'</div>'
-   +'<div style="font-weight:800;font-size:14.5px">'+esc(SNAME[trader]||trader)+' n\'a pas encore de courbe de valeur</div>'
-   +'<div style="color:var(--dim);font-size:13px;margin-top:6px;max-width:52ch;margin-inline:auto;line-height:1.6">'
-   +(est?'Les Marées sont suivies trade par trade (forex, validation précoce) : la valorisation continue n\'est pas encore alimentée.':'Aucun point de valorisation en base pour cet agent.')+'</div></div>';
-  $('pfLegend').innerHTML='';
-  $('pfTiles').innerHTML=est?[[m.positions_ouvertes??'—','Positions ouvertes'],[m.trades_clos??'—','Trades clos'],[m.pnl_latent_pct!=null?pct2(num(m.pnl_latent_pct)):'—','P&L latent'],[m.expo_poids??'—','Exposition (poids)']]
-   .map(t=>'<div class="tile"><div class="n">'+t[0]+'</div><div class="k">'+t[1]+'</div></div>').join(''):'';
+ // Marées était annoncé « n'a pas encore de courbe de valeur ». C'est faux : il a 39 points
+ // depuis le 14/08. Il n'a pas de capital en DOLLARS — il est dimensionné en poids de
+ // portefeuille — donc sa série est un rendement en pourcentage. v_equity_points le déclare
+ // désormais par sa colonne « unite » et on trace la bonne courbe dans la bonne unité,
+ // au lieu de prétendre qu'elle n'existe pas.
+ const pct=(D.suivi?.equityUnite?.[trader]==='pct')||(trader==='MAREES');
+ if(pct){const m=D.suivi?.marees_virtuel?.resume||{};
+  const serie=slicePer(cmpPts(trader),period);
+  if(serie.length>1){
+   lineChart($('pfChart'),{W:880,H:250,fmt:pctF,x0line:true,series:[{name:SNAME[trader],color:SCOL[trader],pts:serie,width:2.4,area:true,areaColor:SCOL[trader]+'26'}]});
+   const der=serie[serie.length-1].y;
+   $('pfLegend').innerHTML='<span><i style="background:'+SCOL[trader]+'"></i>'+SNAME[trader]+' <b>'+pctF(der)+'</b></span>'
+    +'<span style="color:var(--mute)">rendement cumulé · '+serie.length+' points réels · pas de capital propre, position dimensionnée en poids</span>';
+  } else {
+   $('pfChart').innerHTML='<div style="padding:26px 14px;text-align:center;color:var(--dim);font-size:13px">Pas encore assez de trades clos sur cette période pour tracer une courbe.</div>';
+   $('pfLegend').innerHTML='';}
+  $('pfTiles').innerHTML=[[m.positions_ouvertes??'—','Positions ouvertes'],[m.trades_clos??'—','Trades clos'],
+   [m.pnl_latent_pct!=null?pct2(num(m.pnl_latent_pct)):'—','P&L latent'],[m.expo_poids!=null?num(m.expo_poids)+' %':'—','Exposition (poids)']]
+   .map(t=>'<div class="tile"><div class="n">'+t[0]+'</div><div class="k">'+t[1]+'</div></div>').join('');
+  return;}
+ if(!raw.length){
+  $('pfChart').innerHTML='<div style="padding:26px 14px;text-align:center"><div style="font-size:26px;margin-bottom:8px">📉</div>'
+   +'<div style="font-weight:800;font-size:14.5px">'+esc(SNAME[trader]||trader)+' n\'a pas de point de valorisation sur cette période</div></div>';
+  $('pfLegend').innerHTML='';$('pfTiles').innerHTML='';
   return;}
  let pts,fmt;
  if(metric==='valeur'){pts=raw;fmt=fmt$;}
@@ -1125,7 +1265,13 @@ function rPf(){const {trader,metric,period}=pfSel;const raw=slicePer(eqPts(trade
  const last=raw.length?raw[raw.length-1].y:null,first=raw.length?raw[0].y:null;
  $('pfLegend').innerHTML=raw.length?'<span><i style="background:'+SCOL[trader]+'"></i>'+SNAME[trader]+' <b>'+fmt$(last)+'</b></span><span style="color:var(--mute)">'+(PSET[period]&&PSET[period].t||period)+' · '+raw.length+' points réels</span>':'<span style="color:var(--mute)">Pas de série pour cet agent.</span>';
  let ddMin=0,peak=-1e18;raw.forEach(p=>{if(p.y>peak)peak=p.y;const dd=peak>0?-(peak-p.y)/peak*100:0;if(dd<ddMin)ddMin=dd;});
- $('pfTiles').innerHTML=raw.length?[[fmt$(last),'Valeur actuelle'],[first!=null?((last-first>=0?'+':'−')+fmt$(Math.abs(last-first))):'—','Variation (fenêtre)'],[first?pct2((last-first)/first*100):'—','Rendement (fenêtre)'],[ddMin.toFixed(2)+' %','Drawdown max (fenêtre)']].map(t=>'<div class="tile"><div class="n">'+t[0]+'</div><div class="k">'+t[1]+'</div></div>').join(''):'';}
+ const rf=rendementFenetre(raw);
+ const chaine=raw.length>1&&raw[0].pct!=null&&raw[raw.length-1].pct!=null;
+ $('pfTiles').innerHTML=raw.length?[[fmt$(last),'Valeur actuelle'],
+   [first!=null?((last-first>=0?'+':'−')+fmt$(Math.abs(last-first))):'—','Variation (fenêtre)'],
+   [rf!=null?pct2(rf):'—','Rendement (fenêtre)'+(chaine?' · apports déduits':'')],
+   [ddMin.toFixed(2)+' %','Drawdown max (fenêtre)']]
+   .map(t=>'<div class="tile"><div class="n">'+t[0]+'</div><div class="k">'+t[1]+'</div></div>').join(''):'';}
 function rAlc(){const jours=D.suivi?.alc_virtuel?.jours||[];const box=$('alcChart');
  const fee=Math.max(0,Number($('alcFee').value)||0);
  if(!jours.length){box.innerHTML='<div style="color:var(--mute);font-size:13px;padding:20px 0">Pas encore de données virtuelles.</div>';$('alcLegend').innerHTML='';return;}
@@ -1183,16 +1329,31 @@ function rTables(){
  rClassement(c);}
 
 /* --- Classement des portefeuilles (remplace l'ancien tableau « comparatif ») --- */
-const RSUB={JU:'Actions US · Alpaca',SYL:'Paniers ETF · Alpaca',GIL:'Contrarian · Alpaca',ALCHIMISTE:'Crypto · Revolut X (réel)'};
+// Sous-titres conformes à la composition constatée (voir DESCS) : GIL ne détient pas de crypto.
+const RSUB={JU:'Actions US · Alpaca',SYL:'Paniers ETF · Alpaca',GIL:'Secteurs & indices US · Alpaca',
+  ALCHIMISTE:'Crypto · Revolut X (réel)',MAREES:'Devises · virtuel'};
 function rClassement(c){const el=$('comparatif');if(!el)return;
  const SH=D.suivi?.sharpe||{};const alc=D.suivi?.alc_reel_live?.resume||{};const A=D.alch||{};
- const lignes=(c||[]).map(a=>{const b=num(a.baseline_equity),p=num(a.cumulative_pnl);
-  return {k:a.archimage,valeur:(b!=null&&p!=null)?b+p:null,gain:(b&&p!=null)?p/b*100:null,gainUsd:p,
+ const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);
+ // Le rendement et la valeur viennent de la valeur constatée chez le courtier, comme partout
+ // ailleurs dans la page — plus de baseline + cumulative_pnl, qui donnait 0,01 pt d'écart
+ // avec les courbes pour le même agent.
+ const lignes=(c||[]).map(a=>{const b=num(a.baseline_equity),v=num(a.alpaca_portfolio_value);
+  return {k:a.archimage,valeur:v,gain:(b&&v!=null)?(v-b)/b*100:null,gainUsd:(b&&v!=null)?v-b:null,
    wr:a.win_rate!=null?num(a.win_rate)*100:null,dd:a.current_drawdown!=null?num(a.current_drawdown)*100:null,
    sharpe:SH[a.archimage]!=null?num(SH[a.archimage]):null,poids:poidsOf(a)!=null?poidsOf(a)*100:null,reel:false};});
  if(num(alc.total_live_usd)!=null){const s=num(alc.total_snapshot_usd),l=num(alc.total_live_usd);
-  lignes.push({k:'ALCHIMISTE',valeur:l,gain:num(A.rendement_compose_pct),gainUsd:(s!=null?l-s:null),
+  // Cette ligne porte le badge RÉEL et une valeur en argent réel : son rendement doit être
+  // celui du compte réel (apports déduits), pas celui du portefeuille virtuel de validation.
+  lignes.push({k:'ALCHIMISTE',valeur:l,gain:rendementReelAlchimiste(),gainUsd:(s!=null?l-s:null),
    wr:A.win_rate!=null?num(A.win_rate):null,dd:null,sharpe:SH.ALCHIMISTE!=null?num(SH.ALCHIMISTE):null,poids:null,reel:true});}
+ // Marées manquait au classement : il n'a pas de capital en dollars (il est suivi en poids),
+ // mais il a bien un rendement mesuré et 40 trades clos. L'omettre revenait à le faire
+ // disparaître de la vitrine alors qu'il tourne.
+ if(P.MAREES&&P.MAREES.rendement_pct!=null){
+  lignes.push({k:'MAREES',valeur:null,gain:num(P.MAREES.rendement_pct),gainUsd:null,
+   wr:P.MAREES.reussite_pct!=null?num(P.MAREES.reussite_pct):null,dd:null,
+   sharpe:SH.MAREES!=null?num(SH.MAREES):null,poids:null,reel:false});}
  if(!lignes.length){el.innerHTML='<div style="color:var(--mute);font-size:13px">Classement indisponible.</div>';return;}
  lignes.sort((x,y)=>(y.gain==null?-1e9:y.gain)-(x.gain==null?-1e9:x.gain));
  const maxDd=Math.max(1,...lignes.map(l=>Math.abs(l.dd||0)));
@@ -1208,7 +1369,11 @@ function rClassement(c){const el=$('comparatif');if(!el)return;
    +'<div class="c"><b class="'+(l.dd>3?'down':'')+'">'+(l.dd!=null?'−'+l.dd.toFixed(2)+' %':'—')+'</b><span>'+(l.poids!=null?'Poids '+l.poids.toFixed(0)+' %':'Perte / plus haut')+'</span>'
      +(l.dd!=null?'<div class="jauge"><i style="width:'+Math.min(100,Math.abs(l.dd)/maxDd*100)+'%;background:var(--red)"></i></div>':'')+'</div>'
    +'</div></div>';}).join('');
- el.innerHTML+='<div class="note" style="margin-top:12px">Classement par gain sur la période mesurée depuis le 5 juin 2026. Les trois comptes Alpaca sont en simulation (paper trading) ; seul l\'Alchimiste engage du capital réel. Performances passées, sans garantie sur l\'avenir.</div>';}
+ // « depuis le 5 juin 2026 » était écrit en dur. La date de départ du track record vient
+ // maintenant de equity_series, qui la dérive du premier jour réellement suivi.
+ const dep=D.hero?.depuis?new Date(D.hero.depuis+'T00:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):null;
+ el.innerHTML+='<div class="note" style="margin-top:12px">Classement par gain'+(dep?' sur la période mesurée depuis le '+esc(dep):'')
+  +'. Les trois comptes Alpaca sont en simulation (paper trading) ; seul l\'Alchimiste engage du capital réel. Marées est suivi en pourcentage : il n\'a pas de capital propre. Performances passées, sans garantie sur l\'avenir.</div>';}
 
 /* --- Traders spécialistes (Collège) --- */
 function rSpec(){const alc=D.suivi?.alc_reel_live?.resume||{};const mar=D.suivi?.marees_virtuel?.resume||{};
@@ -1297,7 +1462,10 @@ function rapportHTML(){
  +'<div class="tools"><button class="p" onclick="window.print()">Imprimer / PDF</button><button onclick="window.close()">Fermer</button></div>'
  +'<div class="page">'
  +'<div class="hd"><div class="lg"><div class="sig">Æ</div><div><h1>AETHER</h1><div class="sl">Seul, un petit poisson. Ensemble, un banc.</div></div></div>'
- +'<div class="meta">Rapport investisseurs<br><b>'+auj+'</b><br>Période mesurée depuis le 5 juin 2026</div></div>'
+ // « depuis le 5 juin 2026 » était figé dans le rapport remis aux investisseurs. La date vient
+ // maintenant de equity_series, qui la dérive du premier jour réellement suivi.
+ +'<div class="meta">Rapport investisseurs<br><b>'+auj+'</b>'
+ +(D.hero?.depuis?'<br>Période mesurée depuis le '+esc(new Date(D.hero.depuis+'T00:00:00Z').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})):'')+'</div></div>'
  +'<p class="lede">Système de trading autonome opéré par un collège d\'agents — cinq Sages qui produisent les signaux, trois Archimages qui décident, un Méta-Cerveau qui pondère leur influence selon leurs résultats. '
  +'Les trois comptes actions sont en <b>simulation</b> ; seul l\'Alchimiste engage du capital réel, pour un montant volontairement réduit.</p>'
  +'<h2>Chiffres clés</h2><div class="kpis">'
@@ -1315,7 +1483,7 @@ function rapportHTML(){
    +'<td class="'+(l.r>=0?'up':'down')+'">'+pc(l.r)+'</td><td>'+(l.wr!=null?l.wr.toFixed(0)+' %':'—')+'</td>'
    +'<td>'+(l.dd!=null?'−'+l.dd.toFixed(2)+' %':'—')+'</td><td>'+(SH[l.k]!=null?Number(SH[l.k]).toFixed(2):'—')+'</td></tr>').join('')
  +(num(alc.total_live_usd)!=null?'<tr><td><span class="dot" style="background:'+COL.ALCHIMISTE+'"></span>Alchimiste — crypto (capital réel)</td><td>'+dol(num(alc.total_live_usd))+'</td>'
-   +'<td>'+pc(num(D.alch?.rendement_compose_pct))+'</td><td>'+(D.alch?.win_rate!=null?num(D.alch.win_rate).toFixed(1)+' %':'—')+'</td><td>—</td><td>'+(SH.ALCHIMISTE!=null?Number(SH.ALCHIMISTE).toFixed(2):'—')+'</td></tr>':'')
+   +'<td>'+pc(num(D.alch?.rendement_pct))+'</td><td>'+(D.alch?.win_rate!=null?num(D.alch.win_rate).toFixed(1)+' %':'—')+'</td><td>—</td><td>'+(SH.ALCHIMISTE!=null?Number(SH.ALCHIMISTE).toFixed(2):'—')+'</td></tr>':'')
  +'</tbody></table>'
  +'<h2>Mesures de risque — portefeuille consolidé</h2><div class="kpis">'
  +kpi(A.volatilite!=null?Number(A.volatilite).toFixed(2)+' %':'—','Volatilité')
@@ -1347,8 +1515,24 @@ function ouvrirRapport(imprimer){
 
 /* --- Passage au réel --- */
 function rReel(){const a=D.alch||{};
- $('alcReel').innerHTML=[[a.win_rate!=null?num(a.win_rate).toFixed(1)+' %':'—','Win rate réel'],[a.rendement_compose_pct!=null?sgn(num(a.rendement_compose_pct)):'—','Rendement composé'],[a.positions_ouvertes??'—','Positions ouvertes'],[a.esperance_pct!=null?sgn(num(a.esperance_pct)):'—','Espérance / trade']]
-  .map(t=>'<div class="card kpi c3"><span class="lab">'+t[1]+'</span><span class="val" style="font-size:24px">'+t[0]+'</span></div>').join('');
+ // Ce bloc est titré « capital RÉEL (Revolut X) » : il doit donc afficher le capital réel,
+ // pas le portefeuille virtuel. Il lisait D.alch (= alc_stats, 100 % virtuel) et étiquetait
+ // « Win rate réel » un chiffre de simulation. Les vrais montants sont dans v_alc_reel_live,
+ // déjà utilisé partout ailleurs dans la page. Le bilan virtuel reste affiché, sur une
+ // seconde rangée et nommé pour ce qu'il est.
+ const r=D.suivi?.alc_reel_live?.resume||{};
+ const reel=[[fmt$(num(r.total_live_usd)),'Capital réel — valorisé en direct'],
+  [r.total_live_eur!=null?Number(r.total_live_eur).toLocaleString('fr-FR',{maximumFractionDigits:0})+' €':'—','Soit en euros'],
+  [(r.n_live!=null&&r.n_lignes!=null)?r.n_live+' / '+r.n_lignes:'—','Lignes valorisées au dernier cours'],
+  [r.ecart_depuis_snapshot_usd!=null?fmt$(num(r.ecart_depuis_snapshot_usd)):'—','Écart depuis le relevé'+(r.snapshot_at?' de '+hm(r.snapshot_at):'')]];
+ const virtuel=[[a.win_rate!=null?num(a.win_rate).toFixed(1)+' %':'—','Win rate (virtuel)'],
+  [a.rendement_pct!=null?sgn(num(a.rendement_pct)):'—','Rendement cumulé (virtuel)'],
+  [a.clotures??'—','Trades clôturés (virtuel)'],
+  [a.esperance_pct!=null?sgn(num(a.esperance_pct)):'—','Espérance / trade (virtuel)']];
+ const carte=t=>'<div class="card kpi c3"><span class="lab">'+t[1]+'</span><span class="val" style="font-size:24px">'+t[0]+'</span></div>';
+ $('alcReel').innerHTML=reel.map(carte).join('')
+  +'<div class="c12" style="margin:6px 0 2px"><div class="chart-sub">Bilan du portefeuille <b>virtuel</b> qui sert de dossier de validation — ce n\'est pas de l\'argent engagé.</div></div>'
+  +virtuel.map(carte).join('');
  // perf par période (calcul client identique à suivi.html : ((100+fin)/(100+deb)-1)*100 )
  const EQT=D.teq||{};const J={jour:1,semaine:7,mois:30,debut:9999};
  function rend(serie,nj){if(!serie||serie.length<2)return null;const fin=num(serie[serie.length-1].pct);let i=serie.length-1-nj;if(i<0)i=0;const deb=num(serie[i].pct);if(fin==null||deb==null)return null;return ((100+fin)/(100+deb)-1)*100;}
