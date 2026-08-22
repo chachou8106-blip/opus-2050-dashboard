@@ -159,21 +159,74 @@ Trois constats déjà listés dans l'audit du 21/08 et toujours vrais :
   événement `modify`. La correction qu'il porte n'a donc encore **jamais été vérifiée
   en conditions réelles**.
 
-## Corrections proposées (aucune appliquée)
+## Corrections — TOUTES APPLIQUÉES le 22/08 au soir
 
-Par ordre de rapport / risque :
+Chachou : « je veux que tu corriges intégralement ma console pour que chaque onglet
+soit bien la réalité du terrain ». Les sept défauts ci-dessus sont corrigés, plus
+quatre autres trouvés en corrigeant. Détail SQL : `supabase/schema/16_console_verite_terrain.sql`.
 
-1. Convertir en `Europe/Paris` les 8 `to_char()` de `dashboard_snapshot()`. Purement affichage.
-2. Filtrer `abs(market_value) >= 50` dans le bloc `positions_vivantes` de
-   `dashboard_snapshot()`, comme le fait déjà `ju_archimage_metrics`. Supprime les +324 985 $ fantômes.
-3. Faire lire à `oracle-tests/hero` `coalesce(alpaca_drawdown_from_peak, current_drawdown)`
-   au lieu de `current_drawdown`. Rétablit la porte 1 et fait passer le verdict à 3/4.
-4. Brancher `rReel()` (ligne 1349 de `aether.html`) sur `D.suivi.alc_reel_live.resume`
-   au lieu de `D.alch`, pour que le bloc « capital réel » affiche le capital réel.
-5. Alimenter la ligne MAREES de `v_perf_resume` depuis `marees_virtual_trades`.
-6. Choisir **un seul** rendement Alchimiste et l'afficher partout — je recommande
-   `cumul_pct` (17,4 %), le seul défendable.
-7. Remplacer la moyenne par la médiane dans `v_couts_friction.slippage_achats_moyen_pct`.
+| # | Correction | Où | Vérifié |
+|---|---|---|---|
+| 1 | 10 `to_char()` passent en `Europe/Paris` | `dashboard_snapshot()` | `genere_a` = 21:19 Paris, dernier run « 08-21 **09:05** » |
+| 2 | Positions fantômes écartées (`avg_entry_price > 0`) | `dashboard_snapshot()`, `ju_archimage_metrics`, `oracle-tests/archimage_detail` | GIL +15 196 $ · JU −353 $ · 4 lignes aberrantes comptées à part |
+| 3 | Drawdown résolu sur la colonne du broker | `oracle-tests` v12 (`ddResolu`) | GIL 0,59 % · `dd_source=alpaca_drawdown_from_peak` · **porte 1 OK** |
+| 4 | Le bloc « capital réel (Revolut X) » affiche le capital réel | `aether.html` `rReel()` | 1 004 $ / 861 € / 49 lignes ; le virtuel reste, nommé « (virtuel) » |
+| 5 | MARÉES et ALCHIMISTE alimentés | `v_perf_resume` | MARÉES −3,01 % / 30,8 % · ALCHIMISTE 17,42 % / 84 % |
+| 6 | Un seul rendement Alchimiste partout | `oracle-tests`, `aether.html` ×2 | `rendement_pct` = 17,42 ; l'autre renommé `rendement_compose_theorique_pct` |
+| 7 | Médiane au lieu de la moyenne | `v_couts_friction` | GIL −1,945 · JU 0,000 · SYL −1,960, aberrations exposées |
 
-Les points 1 à 3 et 5 à 7 sont des objets Supabase en lecture seule : aucun n'entre
-dans un prompt d'agent, aucun ne touche l'exécution d'ordres.
+Trouvés et corrigés en chemin :
+
+| # | Correction | Où |
+|---|---|---|
+| 8 | `meilleur_pct` de GIL à **456,03 %** et volatilité à **87,41** : une 4ᵉ ligne aberrante passait le filtre `≥ 50 $`. Ramenés à 18,12 % et 7,57 | `ju_archimage_metrics` |
+| 9 | La Vigie déclarait « Sage Macro PANNE » alors qu'il avait reparlé le 22/08 à 10h51 — et affichait elle-même une sortie postérieure au run audité | `vigie_scan()` |
+| 10 | Le titre Discord de la Vigie ne s'affichait plus en gras : un espace après `**` annule le gras Markdown (résidu de la correction emoji du 21/08) | `vigie_alert()` |
+| 11 | Valeurs figées visibles au chargement : KPI d'accueil (`+9.4 %`, `+6.4 %`, `1.32`, `$847.69`), les deux bandeaux « 3/4 », et surtout la **légende du graphe d'accueil** (`AETHER +11.8 % / S&P 500 +3.1 % / Bitcoin −4.6 %`) qui n'était recalculée **jamais** | `aether.html` |
+
+L'incident « Sage Macro » a été clos dans le registre `oracle_problemes`
+(1 fermeture, notification Discord envoyée). La Vigie est passée de 14 OK / 2 PANNE / 1 alerte
+à **15 OK / 1 PANNE / 1 alerte** ; les deux restants sont vrais : le scénario Make est arrêté,
+donc le tir de 21h15 n'a pas eu lieu et le verdict de dé-stake n'est plus évalué.
+
+### Ce qui n'était pas un défaut, après vérification
+- **Journal écrit deux fois par créneau** : c'est voulu et documenté dans
+  `supabase/README-DAILY-JOURNAL.md`. `generate_daily_journal()` garantit l'écriture côté
+  serveur, la tâche Claude « AETHER — Résumé » écrit sa propre version pour la notification
+  push. Deux textes différents, pas un doublon technique. Rien touché.
+- **Taux du Sage Macro à 63,4 % dans sa fiche contre 62,7 % dans la jauge** : ce sont deux
+  fenêtres de mesure différentes (`sage_detail` vs `evaluate_sages(24, 0.5)`), pas une incohérence.
+
+### Vérification finale, en HTTP réel
+Les edge functions ont été appelées depuis Postgres via `net.http_post` — vrai transport HTTP,
+pas une simulation SQL :
+
+| Appel | Résultat |
+|---|---|
+| `oracle-tests/hero` | 200 · alpha −1,74 pt · drawdowns résolus sur la source broker |
+| `oracle-tests/alchimiste` | 200 · `rendement_pct` 17,42 · plus de `rendement_compose_pct` dans le flux |
+| `oracle-tests/archimage_detail` (GIL) | 200 · **26** positions (2 fantômes écartées) · dd 0,59 % |
+| `oracle-tests/positions` | 200 · 76 lignes |
+| `oracle-tests/friction` | 200 · médianes en place |
+| `oracle-inbox/suivi` | 200 · 100 Ko · VIGIE, MARÉES, ALCHIMISTE, capital réel corrects |
+| `oracle-inbox/journal` | 200 · 121 Ko |
+
+Syntaxe JavaScript de `aether.html` validée par `node --check`.
+
+### Restent ouverts — hors console, non corrigés
+
+Ces points relèvent du scénario Make ou de la stratégie, pas de l'affichage :
+
+- **Module 303 (SYL)** : la dernière exécution du 6183820 (22/08 10h50) est morte sur son
+  échappement. Le correctif est dans le scénario 7051944 et dans
+  `blueprint-6183820-CORRIGE-v2.json` — **7051944 n'a encore jamais été exécuté**.
+- **Aucun run n'a produit les 5 Sages depuis le 19/08 22h18.** La clé Gemini du module 207
+  a été corrigée après le dernier run : à re-vérifier au premier tir.
+- `oracle_flash_intel` : 0 ligne. `propositions_validees` : 0 sur 56.
+- **SYL au levier 2,00**, short TLT de −1 681 547 $ détenu depuis 220 runs.
+- **JU et GIL n'ont aucun edge** (Kelly brut négatif) ; GIL est à 44,6 % de précision directionnelle.
+- Le créneau 9h00 Paris tombe marché US fermé : 15 ordres écartés au dernier run.
+- `oracle-inbox/suivi` répond en plus de 5 secondes (il pagine 1 269 + 1 613 lignes). Sans effet
+  dans le navigateur, mais c'est le point lent de la console.
+- `dashboard.html:518` code en dur l'identifiant de scénario `6183820` (autre fichier, non utilisé
+  par les 8 onglets).
