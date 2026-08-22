@@ -309,7 +309,11 @@ svg{max-width:100%}
            recalcules depuis l'ecriture de la page — trois chiffres faux en permanence. -->
       <div class="legend" id="ovLegend"></div>
     </div>
-    <div class="card c4 pad"><div class="chart-title">Gains par trader</div><div class="chart-sub" style="margin-bottom:4px">Aujourd'hui · en euros</div><table class="tbl"><tbody id="gains"></tbody></table></div>
+    <!-- Le sous-titre disait « Aujourd'hui ». Les montants sont ceux de la dernière séance
+         où le Collège a tourné — le 21/08 au moment où ceci est écrit, le scénario étant à
+         l'arrêt. Afficher -44 270 € sous le mot « Aujourd'hui » laissait croire à une perte
+         du jour même. rGains() date maintenant le bloc à partir de la donnée. -->
+    <div class="card c4 pad"><div class="chart-title">Gains par trader</div><div class="chart-sub" style="margin-bottom:4px" id="gainsSub">en euros</div><table class="tbl"><tbody id="gains"></tbody></table></div>
   </div>
 
   <div class="bento" style="margin-top:14px"><div class="card flux c12"><div class="flux-h"><span class="pulse"></span> Flux du Collège · en direct</div><div id="flux"></div></div></div>
@@ -938,6 +942,16 @@ function rTotaux(){const c=(D.snap&&Array.isArray(D.snap.cerveau))?D.snap.cervea
   .map(t=>'<div class="card kpi c3"><span class="lab">'+t[1]+'</span><span class="val '+t[2]+'" style="font-size:23px">'+t[0]+'</span></div>').join('');}
 
 function rGains(){const rows=(D.suivi?.gains||[]).filter(g=>g.horizon==='jour');
+ // Date réellement couverte : la dernière période quotidienne présente dans
+ // v_rendements_periodes. Sans elle, le bloc s'annonçait « Aujourd'hui » quel que soit
+ // l'âge de la donnée — trompeur dès que le Collège ne tourne pas.
+ const sub=$('gainsSub');
+ if(sub){const jours=(D.suivi?.rendements||[]).filter(r=>r.granularite==='jour').map(r=>r.periode).sort();
+  const dernier=jours.length?jours[jours.length-1]:null;
+  const auj=new Date().toISOString().slice(0,10);
+  sub.textContent=dernier
+    ? (dernier===auj?"Aujourd'hui · en euros":'Dernière séance mesurée : '+dj(dernier+'T12:00:00')+' · en euros')
+    : 'en euros';}
  $('gains').innerHTML=rows.length?rows.map(g=>{const v=num(g.gain_eur)??num(g.gain_pct);const cls=v>0?'up':(v<0?'down':'');
   const key=KEYOF[g.label]||g.serie;const col=SCOL[g.serie]||CLR[g.label]||'var(--dim)';
   const eu=num(g.gain_eur);const txt=eu!=null?fmtE(eu):pctF(num(g.gain_pct));
@@ -1295,9 +1309,23 @@ function T(el,head,rows,empty){$(el).innerHTML='<thead><tr>'+head.map(h=>'<th>'+
 function rTables(){
  const c=(D.snap&&Array.isArray(D.snap.cerveau))?D.snap.cerveau.filter(x=>['JU','SYL','GIL'].includes(x.archimage)):[];
  const alc=D.suivi?.alc_reel_live?.resume||{};
- T('comptes',["Compte","Départ (baseline)","Valeur actuelle","Gain","Win rate"],
-  c.map(a=>{const b=num(a.baseline_equity),p=num(a.cumulative_pnl);return ['<span class="tname"><i style="background:'+SCOL[a.archimage]+'"></i>'+a.archimage+' · Alpaca</span>',fmt$(b),fmt$(b!=null&&p!=null?b+p:null),(p!=null&&b?sgn(p/b*100):'—'),(a.win_rate!=null?(num(a.win_rate)*100).toFixed(0)+' %':'—')];})
-  .concat(num(alc.total_live_usd)!=null?[['<span class="tname"><i style="background:var(--s-alch)"></i>Alchimiste · Revolut X (réel)</span>',fmt$(num(alc.total_snapshot_usd)),'<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>',sgn(num(alc.ecart_depuis_snapshot_usd)&&num(alc.total_snapshot_usd)?num(alc.ecart_depuis_snapshot_usd)/num(alc.total_snapshot_usd)*100:null),'—']]:[]),'Comptes indisponibles.');
+ // Ce tableau calculait la valeur du compte comme baseline + cumulative_pnl, et affichait donc
+ // 1 067 365 $ pour SYL juste au-dessus du tableau d'exposition qui, lui, lit la valeur du
+ // courtier : 1 067 424 $. Deux montants pour le même compte, dans le même onglet, à 59 $ près.
+ // Il lit désormais alpaca_portfolio_value, comme le reste de la page.
+ // La ligne de l'Alchimiste, elle, ne montrait pas un gain mais l'écart depuis le relevé du
+ // matin : la colonne le dit maintenant, au lieu de le ranger sous « Gain » à côté de
+ // performances mesurées depuis l'origine.
+ T('comptes',["Compte","Départ (baseline)","Valeur actuelle","Gain depuis l'origine","Win rate"],
+  c.map(a=>{const b=num(a.baseline_equity),v=num(a.alpaca_portfolio_value);
+   return ['<span class="tname"><i style="background:'+SCOL[a.archimage]+'"></i>'+a.archimage+' · Alpaca</span>',
+    fmt$(b),fmt$(v),(b&&v!=null?sgn((v-b)/b*100):'—'),
+    (a.win_rate!=null?(num(a.win_rate)*100).toFixed(0)+' %':'—')];})
+  .concat(num(alc.total_live_usd)!=null?[['<span class="tname"><i style="background:var(--s-alch)"></i>Alchimiste · Revolut X (réel)</span>',
+    fmt$(num(alc.total_snapshot_usd))+'<div style="font-size:10.5px;color:var(--mute)">relevé du matin</div>',
+    '<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>',
+    (rendementReelAlchimiste()!=null?sgn(rendementReelAlchimiste())+'<div style="font-size:10.5px;color:var(--mute)">apports déduits</div>':'—'),
+    '—']]:[]),'Comptes indisponibles.');
  // Exposition brute : somme des valeurs absolues. Les ventes à découvert sont négatives et
  // s'annulent avec les achats dans un total net — le risque réel n'apparaît que comme ça.
  const LVCOL={ELEVE:'var(--red)',MOYEN:'var(--amber)',MODERE:'var(--grn)'};
@@ -1313,10 +1341,16 @@ function rTables(){
  // Achats (valeur > 0) ET ventes à découvert (valeur < 0), triés par compte puis par taille.
  const pos=(Array.isArray(D.positions)?D.positions:[]).slice().sort((a,b)=>String(a.archimage||'').localeCompare(String(b.archimage||''))||Math.abs(num(b.market_value)||0)-Math.abs(num(a.market_value)||0));
  const vente=p=>String(p.side||'').toLowerCase()==='short'||(num(p.qty)!=null&&num(p.qty)<0);
- T('positions',["Compte","Actif","Sens","Valeur $","P&L latent $","P&L %","Jours"],pos.slice(0,90).map(p=>{const sh=vente(p);
+ // La colonne s'appelait « Jours » et lisait days_held : cette colonne est NULL sur les
+ // 72 positions (comme opened_at), la colonne était donc entièrement remplie de tirets —
+ // 73 lignes de « — ». consecutive_runs_held, lui, est alimenté sur 72/72 (de 2 à 224) :
+ // c'est la durée de détention réellement mesurée par le système, en nombre de runs.
+ T('positions',["Compte","Actif","Sens","Valeur $","P&L latent $","P&L %","Détenu depuis"],pos.slice(0,90).map(p=>{const sh=vente(p);
+  const duree=(p.days_held!=null)?(p.days_held+' j')
+    :(p.consecutive_runs_held!=null?p.consecutive_runs_held+' runs':'—');
   return ['<span class="tname"><i style="background:'+(SCOL[p.archimage]||'var(--dim)')+'"></i>'+esc(p.archimage||'—')+'</span>',esc(p.ticker||'—'),
    (sh?'<span class="tag sell">VENTE</span>':'<span class="tag buy">ACHAT</span>'),
-   fmt$(num(p.market_value)),(num(p.unrealized_pl)!=null?(num(p.unrealized_pl)>=0?up('+'+fmt$(num(p.unrealized_pl))):dn(fmt$(num(p.unrealized_pl)))):'—'),sgn(num(p.unrealized_pl_pct)),(p.days_held??'—')];}),'Aucune position vivante.');
+   fmt$(num(p.market_value)),(num(p.unrealized_pl)!=null?(num(p.unrealized_pl)>=0?up('+'+fmt$(num(p.unrealized_pl))):dn(fmt$(num(p.unrealized_pl)))):'—'),sgn(num(p.unrealized_pl_pct)),duree];}),'Aucune position vivante.');
  // rappel de comptage par compte, pour recoupement direct avec l'écran Alpaca
  const cnt={};pos.forEach(p=>{const k=p.archimage||'?';cnt[k]=cnt[k]||{n:0,v:0};cnt[k].n++;if(vente(p))cnt[k].v++;});
  const elc=$('posCount');

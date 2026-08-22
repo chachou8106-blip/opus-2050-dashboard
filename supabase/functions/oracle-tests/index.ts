@@ -1,4 +1,9 @@
-// oracle-tests v13 — VITRINE : plus aucune constante en dur dans les calculs de hero.
+// oracle-tests v14 — positions : le filtre client (qty < 1e-6) laissait passer le résidu BTCUSD de
+// GIL, qui a une quantité normale (0,0034) mais un prix d'entrée de -21 282 $ ; il s'affichait
+// à « +456 % » dans le tableau des positions. Même critère qu'en base : avg_entry_price > 0.
+// consecutive_runs_held est ajouté : days_held est NULL sur les 72 positions (opened_at aussi),
+// la colonne « Jours » de la console était donc entièrement remplie de tirets.
+// v13 — VITRINE : plus aucune constante en dur dans les calculs de hero.
 // L'alpha était calculé par gain/30000, c'est-à-dire un capital de 3 000 000 $ écrit dans le code —
 // faux dès qu'un compte est redimensionné. Il se calcule maintenant sur la somme des baseline_equity
 // réellement lues. La durée du track record ne part plus d'un new Date('2026-06-05') en dur mais de
@@ -159,7 +164,12 @@ Deno.serve(async (req) => {
       case 'positions': {
         // limite 300 (et tri par |valeur|) : avec limit=60 + tri sur market_value desc, les positions
         // VENDEUSES (market_value negatif) tombaient toutes hors de la fenetre -> invisibles en console. [19/08]
-        const rows = await rest('oracle_positions_live?select=archimage,ticker,side,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held&order=archimage.asc,market_value.desc.nullslast&limit=300')
+        // avg_entry_price=gt.0 : le filtre client (qty < 1e-6) laissait passer le residu BTCUSD de GIL,
+        // qui a une quantite normale (0,0034) mais un prix d'entree de -21 282 $ et affichait donc
+        // « +456 % » dans le tableau des positions. Le meme critere qu'en base ecarte les quatre.
+        // consecutive_runs_held remplace days_held : cette derniere est NULL sur les 72 positions,
+        // d'ou une colonne « Jours » entierement remplie de tirets.
+        const rows = await rest('oracle_positions_live?avg_entry_price=gt.0&select=archimage,ticker,side,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held,consecutive_runs_held&order=archimage.asc,market_value.desc.nullslast&limit=300')
         data = Array.isArray(rows) ? rows.map((r: any) => ({ ...r, market_value: Math.round(r.market_value), unrealized_pl: Math.round(r.unrealized_pl) })) : rows
         break }
       case 'lead': {
@@ -217,7 +227,7 @@ Deno.serve(async (req) => {
           rest(`oracle_brain_state?archimage=eq.${a}&select=archimage,win_rate,directional_accuracy,kelly_fraction,current_drawdown,alpaca_drawdown_from_peak,max_drawdown,cumulative_pnl,alpaca_portfolio_value,baseline_equity,consecutive_losses,current_bias,learnings,mistakes_history`),
           // avg_entry_price > 0 : ecarte les residus Alpaca (qty 1e-9, prix d'entree negatif,
           // unrealized_pl aberrant a +188 325 $ sur SOLUSD) qui ne sont pas des positions.
-          rest(`oracle_positions_live?archimage=eq.${a}&avg_entry_price=gt.0&select=ticker,side,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held&order=market_value.desc.nullslast&limit=60`)
+          rest(`oracle_positions_live?archimage=eq.${a}&avg_entry_price=gt.0&select=ticker,side,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held,consecutive_runs_held&order=market_value.desc.nullslast&limit=60`)
         ])
         const b = Array.isArray(brain) && brain[0] ? ddResolu(brain[0]) : {}
         data = {
