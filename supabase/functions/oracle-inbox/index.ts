@@ -1,3 +1,5 @@
+// oracle-inbox v21 — v_equity_points declare son unite (usd / pct) et son rendement ; le bloc
+// suivi les transmet via equityUnite. Voir le commentaire au-dessus de la requete.
 // oracle-inbox v20 — canal Chachou <-> robot.
 // [19/08] PAGINATION : PostgREST plafonne à 1000 lignes côté serveur (un &limit= plus grand ne sert
 // à rien). v_comparaison (1204 lignes) perdait donc URTH/USO/XRP-USD et amputait SYL de moitié.
@@ -58,9 +60,18 @@ Deno.serve(async (req) => {
       const si = await sb('v_stats_indice?select=serie,correlation,beta,alpha_annualise')
       const men = await sb('v_rendements_mensuels?select=serie,mois,rendement_pct&order=serie.asc,mois.asc&limit=1000')
       const rpRows = await sbAll('v_rendements_periodes?select=serie,granularite,periode,rendement_pct&serie=in.(OPUS,SYL,JU,GIL,ALCHIMISTE,MAREES)&order=serie.asc,periode.asc')
-      const eqRows = await sbAll('v_equity_points?select=trader,ts,equity&order=trader.asc,ts.asc')
+      // v21 : v_equity_points melangeait trois unites dans sa colonne equity (un GAIN en $ pour
+      // les archimages, une VALEUR en $ pour l'Alchimiste, un nombre sans unite pour Marees) et
+      // la console l'affichait partout comme « Valeur $ ». La vue declare desormais son unite ;
+      // on la transmet telle quelle pour que la page trace chaque agent dans la sienne au lieu
+      // de pretendre que Marees « n'a pas encore de courbe » alors qu'il a 39 points.
+      const eqRows = await sbAll('v_equity_points?select=trader,ts,equity,unite,rendement_pct&order=trader.asc,ts.asc')
       const equity: Record<string, any[]> = {}
-      for (const p of eqRows) { (equity[p.trader] = equity[p.trader] || []).push({ t: p.ts, v: Number(p.equity) }) }
+      const equityUnite: Record<string, string> = {}
+      for (const p of eqRows) {
+        equityUnite[p.trader] = p.unite || 'usd'
+        ;(equity[p.trader] = equity[p.trader] || []).push({ t: p.ts, v: Number(p.equity), pct: p.rendement_pct == null ? null : Number(p.rendement_pct) })
+      }
       for (const k of Object.keys(equity)) { if (equity[k].length > 90) equity[k] = equity[k].slice(-90) }
       const cmpRows = await sbAll('v_comparaison?select=serie,jour,ret&order=serie.asc,jour.asc')
       const comparaison: Record<string, any[]> = {}
@@ -102,7 +113,7 @@ Deno.serve(async (req) => {
       const vgr = await sb('v_vigie_resume?select=*')
       const vgd = await sb('v_vigie_detail?select=composant,categorie,etat,detail,derniere_sortie,run_auditee')
       const vigie = { resume: (arr(vgr.body)[0] || null), detail: arr(vgd.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: rpRows, equity, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie })
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: rpRows, equity, equityUnite, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')

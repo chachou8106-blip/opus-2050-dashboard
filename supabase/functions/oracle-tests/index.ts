@@ -1,4 +1,11 @@
-// oracle-tests v12 — DRAWDOWN. La porte « aucun drawdown au-dessus de 5 % » de l'onglet Réel lisait
+// oracle-tests v13 — VITRINE : plus aucune constante en dur dans les calculs de hero.
+// L'alpha était calculé par gain/30000, c'est-à-dire un capital de 3 000 000 $ écrit dans le code —
+// faux dès qu'un compte est redimensionné. Il se calcule maintenant sur la somme des baseline_equity
+// réellement lues. La durée du track record ne part plus d'un new Date('2026-06-05') en dur mais de
+// la date renvoyée par equity_series, elle-même dérivée du premier jour réellement suivi.
+// Le gain se mesure comme sur les courbes (valeur constatée − capital de départ) au lieu de
+// cumulative_pnl, colonne applicative écrite à un instant légèrement différent.
+// v12 — DRAWDOWN. La porte « aucun drawdown au-dessus de 5 % » de l'onglet Réel lisait
 // oracle_brain_state.current_drawdown, colonne figée : GIL y restait à 6,26 %, soit exactement son
 // drawdown MAXIMUM historique. La colonne alimentée par le broker, alpaca_drawdown_from_peak, disait
 // 0,59 %. L'onglet Collège lisait déjà la bonne (dashboard_snapshot fait le coalesce), l'onglet Réel la
@@ -77,21 +84,39 @@ Deno.serve(async (req) => {
     switch (action) {
       case 'hero': {
         const [brainsRaw, spyRow, leadsCount] = await Promise.all([
-          rest('oracle_brain_state?archimage=in.(JU,SYL,GIL)&select=archimage,cumulative_pnl,win_rate,alpaca_portfolio_value,current_drawdown,alpaca_drawdown_from_peak'),
+          rest('oracle_brain_state?archimage=in.(JU,SYL,GIL)&select=archimage,cumulative_pnl,win_rate,alpaca_portfolio_value,baseline_equity,current_drawdown,alpaca_drawdown_from_peak'),
           rpc('equity_series'),
           compte('oracle_leads')
         ])
         const brains = Array.isArray(brainsRaw) ? brainsRaw.map(ddResolu) : brainsRaw
-        let gain = 0, wr = 0, valeur = 0
-        if (Array.isArray(brains)) for (const b of brains) { gain += Number(b.cumulative_pnl)||0; wr += Number(b.win_rate)||0; valeur += Number(b.alpaca_portfolio_value)||0 }
+        // Le gain se mesure comme sur les courbes : valeur constatée du compte moins capital
+        // de départ. On n'utilise plus cumulative_pnl, colonne applicative écrite par
+        // update-brain à un instant différent de la synchro des positions (écart 0,01 pt).
+        let gain = 0, wr = 0, valeur = 0, capital = 0
+        if (Array.isArray(brains)) for (const b of brains) {
+          const v = Number(b.alpaca_portfolio_value) || 0
+          const base = Number(b.baseline_equity) || 0
+          valeur += v; capital += base; gain += (base > 0 ? v - base : 0)
+          wr += Number(b.win_rate) || 0
+        }
         const spy = (spyRow && spyRow.spy && spyRow.spy.length) ? spyRow.spy[spyRow.spy.length-1].pct : null
+        // Alpha = rendement du collège moins celui du S&P 500. Le rendement se calcule sur le
+        // capital RÉELLEMENT engagé : l'ancienne version divisait par 30000, c'est-à-dire un
+        // capital de 3 000 000 $ écrit en dur — faux dès qu'un compte est redimensionné.
+        const rendement = capital > 0 ? (gain / capital) * 100 : null
+        // Durée du track record : première date réellement suivie, renvoyée par equity_series,
+        // au lieu d'une date écrite en dur dans le code.
+        const depart = (spyRow && spyRow.depart) ? new Date(spyRow.depart + 'T00:00:00Z').getTime() : null
         data = {
           gain_total: Math.round(gain),
           valeur_totale: Math.round(valeur),
+          capital_engage: Math.round(capital),
+          rendement_moyen_pct: rendement != null ? Math.round(rendement * 100) / 100 : null,
           win_rate_moyen: Array.isArray(brains) && brains.length ? Math.round(wr/brains.length*1000)/10 : null,
           spy_periode_pct: spy,
-          alpha_moyen_pct: (spy != null && valeur > 0) ? Math.round((gain/30000 - spy)*100)/100 : null,
-          jours: Math.max(1, Math.round((Date.now() - new Date('2026-06-05').getTime())/86400000)),
+          alpha_moyen_pct: (spy != null && rendement != null) ? Math.round((rendement - spy) * 100) / 100 : null,
+          depuis: (spyRow && spyRow.depart) || null,
+          jours: depart != null ? Math.max(1, Math.round((Date.now() - depart)/86400000)) : null,
           leads_count: leadsCount,
           brains
         }
@@ -189,7 +214,7 @@ Deno.serve(async (req) => {
         const a = String(p.archimage || '').toUpperCase()
         if (!['JU','SYL','GIL'].includes(a)) { data = { error: 'archimage inconnu' }; break }
         const [brain, pos] = await Promise.all([
-          rest(`oracle_brain_state?archimage=eq.${a}&select=archimage,win_rate,directional_accuracy,kelly_fraction,current_drawdown,alpaca_drawdown_from_peak,max_drawdown,cumulative_pnl,alpaca_portfolio_value,consecutive_losses,current_bias,learnings,mistakes_history`),
+          rest(`oracle_brain_state?archimage=eq.${a}&select=archimage,win_rate,directional_accuracy,kelly_fraction,current_drawdown,alpaca_drawdown_from_peak,max_drawdown,cumulative_pnl,alpaca_portfolio_value,baseline_equity,consecutive_losses,current_bias,learnings,mistakes_history`),
           // avg_entry_price > 0 : ecarte les residus Alpaca (qty 1e-9, prix d'entree negatif,
           // unrealized_pl aberrant a +188 325 $ sur SOLUSD) qui ne sont pas des positions.
           rest(`oracle_positions_live?archimage=eq.${a}&avg_entry_price=gt.0&select=ticker,side,qty,market_value,unrealized_pl,unrealized_pl_pct,days_held&order=market_value.desc.nullslast&limit=60`)

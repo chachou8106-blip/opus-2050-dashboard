@@ -93,35 +93,13 @@ group by archimage;
 -- (v_alc_virtuel_jour.cumul_pct = 17,42 %), et non le composé trade par trade
 -- (alc_stats.rendement_compose_pct = 59,7 %) qui suppose 100 % du capital sur
 -- chaque trade — une hypothèse qu'aucun portefeuille ne peut tenir.
+--
+-- ATTENTION : cette première version composait MARÉES trade par trade — le défaut
+-- exact que la ligne au-dessus reproche à alc_stats, et qui donnait -3,01 % au lieu
+-- de -0,27 %. Elle a été remplacée le soir même. La définition qui fait foi est
+-- celle de la SECONDE PASSE, en fin de fichier. Ne pas rejouer ce bloc.
 -- ---------------------------------------------------------------------------
-create or replace view public.v_perf_resume as
-select archimage as trader,
-       round(cumulative_pnl / nullif(baseline_equity, 0) * 100, 2) as rendement_pct,
-       round(max_drawdown * 100, 2)                                as drawdown_max_pct,
-       round(win_rate * 100, 1)                                    as reussite_pct,
-       'simulation'::text                                          as statut,
-       'juin–août 2026'::text                                      as periode
-  from public.oracle_brain_state
- where archimage = any (array['JU','SYL','GIL'])
-union all
-select 'ALCHIMISTE',
-       (select round(cumul_pct, 2) from public.v_alc_virtuel_jour order by jour desc limit 1),
-       null::numeric,
-       (select wr_pct from public.v_alc_virtuel_resume),
-       'reel_imminent',
-       'validation'
-union all
-select 'MAREES',
-       (select round((exp(sum(ln(1 + pnl_pct/100.0))) - 1)::numeric * 100, 2)
-          from public.marees_virtual_trades
-         where not is_open and pnl_pct is not null and pnl_pct > -100),
-       null::numeric,
-       (select round(count(*) filter (where pnl_pct > 0)::numeric * 100.0
-                     / nullif(count(*), 0)::numeric, 1)
-          from public.marees_virtual_trades
-         where not is_open and pnl_pct is not null),
-       'validation_precoce',
-       'depuis juil.';
+-- (version périmée retirée — voir « v_perf_resume » dans la seconde passe)
 
 
 -- ---------------------------------------------------------------------------
@@ -187,3 +165,178 @@ group by archimage;
 -- Discord : Chachou voyait « ** 🔭 La Vigie — anomalie detectee** » en texte
 -- brut, astérisques comprises. Les deux occurrences sont recollées :
 --   '**' || chr(128301) || ' La Vigie...'
+
+
+-- ############################################################################
+-- SECONDE PASSE — 22/08/2026 au soir, demande de Chachou :
+-- « rien ne doit être écrit en dur, vérifie tous les calculs, tout doit être
+--   transparent et vrai — c'est ma future vitrine d'abonnés »
+--
+-- Objets ajoutés / corrigés (migrations vitrine_1 à vitrine_7) :
+--   v_equity_journalier   (nouveau) valeur des comptes = historique + jour courant
+--   v_marees_virtuel_jour (nouveau) pendant de v_alc_virtuel_jour pour Marées
+--   v_alc_reel_jour       (nouveau) performance Revolut X, apports déduits (TWR)
+--   v_comparaison         courbes jusqu'au dernier état réel, date dérivée
+--   v_equity_points       une seule unité, + colonnes unite / rendement_pct
+--   v_perf_resume         MARÉES et ALCHIMISTE alimentés, rendement aligné
+--   v_gains_traders       libellés conformes à la composition constatée
+--   equity_series()       plus de /10000 ni de date en dur
+--
+-- CE QUE LA VITRINE AFFICHAIT DE FAUX, ET POURQUOI :
+--
+-- 1. GIL en positif alors qu'il est en perte.
+--    alpaca_equity_daily vient de l'historique Alpaca, qui a un jour de retard ;
+--    la valeur constatée est dans oracle_brain_state. Les courbes s'arrêtaient
+--    donc au 20/08 : GIL affiché +1,56 % (1 015 563 $) contre -3,61 % réel
+--    (963 914 $) sur l'onglet Stratégies. Cinq points d'écart entre deux onglets
+--    pour le même agent, le même jour.
+--
+-- 2. Trois unités dans une colonne nommée « Valeur $ ».
+--    v_equity_points renvoyait un GAIN pour les archimages, une VALEUR pour
+--    l'Alchimiste, un nombre sans unité pour Marées. La tuile « Valeur actuelle »
+--    montrait donc un gain, et le drawdown — calculé en (pic-valeur)/pic sur un
+--    GAIN — donnait des pourcentages absurdes.
+--
+-- 3. Marées invisible.
+--    « n'a pas encore de courbe de valeur » alors qu'il a 39 points depuis le
+--    14/08. Il n'a pas de capital en dollars : il est dimensionné en poids. La
+--    vue déclare maintenant son unité et la console trace sa courbe en %.
+--
+-- 4. Quatre méthodes de rendement pour deux portefeuilles virtuels.
+--    Alchimiste : +0,163 % en courbe, +17,42 % en fiche. Marées : -0,072 % en
+--    courbe, -3,01 % en fiche (ce dernier écrit par moi le matin même, et
+--    reproduisant exactement le défaut que je venais de corriger sur alc_stats).
+--    Convention unique : rendement du jour pondéré par les montants engagés,
+--    puis composition des jours.
+--
+-- 5. Des apports de capital comptés comme performance.
+--    Le portefeuille réel Revolut X affichait +84,1 % (553,27 $ -> 1 020,06 $).
+--    Or le compte a reçu 100 $ le 07/07 (cash_usd 22,96 -> 122,96 le jour où le
+--    total bondit de 558,61 à 664,27) et 2,52 $ le 14/08. Performance réelle,
+--    en rendement chaîné : +55,87 %. Annoncer +84 % à de futurs abonnés aurait
+--    été faux.
+--
+-- 6. Un capital de 3 000 000 $ écrit dans le code.
+--    oracle-tests calculait l'alpha par gain/30000. Il le calcule désormais sur
+--    la somme des baseline_equity lues (2 999 734 $). equity_series divisait par
+--    10000 — un capital de 1 M$ supposé — et filtrait sur '2026-06-05', date
+--    répétée à trois endroits. Elle est maintenant dérivée du premier jour où
+--    les trois comptes sont suivis (ce qui redonne 2026-06-05, mais se corrigera
+--    tout seul).
+--
+-- 7. GIL présenté comme « Crypto tactique ».
+--    Mesure au 21/08 : 1 397 372 $ en actions et ETF, 56 $ en crypto — 0,004 %.
+--
+-- CONTRÔLE FINAL — le même agent, lu par trois chemins différents :
+--   agent       onglet Marchés   onglet Stratégies   onglet Portefeuille   recalcul
+--   GIL             -3,608            -3,61                -3,608           -3,61
+--   JU               4,564             4,56                 4,564            4,56
+--   SYL              6,747             6,75                 6,747            6,75
+--   MARÉES          -0,273            -0,27                -0,27 (pct)         —
+--   ALCHIMISTE      17,421            17,42  (virtuel)     55,87 (réel)         —
+--   OPUS             2,568  = moyenne des trois = hero.rendement_moyen_pct 2,57
+--
+-- Les deux chiffres de l'Alchimiste sont deux portefeuilles distincts : le
+-- virtuel de validation et le compte Revolut X. La console les nomme désormais
+-- séparément (« Rendement virtuel » / « Rendement réel ») au lieu de les
+-- présenter sous une seule étiquette.
+-- ############################################################################
+
+-- ---------------------------------------------------------------------------
+-- DÉFINITIONS QUI FONT FOI (seconde passe). Elles remplacent, pour v_perf_resume,
+-- le bloc marqué « version périmée » plus haut dans ce fichier.
+-- ---------------------------------------------------------------------------
+
+create or replace view public.v_equity_journalier as
+with hist as (
+  select e.archimage as trader, e.jour, e.equity::numeric as equity_usd, 'historique'::text as source
+  from public.alpaca_equity_daily e
+),
+live as (
+  -- le point du jour, absent de l'historique Alpaca ; jamais dupliqué
+  select b.archimage, (b.updated_at at time zone 'Europe/Paris')::date,
+         b.alpaca_portfolio_value::numeric, 'constate'::text
+  from public.oracle_brain_state b
+  where b.archimage in ('JU','SYL','GIL')
+    and coalesce(b.alpaca_portfolio_value, 0) > 0
+    and (b.updated_at at time zone 'Europe/Paris')::date
+        > coalesce((select max(e.jour) from public.alpaca_equity_daily e
+                     where e.archimage = b.archimage), 'epoch'::date)
+)
+select * from hist union all select * from live;
+
+create or replace view public.v_marees_virtuel_jour as
+with j as (
+  select (exit_ts at time zone 'UTC')::date as jour, count(*) as n_trades,
+         count(*) filter (where pnl_pct > 0) as gagnants,
+         sum(montant * pnl_pct) / nullif(sum(montant), 0) as ret_pct
+  from public.marees_virtual_trades
+  where not is_open and exit_ts is not null and pnl_pct is not null
+  group by 1
+)
+select jour, n_trades, gagnants,
+       round(gagnants::numeric / nullif(n_trades, 0)::numeric * 100, 1) as wr_pct,
+       round(ret_pct::numeric, 3) as ret_pct,
+       round(((exp(sum(ln(1 + ret_pct / 100.0)) over (order by jour)) - 1) * 100)::numeric, 2) as cumul_pct
+from j;
+
+create or replace view public.v_alc_reel_jour as
+with s as (
+  select snapshot_at, snapshot_at::date as jour, total_usd, cash_usd,
+         lag(total_usd) over (order by snapshot_at) as prev_total,
+         lag(cash_usd)  over (order by snapshot_at) as prev_cash
+  from public.revolut_portfolio_daily
+  where total_usd >= 300
+),
+r as (
+  select jour, total_usd, cash_usd,
+         greatest(coalesce(cash_usd - prev_cash, 0), 0) as apport,
+         case when prev_total is null or prev_total = 0 then null
+              else (total_usd - greatest(coalesce(cash_usd - prev_cash, 0), 0)) / prev_total - 1 end as ret
+  from s
+)
+select jour, round(total_usd, 2) as valeur_usd, round(apport, 2) as apport_usd,
+       round((coalesce(ret, 0) * 100)::numeric, 3) as ret_pct,
+       round(((exp(sum(ln(1 + greatest(coalesce(ret, 0), -0.999))) over (order by jour, total_usd)) - 1) * 100)::numeric, 2) as cumul_pct
+from r;
+
+create or replace view public.v_perf_resume as
+select b.archimage as trader,
+       round((b.alpaca_portfolio_value - b.baseline_equity) / nullif(b.baseline_equity, 0) * 100, 2) as rendement_pct,
+       round(b.max_drawdown * 100, 2) as drawdown_max_pct,
+       round(b.win_rate * 100, 1)     as reussite_pct,
+       'simulation'::text             as statut,
+       'juin–août 2026'::text         as periode
+  from public.oracle_brain_state b
+ where b.archimage = any (array['JU','SYL','GIL'])
+union all
+select 'ALCHIMISTE',
+       (select round(cumul_pct, 2) from public.v_alc_virtuel_jour order by jour desc limit 1),
+       null::numeric,
+       (select wr_pct from public.v_alc_virtuel_resume),
+       'reel_imminent', 'validation'
+union all
+select 'MAREES',
+       (select round(cumul_pct, 2) from public.v_marees_virtuel_jour order by jour desc limit 1),
+       null::numeric,
+       (select round(count(*) filter (where pnl_pct > 0)::numeric * 100.0
+                     / nullif(count(*), 0)::numeric, 1)
+          from public.marees_virtual_trades where not is_open and pnl_pct is not null),
+       'validation_precoce', 'depuis juil.';
+
+create or replace view public.v_equity_points as
+select e.trader, (e.jour + '20:00:00'::time)::timestamptz as ts, e.equity_usd as equity, 'usd'::text as unite,
+       round((e.equity_usd - bs.baseline_equity) / nullif(bs.baseline_equity, 0) * 100, 3) as rendement_pct
+from public.v_equity_journalier e
+join public.oracle_brain_state bs on bs.archimage = e.trader
+where bs.baseline_equity is not null
+union all
+select 'ALCHIMISTE', (j.jour + '20:00:00'::time)::timestamptz, j.valeur_usd, 'usd', j.cumul_pct
+from public.v_alc_reel_jour j
+union all
+select 'MAREES', (j.jour + '20:00:00'::time)::timestamptz, null::numeric, 'pct', j.cumul_pct
+from public.v_marees_virtuel_jour j;
+
+-- v_comparaison et equity_series() : corps complets dans les migrations
+--   vitrine_3_une_seule_convention_pour_les_virtuels
+--   vitrine_6_equity_series_sans_constante_en_dur
