@@ -10,8 +10,12 @@
 // la date renvoyée par equity_series, elle-même dérivée du premier jour réellement suivi.
 // Le gain se mesure comme sur les courbes (valeur constatée − capital de départ) au lieu de
 // cumulative_pnl, colonne applicative écrite à un instant légèrement différent.
+// v17 — DRAWDOWN, règle unique : la plus prudente des deux fenêtres de mesure, et « — » quand
+// aucune n'est disponible. Même règle dans iron_sentinel_validate_order, dashboard_snapshot et
+// get_oracle_context : l'écran, les prompts et la sentinelle disent le même chiffre.
+// Voir le bloc au-dessus de ddResolu(). GIL ressort à 11,03 % (pic du 25/07).
 // v15 — DRAWDOWN, CORRECTION DE LA v12 : voir le bloc au-dessus de ddResolu(). La v12 lisait la
-// mauvaise colonne et rendait verte une porte qui doit être rouge (GIL est à −6,26 % de son pic).
+// mauvaise colonne et rendait verte une porte qui doit être rouge.
 // v12 — DRAWDOWN. La porte « aucun drawdown au-dessus de 5 % » de l'onglet Réel lisait
 // oracle_brain_state.current_drawdown, colonne figée : GIL y restait à 6,26 %, soit exactement son
 // drawdown MAXIMUM historique. La colonne alimentée par le broker, alpaca_drawdown_from_peak, disait
@@ -84,15 +88,30 @@ const tronque = (s: any, n = 90) => (s == null ? null : (String(s).length > n ? 
 //     alpaca_drawdown_from_peak disait 0,59 % / 0,00 % / 0,38 %.
 // C'est current_drawdown qui est juste. La v12 avait donc rendu VERTE une porte qui doit etre
 // rouge : GIL est a -6,26 % de son pic, et son coupe-circuit « drawdown_5pct » est arme.
+// v16 — les deux colonnes mesurent des FENETRES differentes, aucune n'est fausse depuis que
+// sync_alpaca_positions a ete corrige (il prenait MAX() sur une table a une seule ligne) :
+//   current_drawdown          pic sur le mois renvoye par l'API Alpaca (update-brain)
+//   alpaca_drawdown_from_peak pic all-time sur alpaca_equity_daily (sync_alpaca_positions)
+// GIL : 6,26 % sur un mois, 11,03 % depuis son plus haut du 25/07. Un garde-fou retient la
+// plus prudente — c'est la regle appliquee dans iron_sentinel_validate_order,
+// dashboard_snapshot et get_oracle_context. L'ecran affiche donc la meme chose que la
+// sentinelle, et les deux mesures restent visibles separement.
+// Une mesure ABSENTE ne vaut pas zero : sur une porte de securite, afficher « 0 % de drawdown »
+// quand on ne sait pas est le pire des defauts. Si les deux colonnes sont nulles, on renvoie null
+// et l'ecran affiche « — ».
 function ddResolu(b: any) {
-  const applicatif = b?.current_drawdown
-  const alpaca = b?.alpaca_drawdown_from_peak
+  const nb = (x: any) => { const n = Number(x); return (x == null || !isFinite(n)) ? null : n }
+  const applicatif = nb(b?.current_drawdown)
+  const alpaca = nb(b?.alpaca_drawdown_from_peak)
+  const connues = [applicatif, alpaca].filter((x): x is number => x !== null)
+  const retenu = connues.length ? Math.max(...connues) : null
   return {
     ...b,
-    current_drawdown: (applicatif == null ? alpaca : applicatif),
-    dd_source: (applicatif == null ? 'alpaca_drawdown_from_peak' : 'current_drawdown'),
-    dd_applicatif: applicatif ?? null,
-    dd_broker: alpaca ?? null
+    current_drawdown: retenu,
+    dd_source: retenu === null ? 'inconnu'
+      : (retenu === alpaca && alpaca !== applicatif) ? 'pic all-time' : 'fenetre 1 mois',
+    dd_applicatif: applicatif,
+    dd_broker: alpaca
   }
 }
 

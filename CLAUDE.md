@@ -26,7 +26,15 @@ un mécanisme de « leçon épinglée » dans `update-brain` v16, puis j'ai ins�
 `oracle_brain_state.learnings` un texte de ma composition pour SYL
 (`run_id = 'lecon-manuelle-20260815'`). Le module Make 303 lit `learnings[1].bias` : mon texte a
 donc occupé **l'unique canal de mémoire de SYL pendant cinq jours**, et SYL n'a plus relu une
-seule de ses propres leçons. Retiré le 20/08 (sauvegarde `bak_20260820_lecon_epinglee`).
+seule de ses propres leçons.
+
+**Le retrait du 20/08 a nettoyé la mauvaise table.** J'avais supprimé la ligne de
+`oracle_brain_state.learnings` (sauvegarde `bak_20260820_lecon_epinglee`) en croyant l'affaire
+close, et je l'ai écrit ici. Or `get_oracle_context()` ne construit PAS le bloc `learnings` à
+partir de cette colonne : il le construit à partir de **`brain_lessons`**, où la ligne est restée.
+Mon texte a donc continué de partir dans le prompt de SYL **huit jours de plus**, jusqu'au
+23/08 (sauvegarde `bak_20260823_lecon_manuelle`). Leçon : vérifier le CHEMIN de lecture, pas
+seulement la table qui porte le nom attendu.
 
 Interdictions, sans exception :
 1. **Ne jamais écrire, modifier ou épingler** une ligne de `oracle_brain_state.learnings`,
@@ -36,10 +44,27 @@ Interdictions, sans exception :
 4. Si je pense qu'un agent a besoin d'une règle, je le **propose à Chachou** avec le prompt Maia
    correspondant. C'est lui qui décide. Je n'ai pas le droit de court-circuiter.
 
-**Liste des textes Supabase qui atteignent un prompt** — à vérifier avant toute modification :
-`oracle_brain_state.current_bias` et `.learnings[].bias` (les 3 Archimages via `MEMORY_CORRECTION`),
-`active_circuit_breakers` (via `CIRCUIT_BREAKERS`), `crypte_ju_evaluate_and_learn` (Alchimiste),
-`marees_evaluate_and_learn` (Marées). Tout passe par `get_oracle_context()` → module 105.
+**Liste des textes qui atteignent un prompt** — à vérifier avant toute modification. Elle était
+incomplète, c'est ce qui m'a fait nettoyer la mauvaise table le 20/08 :
+
+Dans Supabase, via `get_oracle_context()` → module 105 :
+- **`brain_lessons.bias` et `.eval`** — la VRAIE source des blocs `learnings` et
+  `mistakes_history`. C'est ici qu'on lit, pas dans `oracle_brain_state`.
+- `oracle_brain_state.current_bias` (les 3 Archimages via `MEMORY_CORRECTION`) ; `.learnings` et
+  `.mistakes_history` ne servent que de repli quand `brain_lessons` est vide.
+- `oracle_circuit_breakers` → bloc `active_circuit_breakers` (via `CIRCUIT_BREAKERS`).
+- `crypte_ju_evaluate_and_learn` (Alchimiste), `marees_evaluate_and_learn` (Marées) : ces
+  fonctions ÉCRIVENT le `current_bias` de CRYPTE_JU et de MAREES.
+
+Hors Supabase, dans le code des edge functions — même statut, même interdiction :
+- `collect-market-data/index.ts` : le champ `directive` injecté aux Archimages, et 3 prompts
+  système Perplexity.
+- `marees-context/index.ts` : le champ `directive`, prompt système complet de l'Archimage des Marées.
+- `fx-context/index.ts` : le champ `directive` forex.
+
+**Deux chemins écrivent `current_bias`, avec des règles opposées** : `update-brain` tronque à
+260 caractères et garde 30 leçons ; `batch_write_college_run_v2` (la RPC appelée par Make) ne
+tronque pas et empile. C'est par là que `JU.current_bias` a atteint 1 132 caractères.
 
 ## RÈGLE ABSOLUE — Ne jamais déployer ce que je n'ai pas pu tester (20/08/2026)
 

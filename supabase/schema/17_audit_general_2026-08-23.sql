@@ -64,7 +64,17 @@
 
 
 -- =====================================================================================
--- CONSTATÉ ET **NON CORRIGÉ** — demande l'accord de Chachou
+-- CONSTATÉ LE MATIN — A ET B ONT ÉTÉ CORRIGÉS DEPUIS (23/08 après-midi)
+-- =====================================================================================
+-- A) et B) sont APPLIQUÉS. Le détail des corrections est dans
+--    docs/decisions/CONTROLE-TABLES-CONTEXTE-2026-08-23.md :
+--      * sync_alpaca_positions prend désormais le pic dans alpaca_equity_daily ;
+--      * iron_sentinel_validate_order, dashboard_snapshot, get_oracle_context et
+--        oracle-tests v16 retiennent tous la plus prudente des deux mesures de drawdown ;
+--        GIL ressort à 11,03 % (pic du 25/07) et sera bloqué à l'OUVERTURE, pas à la vente ;
+--      * la fenêtre de 24 h des coupe-circuits passe à 30 jours : les 3 armés sont transmis ;
+--      * les leçons injectées sont plafonnées à 30 (elles n'avaient AUCUNE limite).
+-- C) et D) restent ouverts.
 -- =====================================================================================
 --
 -- A) LE DRAWDOWN QUI PROTÈGE LES ORDRES NE MESURE PAS UN DRAWDOWN
