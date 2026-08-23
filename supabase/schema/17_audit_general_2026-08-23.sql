@@ -179,3 +179,47 @@
 -- « L'Alchimiste — capital réel (Revolut X) ». Renommé « L'Alchimiste VIRTUEL », avec la
 -- durée sur la légende et une phrase qui dit que ce portefeuille ne détient pas d'argent.
 -- Onglet Stratégies : nouvelle colonne « Période mesurée », en ambre sous 15 jours.
+
+
+-- =====================================================================================
+-- 10) LA RACINE DU MELANGE REEL / VIRTUEL  (trouvee apres relance de Chachou)
+-- =====================================================================================
+-- Les corrections 1 a 9 traitaient les symptomes. La cause etait plus bas : LE MEME
+-- IDENTIFIANT 'ALCHIMISTE' DESIGNAIT DEUX PORTEFEUILLES DIFFERENTS SELON LA VUE.
+--
+--   v_comparaison.ALCHIMISTE    -> alchimiste_virtual_trades   VIRTUEL  (7 jours,  +17,42 %)
+--   v_equity_points.ALCHIMISTE  -> v_alc_reel_jour             REEL     (47 jours,  -4,72 %)
+--
+-- Les cinq vues derivees de v_comparaison (v_sharpe, v_stats_indice, v_perf_avancee,
+-- v_rendements_periodes, v_rendements_mensuels) heritaient donc du VIRTUEL, pendant que la
+-- console tracait le REEL sous le meme nom. Consequences constatees a l'ecran :
+--   * carte « Alchimiste » (Strategies)  : rendement virtuel + valeur reelle + Sharpe virtuel
+--   * classement des portefeuilles       : Sharpe et win rate VIRTUELS sur la ligne badgee REEL
+--   * rapport investisseurs              : rendement, win rate et Sharpe VIRTUELS sur la ligne
+--                                          intitulee « Alchimiste — crypto (capital reel) »
+--   * mini-carte du College              : badge REEL, « Win rate » du portefeuille virtuel
+--   * onglet Portefeuilles               : selecteur « Alchimiste » = courbe REELLE, alors que
+--                                          l'onglet Marches montrait la courbe VIRTUELLE
+--
+-- CORRECTION : plus aucune serie ne s'appelle 'ALCHIMISTE'.
+--   ALC_VIRT  portefeuille de validation, aucun capital engage
+--   ALC_REEL  compte Revolut X, argent reel, rendement net d'apports
+-- Vues modifiees : v_comparaison (+ ajout de la serie ALC_REEL, qui n'y figurait pas du tout),
+-- v_equity_points, v_perf_resume (deux lignes distinctes), v_gains_traders (filtre),
+-- v_rapport_periodes, v_rapport_mensuel_virtuels. Les 5 vues derivees suivent d'elles-memes.
+-- oracle-inbox v24 : filtre serie=in.(...,ALC_VIRT,ALC_REEL,...).
+--
+-- Cote console, chaque bloc ne lit plus qu'UNE serie :
+--   * deux cartes Strategies distinctes, avec leurs durees et leurs badges
+--   * deux lignes dans le classement — et le laboratoire virtuel en est SORTI : il arrivait
+--     ★ PREMIER avec +17,4 %, devant les comptes qui engagent du capital
+--   * deux lignes dans le rapport investisseurs, la seconde marquee « virtuel, aucun capital »
+--   * mini-carte du College : « Rendement (hors apports) » a la place du win rate virtuel
+--
+-- Verification : les 8 onglets ont ete rendus dans Chromium avec les donnees reelles et
+-- inspectes ligne par ligne (docs/outils/audit-onglets-alchimiste.mjs). Chaque mention de
+-- l'Alchimiste porte desormais « reel » ou « virtuel ».
+--
+-- RESTE A FAIRE, non corrige : oracle_contexte contient une fiche de documentation qui dit
+-- encore « v_equity_points | ... ALCHIMISTE=revolut_portfolio_daily ». C'est un texte affiche
+-- dans l'onglet Journal ; je n'ecris pas dans les tables de contexte sans accord.

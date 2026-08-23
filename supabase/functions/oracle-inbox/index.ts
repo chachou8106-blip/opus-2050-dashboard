@@ -1,3 +1,7 @@
+// oracle-inbox v24 — SEPARATION DE L'ALCHIMISTE REEL ET DU VIRTUEL. Le meme identifiant
+// 'ALCHIMISTE' designait le portefeuille VIRTUEL dans v_comparaison (et ses 5 vues derivees)
+// et le compte REEL dans v_equity_points. Les deux series s'appellent desormais ALC_VIRT et
+// ALC_REEL, et plus rien ne s'appelle 'ALCHIMISTE' tout court.
 // oracle-inbox v23 — un Sharpe absent n'est plus transmis comme 0. Voir le commentaire
 // au-dessus de la construction de la table `sharpe`.
 // oracle-inbox v22 — transmet la DUREE et la NATURE de chaque serie de performance.
@@ -67,7 +71,7 @@ Deno.serve(async (req) => {
       const av = await sb('v_perf_avancee?select=serie,volatilite,sortino,calmar,drawdown_max,meilleur_mois,pire_mois,pct_mois_positifs')
       const si = await sb('v_stats_indice?select=serie,correlation,beta,alpha_annualise')
       const men = await sb('v_rendements_mensuels?select=serie,mois,rendement_pct&order=serie.asc,mois.asc&limit=1000')
-      const rpRows = await sbAll('v_rendements_periodes?select=serie,granularite,periode,rendement_pct&serie=in.(OPUS,SYL,JU,GIL,ALCHIMISTE,MAREES)&order=serie.asc,periode.asc')
+      const rpRows = await sbAll('v_rendements_periodes?select=serie,granularite,periode,rendement_pct&serie=in.(OPUS,SYL,JU,GIL,ALC_VIRT,ALC_REEL,MAREES)&order=serie.asc,periode.asc')
       // v21 : v_equity_points melangeait trois unites dans sa colonne equity (un GAIN en $ pour
       // les archimages, une VALEUR en $ pour l'Alchimiste, un nombre sans unite pour Marees) et
       // la console l'affichait partout comme « Valeur $ ». La vue declare desormais son unite ;
