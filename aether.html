@@ -1041,13 +1041,17 @@ function rKpis(){const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);
  ].map(t=>'<div class="card kpi c3"><span class="lab">'+t[1]+'</span><span class="val" style="font-size:26px">'+t[0]+'</span><span class="sub">'+t[2]+'</span></div>').join('');}
 
 function gatesCalc(){const h=D.hero;if(!h||!Array.isArray(h.brains)||!h.brains.length)return null;
- const dd=h.brains.map(b=>num(b.current_drawdown)*100).filter(v=>v!=null);
- const wr=h.brains.map(b=>num(b.win_rate)*100).filter(v=>v!=null);
- const ddMax=Math.max(...dd),wrMin=Math.min(...wr),wrMoy=num(h.win_rate_moyen),alpha=num(h.alpha_moyen_pct);
+ // num(null) vaut 0 (Number(null)===0). Sans filtrer la valeur BRUTE, une mesure absente
+ // comptait pour « 0 % de drawdown » et rendait cette porte VERTE alors qu'on ne sait rien.
+ // Sur une porte qui autorise le passage en argent réel, une mesure manquante doit bloquer.
+ const mes=k=>h.brains.map(b=>b[k]).filter(v=>v!=null&&v!=='').map(v=>num(v)*100).filter(v=>v!=null);
+ const dd=mes('current_drawdown'),wr=mes('win_rate');
+ const ddMax=dd.length?Math.max(...dd):null,wrMin=wr.length?Math.min(...wr):null;
+ const wrMoy=num(h.win_rate_moyen),alpha=num(h.alpha_moyen_pct);
  return{ddMax,wrMin,wrMoy,alpha,gates:[
-  {ok:ddMax<5,lb:'Aucun drawdown au-dessus de 5 %',sub:'protège le capital',vl:'max '+ddMax.toFixed(2)+' %'},
+  {ok:ddMax!=null&&ddMax<5,lb:'Aucun drawdown au-dessus de 5 %',sub:'protège le capital',vl:ddMax!=null?'max '+ddMax.toFixed(2)+' %':'mesure indisponible'},
   {ok:wrMoy!=null&&wrMoy>=52,lb:'Win rate collectif ≥ 52 %',sub:"sur l'ensemble des runs",vl:wrMoy!=null?wrMoy.toFixed(1)+' %':'—'},
-  {ok:wrMin>=45,lb:'Aucun agent sous 45 %',sub:'chaque IA reste fiable',vl:'min '+wrMin.toFixed(1)+' %'},
+  {ok:wrMin!=null&&wrMin>=45,lb:'Aucun agent sous 45 %',sub:'chaque IA reste fiable',vl:wrMin!=null?'min '+wrMin.toFixed(1)+' %':'mesure indisponible'},
   {ok:alpha!=null&&alpha>0,lb:'Alpha positif vs marché',sub:'vs S&P 500',vl:alpha!=null?(alpha>0?'+':'')+alpha.toFixed(1)+' pts':'—'}]};}
 function rVerdict(){const G=gatesCalc();
  const V=(el,compact)=>{if(!$(el))return;if(!G){$(el).innerHTML='<div class="vs" style="color:var(--mute)">Gates indisponibles (oracle-tests muet).</div>';return;}
@@ -1208,7 +1212,9 @@ function rGardeFous(){const el=$('risque');if(!el)return;
  const ks=D.snap?.stats?.kill_switch;
  const cor=correlationMoyenne();
  const brains=D.hero?.brains||[];
- const ddMax=brains.length?Math.max(...brains.map(b=>(num(b.current_drawdown)||0)*100)):null;
+ // idem : (num(x)||0) transformait une mesure absente en 0 % de drawdown.
+ const ddv=brains.map(b=>b.current_drawdown).filter(v=>v!=null&&v!=='').map(v=>num(v)*100).filter(v=>v!=null);
+ const ddMax=ddv.length?Math.max(...ddv):null;
  const poids=(D.snap?.cerveau||[]).filter(c=>['JU','SYL','GIL'].includes(c.archimage))
    .map(c=>c.archimage+' '+Math.round((num(c.poids)||0)*100)+' %').join(' · ');
  const G=gatesCalc();
