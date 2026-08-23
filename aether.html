@@ -420,10 +420,10 @@ svg{max-width:100%}
     </div>
   </div>
 
-  <div class="sect"><div class="sect-h">L'Alchimiste — brut vs net de frais</div>
+  <div class="sect"><div class="sect-h">L'Alchimiste <b style="color:var(--amber)">virtuel</b> — brut vs net de frais</div>
     <div class="card pad">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-        <div><div class="chart-title">Performance virtuelle cumulée (base 0 %)</div><div class="chart-sub">Brut vs net de frais — le levier des frais sur la perf réelle</div></div>
+        <div><div class="chart-title">Portefeuille de validation — performance cumulée (base 0 %)</div><div class="chart-sub" id="alcSub">Ce n'est pas le compte Revolut X : ce portefeuille ne détient pas d'argent. Le compte réel est deux blocs plus bas.</div></div>
         <label class="mono" style="font-size:12px;color:var(--dim)">Frais/trade % <input id="alcFee" type="number" value="0.30" step="0.05" min="0" style="width:70px;background:var(--surface-2);color:var(--ink);border:1px solid var(--hair);border-radius:8px;padding:6px 8px;font:600 13px var(--mono)"></label>
       </div>
       <div id="alcChart" style="margin-top:10px"></div>
@@ -1083,9 +1083,12 @@ function rGains(){const rows=(D.suivi?.gains||[]).filter(g=>g.horizon==='jour');
   sub.textContent=dernier
     ? (dernier===auj?"Aujourd'hui · en euros":'Dernière séance mesurée : '+dj(dernier+'T12:00:00')+' · en euros')
     : 'en euros';}
+ // Les séries virtuelles (Alchimiste de validation, Marées) tradent des montants symboliques :
+ // leur gain en euros vaut 1 € là où les comptes Alpaca font 44 000 €. Les afficher côte à côte
+ // en euros laissait croire qu'elles ne rapportent rien. La vue déclare l'unité qui a du sens.
  $('gains').innerHTML=rows.length?rows.map(g=>{const v=num(g.gain_eur)??num(g.gain_pct);const cls=v>0?'up':(v<0?'down':'');
   const key=KEYOF[g.label]||g.serie;const col=SCOL[g.serie]||CLR[g.label]||'var(--dim)';
-  const eu=num(g.gain_eur);const txt=eu!=null?fmtE(eu):pctF(num(g.gain_pct));
+  const eu=num(g.gain_eur);const txt=(g.mesure==='pct'||eu==null)?pctF(num(g.gain_pct)):fmtE(eu);
   return '<tr><td><span class="tname"><i style="background:'+col+'"></i>'+esc(g.label)+'</span></td><td class="'+cls+'">'+txt+'</td></tr>';}).join('')
  :'<tr><td class="mono" style="color:var(--mute)">Historique en cours de constitution.</td></tr>';}
 
@@ -1127,25 +1130,32 @@ function rStrats(){const P={};(D.suivi?.perf||[]).forEach(p=>P[p.trader]=p);cons
  const order=['ALCHIMISTE','SYL','JU','GIL','MAREES'];window._SPK=[];
  $('strats').innerHTML=order.map(k=>{const ds=DESCS[k],p=P[k]||{};const alc=k==='ALCHIMISTE'?(D.suivi?.alc_reel_live?.resume||{}):null;
   const figs=[];
-  // La carte Alchimiste affichait « Valeur réelle 1 004 $ » puis « Rendement +17,42 % » : on
-  // lisait donc que ces 1 004 $ avaient fait +17,42 %. Faux — 17,42 % est la performance du
-  // portefeuille VIRTUEL de validation ; le portefeuille réel Revolut X a fait +55,9 % (apports
-  // déduits). Les deux chiffres existent, ils sont désormais nommés séparément.
+  // Deux portefeuilles cohabitent sous le nom « Alchimiste » : le compte RÉEL Revolut X et un
+  // portefeuille VIRTUEL de validation ouvert le 14 août. La carte affichait « Valeur réelle
+  // 1 004 $ » puis « Rendement +17,42 % » — on lisait que ces 1 004 $ avaient fait +17,42 %,
+  // alors que c'est la performance du virtuel sur 7 jours. Chaque chiffre porte sa durée.
+  const nj=x=>{const d0=new Date(x);return isNaN(d0)?null:Math.round((Date.now()-d0)/864e5);};
   if(alc&&num(alc.total_live_usd)!=null){
    figs.push(['<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>','Valeur réelle']);
-   const rr=rendementReelAlchimiste();
-   if(rr!=null)figs.push([sgn(rr),'Rendement réel']);
-   figs.push([sgn(num(p.rendement_pct)),'Rendement virtuel']);
-  } else figs.push([sgn(num(p.rendement_pct)),'Rendement']);
+   const rr=rendementReelAlchimiste(),jr=alc.origine_jour?nj(alc.origine_jour):null;
+   if(rr!=null)figs.push([sgn(rr),'Réel, hors apports'+(jr?' · '+jr+' j':'')]);
+   figs.push([sgn(num(p.rendement_pct)),'Virtuel'+(num(p.jours)!=null?' · '+num(p.jours)+' j':'')]);
+  } else figs.push([sgn(num(p.rendement_pct)),'Rendement'+(num(p.jours)!=null?' · '+num(p.jours)+' j':'')]);
   figs.push([p.drawdown_max_pct!=null?dn('−'+Math.abs(num(p.drawdown_max_pct)).toFixed(1)+' %'):'—','Drawdown max']);
-  figs.push([p.reussite_pct!=null?num(p.reussite_pct).toFixed(0)+' %':'—','Réussite']);
+  figs.push([p.reussite_pct!=null?num(p.reussite_pct).toFixed(0)+' %':'—','Réussite'+(p.nature==='virtuel'?' (virtuel)':'')]);
   figs.push([SH[k]!=null?SH[k]:'—','Sharpe']);
   return '<div class="card strat c4"><div class="top"><span class="dot" style="color:'+SCOL[k]+';background:'+SCOL[k]+'"></span><div><div class="nm">'+ds.t+'</div><div class="mk">'+ds.m+'</div></div><span class="badge '+ds.b[0]+'">'+ds.b[1]+'</span></div><div class="sdesc">'+ds.d+'</div><div class="figs">'+figs.map(f=>'<div class="fig"><div class="n">'+f[0]+'</div><div class="k">'+f[1]+'</div></div>').join('')+'</div>'+sparkReal(k)+'</div>';}).join('');
  document.querySelectorAll('.chartbox[data-sp]').forEach(b=>{const s=window._SPK[Number(b.dataset.sp)];if(!s)return;
   hoverize(b,{W:100,L:0,R:0,label:i=>s.pts[i]?dj(s.pts[i].x):'—',series:[{name:SNAME[s.key],color:SCOL[s.key],vals:s.pts.map(p=>p.y),fmt:pctF}]});});
  // Métriques clés
- $('keys').innerHTML='<thead><tr><th>Stratégie</th><th>Marché</th><th>Rendement</th><th>Drawdown</th><th>Réussite</th><th>Sharpe</th><th>Statut</th></tr></thead><tbody>'+
-  order.map(k=>{const ds=DESCS[k],p=P[k]||{};return '<tr><td><span class="tname"><i style="background:'+SCOL[k]+'"></i>'+SNAME[k]+'</span></td><td style="font-family:var(--sans);color:var(--dim)">'+ds.m+'</td><td>'+sgn(num(p.rendement_pct))+'</td><td>'+(p.drawdown_max_pct!=null?'−'+Math.abs(num(p.drawdown_max_pct)).toFixed(1)+' %':'—')+'</td><td>'+(p.reussite_pct!=null?num(p.reussite_pct).toFixed(0)+' %':'—')+'</td><td>'+(SH[k]??'—')+'</td><td style="font-family:var(--sans)">'+esc(p.statut||ds.b[1])+'</td></tr>';}).join('')+'</tbody>';
+ // Colonne « Période » : sans elle, le +17,4 % de l'Alchimiste (7 jours de portefeuille
+ // VIRTUEL) s'alignait avec le +4,6 % de JU (54 jours), comme s'ils étaient comparables.
+ $('keys').innerHTML='<thead><tr><th>Stratégie</th><th>Marché</th><th>Rendement</th><th>Période mesurée</th><th>Drawdown</th><th>Réussite</th><th>Sharpe</th><th>Statut</th></tr></thead><tbody>'+
+  order.map(k=>{const ds=DESCS[k],p=P[k]||{};
+   const court=num(p.jours)!=null&&num(p.jours)<15;
+   return '<tr><td><span class="tname"><i style="background:'+SCOL[k]+'"></i>'+SNAME[k]+'</span></td><td style="font-family:var(--sans);color:var(--dim)">'+ds.m+'</td><td>'+sgn(num(p.rendement_pct))+'</td>'
+   +'<td style="font-family:var(--sans);font-size:12px;color:'+(court?'var(--amber)':'var(--dim)')+'">'+esc(p.periode||'—')+(p.nature==='virtuel'?' · virtuel':'')+'</td>'
+   +'<td>'+(p.drawdown_max_pct!=null?'−'+Math.abs(num(p.drawdown_max_pct)).toFixed(1)+' %':'—')+'</td><td>'+(p.reussite_pct!=null?num(p.reussite_pct).toFixed(0)+' %':'—')+'</td><td>'+(SH[k]??'—')+'</td><td style="font-family:var(--sans)">'+esc(p.statut||ds.b[1])+'</td></tr>';}).join('')+'</tbody>';
  rGardeFous();}
 
 /* --- Garde-fous : mesurés, jamais affirmés ---------------------------------
@@ -1424,7 +1434,9 @@ function rAlc(){const jours=D.suivi?.alc_virtuel?.jours||[];const box=$('alcChar
  const net=jours.map(d=>{idx*=1+((num(d.ret_pct)||0)-fee)/100;return {x:d.jour,y:idx-100};});
  lineChart(box,{W:880,H:220,fmt:pctF,x0line:true,series:[{name:'Brut',color:'var(--s-alch)',pts:gross,width:2.6},{name:'Net de frais',color:'var(--red)',pts:net,width:1.8}]});
  const g=gross[gross.length-1].y,n2=net[net.length-1].y;
- $('alcLegend').innerHTML='<span><i style="background:var(--s-alch)"></i>Brut <b>'+pctF(g)+'</b></span><span><i style="background:var(--red)"></i>Net de frais ('+fee.toFixed(2)+' %/trade) <b>'+pctF(n2)+'</b></span>';}
+ // Sans la durée, un +17,4 % sur 7 jours se lit comme une performance établie.
+ $('alcLegend').innerHTML='<span><i style="background:var(--s-alch)"></i>Brut <b>'+pctF(g)+'</b></span><span><i style="background:var(--red)"></i>Net de frais ('+fee.toFixed(2)+' %/trade) <b>'+pctF(n2)+'</b></span>'
+  +'<span style="color:var(--amber)">sur '+jours.length+' jour'+(jours.length>1?'s':'')+' seulement</span>';}
 function rHeat(){const bt=Array.isArray(D.bt)?D.bt:[];const el=$('heatmap');
  if(!bt.length){el.innerHTML='<div style="color:var(--mute);font-size:13px">Backtest indisponible (recalculé toutes les 6 h).</div>';return;}
  const TP=[...new Set(bt.map(r=>num(r.tp_pct)))].sort((a,b)=>a-b),SL=[...new Set(bt.map(r=>num(r.sl_pct)))].sort((a,b)=>a-b);
@@ -1452,10 +1464,16 @@ function rTables(){
    return ['<span class="tname"><i style="background:'+SCOL[a.archimage]+'"></i>'+a.archimage+' · Alpaca</span>',
     fmt$(b),fmt$(v),(b&&v!=null?sgn((v-b)/b*100):'—'),
     (a.win_rate!=null?(num(a.win_rate)*100).toFixed(0)+' %':'—')];})
+  // La colonne « Départ » affichait le relevé du matin (1 020 $) à côté d'une valeur actuelle
+  // PLUS BASSE et d'un gain de +55,9 % : trois grandeurs sans rapport dans la même ligne.
+  // Elle montre désormais la vraie origine de la série, et les apports à côté — car sur ce
+  // compte l'essentiel de la hausse est de l'argent versé, pas de l'argent gagné.
   .concat(num(alc.total_live_usd)!=null?[['<span class="tname"><i style="background:var(--s-alch)"></i>Alchimiste · Revolut X (réel)</span>',
-    fmt$(num(alc.total_snapshot_usd))+'<div style="font-size:10.5px;color:var(--mute)">relevé du matin</div>',
-    '<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>',
-    (rendementReelAlchimiste()!=null?sgn(rendementReelAlchimiste())+'<div style="font-size:10.5px;color:var(--mute)">apports déduits</div>':'—'),
+    fmt$(num(alc.origine_usd))+'<div style="font-size:10.5px;color:var(--mute)">'+(alc.origine_jour?'au '+esc(dj(alc.origine_jour)):'origine')
+     +(num(alc.apports_usd)?' · +'+fmt$(num(alc.apports_usd))+' versés depuis':'')+'</div>',
+    '<span style="color:var(--gold-hi)">'+fmt$(num(alc.total_live_usd))+'</span>'
+     +'<div style="font-size:10.5px;color:var(--mute)">relevé du matin '+fmt$(num(alc.total_snapshot_usd))+'</div>',
+    (rendementReelAlchimiste()!=null?sgn(rendementReelAlchimiste())+'<div style="font-size:10.5px;color:var(--mute)">hors apports</div>':'—'),
     '—']]:[]),'Comptes indisponibles.');
  // Exposition brute : somme des valeurs absolues. Les ventes à découvert sont négatives et
  // s'annulent avec les achats dans un total net — le risque réel n'apparaît que comme ça.
@@ -1840,7 +1858,8 @@ function openAutonomie(k){const a=AUTO.find(x=>x.k===k);if(!a)return;const n=aut
 function rOps(){
  safe('auto',rAuto);
  const v=D.suivi?.vigie||{};const r=v.resume||null;
- if($('vigieHead'))$('vigieHead').textContent=r?(r.nb_ok+'/'+r.nb_total+' OK'+(r.problemes?' · '+r.problemes:'')+' · run audité '+hm(r.run_auditee)):'—';
+ // « run audité 09:05 » laissait croire à un run de ce matin : il datait du 21 août.
+ if($('vigieHead'))$('vigieHead').textContent=r?(r.nb_ok+'/'+r.nb_total+' OK'+(r.problemes?' · '+r.problemes:'')+' · run audité '+(dj(r.run_auditee)+' '+hm(r.run_auditee)).trim()):'—';
  const NIV={VERT:['ok','● Collège opérationnel'],ORANGE:['warn','● À surveiller'],ROUGE:['warn','● Panne détectée'],VEILLE:['warn','● En veille (scénario coupé)']};
  const chipEl=$('vigieChip');
  if(chipEl&&r){const nv=NIV[r.niveau]||['warn','● '+(r.niveau||'?')];chipEl.className='chip '+nv[0];chipEl.textContent=nv[1];}

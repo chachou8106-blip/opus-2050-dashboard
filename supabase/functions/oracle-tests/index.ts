@@ -10,6 +10,8 @@
 // la date renvoyée par equity_series, elle-même dérivée du premier jour réellement suivi.
 // Le gain se mesure comme sur les courbes (valeur constatée − capital de départ) au lieu de
 // cumulative_pnl, colonne applicative écrite à un instant légèrement différent.
+// v15 — DRAWDOWN, CORRECTION DE LA v12 : voir le bloc au-dessus de ddResolu(). La v12 lisait la
+// mauvaise colonne et rendait verte une porte qui doit être rouge (GIL est à −6,26 % de son pic).
 // v12 — DRAWDOWN. La porte « aucun drawdown au-dessus de 5 % » de l'onglet Réel lisait
 // oracle_brain_state.current_drawdown, colonne figée : GIL y restait à 6,26 %, soit exactement son
 // drawdown MAXIMUM historique. La colonne alimentée par le broker, alpaca_drawdown_from_peak, disait
@@ -67,13 +69,29 @@ const tronque = (s: any, n = 90) => (s == null ? null : (String(s).length > n ? 
 // current_drawdown est une colonne applicative qui peut rester collee sur le drawdown maximum
 // (cas de GIL, fige a 6,26 %) et n'est donc utilisee qu'a defaut. On conserve les deux sources
 // brutes a cote pour que l'ecart reste verifiable depuis la console.
+// v15 — CORRECTION DE LA v12. J'avais fait lire a la porte de securite la colonne
+// alpaca_drawdown_from_peak en la croyant « alimentee par le broker ». Elle ne l'est pas :
+// sync_alpaca_positions la calcule ainsi —
+//     SELECT COALESCE(MAX(alpaca_portfolio_value), v_portfolio_value) INTO v_peak_value
+//     FROM oracle_brain_state WHERE archimage = v_archimage;
+// or oracle_brain_state ne contient QU'UNE LIGNE par archimage : ce MAX() rend la valeur de la
+// veille, pas le pic historique. La colonne mesure donc l'ecart depuis la derniere synchro,
+// plancher a zero — pas un drawdown depuis le pic, malgre son nom.
+// Verification sur les trois comptes, pic->dernier calcule sur alpaca_equity_daily :
+//     GIL  pic 1 083 401,66 (25/07) -> 1 015 563,36 = 6,26 %   current_drawdown = 0,0626  OK
+//     SYL  pic 1 091 405,32        -> 1 049 877,76 = 3,80 %   current_drawdown = 0,0380  OK
+//     JU   pic 1 054 318,88        -> 1 050 546,47 = 0,36 %   current_drawdown = 0,0036  OK
+//     alpaca_drawdown_from_peak disait 0,59 % / 0,00 % / 0,38 %.
+// C'est current_drawdown qui est juste. La v12 avait donc rendu VERTE une porte qui doit etre
+// rouge : GIL est a -6,26 % de son pic, et son coupe-circuit « drawdown_5pct » est arme.
 function ddResolu(b: any) {
+  const applicatif = b?.current_drawdown
   const alpaca = b?.alpaca_drawdown_from_peak
   return {
     ...b,
-    current_drawdown: (alpaca == null ? b?.current_drawdown : alpaca),
-    dd_source: (alpaca == null ? 'current_drawdown' : 'alpaca_drawdown_from_peak'),
-    dd_applicatif: b?.current_drawdown,
+    current_drawdown: (applicatif == null ? alpaca : applicatif),
+    dd_source: (applicatif == null ? 'alpaca_drawdown_from_peak' : 'current_drawdown'),
+    dd_applicatif: applicatif ?? null,
     dd_broker: alpaca ?? null
   }
 }

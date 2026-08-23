@@ -1,3 +1,11 @@
+// oracle-inbox v23 — un Sharpe absent n'est plus transmis comme 0. Voir le commentaire
+// au-dessus de la construction de la table `sharpe`.
+// oracle-inbox v22 — transmet la DUREE et la NATURE de chaque serie de performance.
+// v_perf_resume : + depuis, jours, nature (simulation / virtuel). Sans ces colonnes, le +17,42 %
+// de l'Alchimiste (7 jours de portefeuille VIRTUEL) s'affichait a cote du +4,56 % de JU
+// (54 jours de simulation) comme s'ils etaient comparables.
+// v_gains_traders : + mesure (usd / pct). Les series virtuelles tradent des montants symboliques :
+// leur gain vaut 1 € la ou les comptes Alpaca font 44 000 €.
 // oracle-inbox v21 — v_equity_points declare son unite (usd / pct) et son rendement ; le bloc
 // suivi les transmet via equityUnite. Voir le commentaire au-dessus de la requete.
 // oracle-inbox v20 — canal Chachou <-> robot.
@@ -55,7 +63,7 @@ Deno.serve(async (req) => {
       const row = Array.isArray(dash.body) ? dash.body[0] : null
       let traders: any[] = []
       if (row && row.archimages && typeof row.archimages === 'object') traders = Object.entries(row.archimages).map(([nom, v]: any) => ({ nom, ...(v || {}) }))
-      const perf = await sb('v_perf_resume?select=trader,rendement_pct,drawdown_max_pct,reussite_pct,statut,periode')
+      const perf = await sb('v_perf_resume?select=trader,rendement_pct,drawdown_max_pct,reussite_pct,statut,periode,depuis,jours,nature')
       const av = await sb('v_perf_avancee?select=serie,volatilite,sortino,calmar,drawdown_max,meilleur_mois,pire_mois,pct_mois_positifs')
       const si = await sb('v_stats_indice?select=serie,correlation,beta,alpha_annualise')
       const men = await sb('v_rendements_mensuels?select=serie,mois,rendement_pct&order=serie.asc,mois.asc&limit=1000')
@@ -77,8 +85,12 @@ Deno.serve(async (req) => {
       const comparaison: Record<string, any[]> = {}
       for (const p of cmpRows) { (comparaison[p.serie] = comparaison[p.serie] || []).push({ j: p.jour, r: Number(p.ret) }) }
       const shr = await sb('v_sharpe?select=serie,sharpe')
-      const sharpe: Record<string, number> = {}
-      for (const p of arr(shr.body)) sharpe[p.serie] = Number(p.sharpe)
+      // v_sharpe renvoie NULL quand la serie est trop courte pour qu'un Sharpe ait un sens
+      // (ALCHIMISTE 6 observations, MAREES 5 ; le seuil est de 20). Number(null) vaut 0 :
+      // la console affichait donc « 0 », un chiffre qui a l'air d'une mesure. On garde null,
+      // et l'ecran affiche « — ».
+      const sharpe: Record<string, number | null> = {}
+      for (const p of arr(shr.body)) sharpe[p.serie] = (p.sharpe == null ? null : Number(p.sharpe))
       const avance: Record<string, any> = {}; for (const p of arr(av.body)) avance[p.serie] = p
       const stats: Record<string, any> = {}; for (const p of arr(si.body)) stats[p.serie] = p
       const mensuel: Record<string, any[]> = {}; for (const p of arr(men.body)) { (mensuel[p.serie] = mensuel[p.serie] || []).push({ mois: p.mois, r: Number(p.rendement_pct) }) }
@@ -88,7 +100,7 @@ Deno.serve(async (req) => {
       const fx: Record<string, number> = {}
       for (const p of arr(fxr.body)) { const k = p.symbol === 'EUR-USD' ? 'EURUSD' : p.symbol === 'GBP-USD' ? 'GBPUSD' : null; if (k && !(k in fx)) fx[k] = Number(p.close) }
       // Gains par trader (jour/semaine/mois/annee) en % + USD + EUR
-      const gns = await sb('v_gains_traders?select=serie,label,ordre,horizon,gain_pct,gain_usd,gain_eur&order=ordre.asc')
+      const gns = await sb('v_gains_traders?select=serie,label,ordre,horizon,gain_pct,gain_usd,gain_eur,mesure&order=ordre.asc')
       // Portefeuille virtuel de l'Alchimiste
       const avr = await sb('v_alc_virtuel_resume?select=*')
       const avj = await sb('v_alc_virtuel_jour?select=jour,n_trades,gagnants,wr_pct,ret_pct,cumul_pct&order=jour.asc')

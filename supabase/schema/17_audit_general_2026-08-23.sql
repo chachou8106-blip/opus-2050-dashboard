@@ -1,0 +1,181 @@
+-- =====================================================================================
+-- AUDIT GÉNÉRAL DU 23/08/2026 — corrections appliquées
+-- Demande : « certains chiffres sont bidons ! 55 % sur l'Alchimiste… j'ai l'impression
+--            que l'Alchimiste virtuel et l'Alchimiste réel sont mélangés »
+-- =====================================================================================
+-- Chaque bloc ci-dessous a été appliqué en migration. Il est reproduit ici pour que le
+-- dépôt garde la trace de CE QUI A CHANGÉ ET POURQUOI.
+--
+--
+-- 1) v_alc_reel_jour — LE +55,87 % QUI N'EXISTAIT PAS
+-- -------------------------------------------------------------------------------------
+-- Ancienne définition : apport = GREATEST(cash_usd - prev_cash, 0).
+-- Elle ne voyait un apport QUE si le cash montait. Or sur Revolut X l'argent entre en
+-- CRYPTO. Preuve, diff ligne à ligne du 06 au 07/08/2026 :
+--     UNI   qty 0,36  ->  25,36     +99,13 $
+--     HFT   qty 2 884 -> 4 001      +67,80 $
+--     USD   ligne de cash disparue  -38,88 $
+-- Soit 166,93 $ de crypto achetée pour 38,88 $ de cash sorti : 128 $ apparus de nulle
+-- part, comptés comme performance. Même schéma le 06/08 (HFT ×32) et le 12/08 (TRU ×32).
+--
+-- Nouvelle mesure, sans hypothèse sur la nature des mouvements :
+--     « combien vaudrait le portefeuille aujourd'hui si l'on n'avait rien fait ? »
+--     v_hold     = quantités d'HIER valorisées aux prix d'AUJOURD'HUI
+--     rendement  = v_hold / total_hier - 1
+--     apport     = total_auj - v_hold
+-- Achat, vente, dépôt en crypto : tout sort du rendement par construction.
+--
+-- Résultat 05/07 -> 22/08 : +55,87 %  devient  -0,83 %.
+--     valeur 557,18 $ -> 1 020,06 $ = +462,88 $, dont 445,58 $ d'apports.
+--     Revenus de staking sur la période, mesurés à part : 1,25 $. Négligeables.
+--     Les 20, 21 et 22/08 (+6,84 %, +6,74 %, +5,49 %) sont de VRAIS gains de marché :
+--     apport mesuré à 0,07 $, 0,03 $ et 0,07 $. Ils sont conservés tels quels.
+--
+-- La série démarre au 05/07/2026 : avant, le champ qty du détail est arrondi à deux
+-- décimales (BTC y figure à « 0.00 »), ce qui rend tout calcul par quantité impossible.
+--
+--
+-- 2) v_gains_traders — LE MÊME FAUX CHIFFRE, RECALCULÉ AILLEURS
+-- -------------------------------------------------------------------------------------
+-- La vue refaisait son propre calcul sur revolut_portfolio_daily.total_usd et affichait
+-- +84,14 % / +466,11 $ sur l'horizon « année » dans l'onglet Vue d'ensemble.
+-- Elle lit désormais v_alc_reel_jour : -0,83 % / +17,30 $.
+-- Ajout de la colonne `mesure` (usd / pct) : les portefeuilles virtuels tradent des
+-- montants symboliques (gain de 0,97 $ pour +17,42 %), les afficher en euros à côté des
+-- 44 000 € des comptes Alpaca laissait croire qu'ils ne rapportent rien.
+--
+--
+-- 3) v_perf_resume — PÉRIODES ÉCRITES EN DUR, DONT UNE FAUSSE
+-- -------------------------------------------------------------------------------------
+-- 'juin–août 2026', 'validation', 'depuis juil.' étaient trois constantes.
+-- « depuis juil. » pour MAREES est FAUX : sa série va du 14 au 20/08, soit 6 jours.
+-- L'Alchimiste virtuel affichait +17,42 % à côté de « JU +4,56 % » : 7 jours contre 54.
+-- periode est maintenant calculée, et deux colonnes (depuis, jours) donnent la durée.
+-- Colonne `nature` : simulation / virtuel.
+--
+--
+-- 4) v_alc_reel_live_resume — origine_jour, origine_usd, apports_usd
+-- -------------------------------------------------------------------------------------
+-- Le tableau « Comptes » mettait le relevé du matin (1 020 $) dans la colonne
+-- « Départ (baseline) », à côté d'une valeur actuelle PLUS BASSE (1 002 $) et d'un gain
+-- de +55,9 %. Trois grandeurs sans rapport dans la même ligne.
+-- La vue expose désormais la vraie origine de la série et le total des apports.
+-- =====================================================================================
+
+
+-- =====================================================================================
+-- CONSTATÉ ET **NON CORRIGÉ** — demande l'accord de Chachou
+-- =====================================================================================
+--
+-- A) LE DRAWDOWN QUI PROTÈGE LES ORDRES NE MESURE PAS UN DRAWDOWN
+-- -------------------------------------------------------------------------------------
+-- sync_alpaca_positions calcule :
+--     SELECT COALESCE(MAX(alpaca_portfolio_value), v_portfolio_value) INTO v_peak_value
+--     FROM oracle_brain_state WHERE archimage = v_archimage;
+--     v_current_drawdown := GREATEST(0, (v_peak_value - v_portfolio_value)/v_peak_value);
+-- oracle_brain_state ne contient QU'UNE LIGNE par archimage. Ce MAX() rend donc la valeur
+-- de la VEILLE, pas le pic historique. La colonne alpaca_drawdown_from_peak mesure l'écart
+-- depuis la dernière synchro, plancher à zéro — pas un drawdown depuis le pic.
+--
+-- Vérification, pic -> dernier calculé sur alpaca_equity_daily :
+--     GIL  1 083 401,66 (25/07) -> 1 015 563,36 = 6,26 %   current_drawdown 0,0626  OK
+--     SYL  1 091 405,32         -> 1 049 877,76 = 3,80 %   current_drawdown 0,0380  OK
+--     JU   1 054 318,88         -> 1 050 546,47 = 0,36 %   current_drawdown 0,0036  OK
+--     alpaca_drawdown_from_peak :  0,59 %  /  0,00 %  /  0,38 %      <- faux sur les 3
+--
+-- Conséquence : iron_sentinel_validate_order lit cette colonne et bloque à 8 %.
+-- Son coupe-circuit de drawdown ne peut donc quasiment jamais se déclencher — il faudrait
+-- une chute de 8 % ENTRE DEUX SYNCHROS. Sur les 7 derniers jours : 116 ordres, 116
+-- exécutés, 0 rejeté.
+--
+-- Correctif proposé (NON APPLIQUÉ — touche la validation des ordres réels) :
+--     remplacer le MAX() sur oracle_brain_state par le pic réel de la série d'equity
+--
+--     SELECT COALESCE(MAX(equity), v_portfolio_value) INTO v_peak_value
+--     FROM alpaca_equity_daily WHERE archimage = v_archimage;
+--
+-- Côté affichage, la correction est faite : oracle-tests v15 lit à nouveau
+-- current_drawdown. Cela fait passer au ROUGE la porte « aucun drawdown au-dessus de 5 % »
+-- de l'onglet « Passage au réel » — c'est le résultat honnête, et il concorde avec le
+-- coupe-circuit « drawdown_5pct » armé sur GIL depuis le 20/08.
+--
+--
+-- B) LES COUPE-CIRCUITS ARMÉS N'ARRIVENT PLUS JUSQU'AUX AGENTS
+-- -------------------------------------------------------------------------------------
+-- get_oracle_context() (module 105) filtre :
+--     FROM oracle_circuit_breakers
+--     WHERE auto_resolved = false AND fired_at > now() - interval '24 hours'
+-- Les trois coupe-circuits actuellement armés ont été déclenchés les 20 et 21/08 :
+--     MAREES — win_rate_faible        (30,8 %)
+--     GIL    — drawdown_5pct          (6,26 %)
+--     GIL    — pertes_consecutives_5
+-- Ils sont donc NON RÉSOLUS mais plus transmis : active_circuit_breakers renvoie [].
+-- La console les affiche comme actifs, les agents ne les reçoivent pas.
+-- Correctif possible : retirer la fenêtre de 24 h, ou l'allonger.
+-- NON APPLIQUÉ : cela change ce que reçoivent les prompts des Archimages.
+--
+--
+-- C) DATES DES COURBES DÉCALÉES D'UN JOUR (déjà signalé le 23/08 au matin)
+-- -------------------------------------------------------------------------------------
+-- alpaca_equity_daily ne contient que des mardis à samedis, jamais de lundi.
+-- update-brain/index.ts:89 date chaque point en UTC :
+--     new Date(ts*1000).toISOString().slice(0,10)
+-- Les barres 1D d'Alpaca semblent horodatées à minuit UTC du lendemain de séance.
+-- Correctif : convertir en America/New_York. NON APPLIQUÉ — réécrirait 54 jours × 3
+-- comptes d'historique réel sur une hypothèse invérifiable depuis ce conteneur.
+--
+--
+-- D) dashboard_snapshot() MET 4,16 s À FROID, LE RÔLE anon COUPE À 3 s
+-- -------------------------------------------------------------------------------------
+-- Mesuré : 4 162 ms cache froid, 125 ms cache chaud. aether.html:613 avale l'échec
+-- (.catch(()=>null)). Au premier chargement de la journée, la console peut afficher des
+-- tuiles vides sans le dire.
+-- =====================================================================================
+
+
+-- =====================================================================================
+-- SUITE DE L'AUDIT — corrections appliquées après la première passe
+-- =====================================================================================
+--
+-- 5) LE DRAWDOWN AFFICHÉ — deux onglets, deux chiffres, le mauvais partout
+-- -------------------------------------------------------------------------------------
+-- dashboard_snapshot() faisait coalesce(alpaca_drawdown_from_peak, current_drawdown),
+-- oracle-tests v12 faisait le même choix. Les deux lisaient donc la colonne fausse (cf. bloc A).
+-- Corrigé des deux côtés : coalesce(current_drawdown, alpaca_drawdown_from_peak).
+-- Conséquence assumée : le verdict « Passage au réel » retombe de 2/4 à 1/4, et le message
+-- dit « le drawdown de 6,26 % doit repasser sous 5 % ». C'est la réalité du compte GIL.
+--
+-- 6) v_stats_indice ET v_perf_avancee — DES STATISTIQUES SUR SEPT JOURS
+-- -------------------------------------------------------------------------------------
+-- v_sharpe refusait déjà de calculer sous 20 observations. Les deux autres vues, non :
+--     ALCHIMISTE  alpha annualisé 738,04 %  ·  sortino 35,4  ·  calmar 5,35
+--                 « pire mois +17,42 % » (il n'y a qu'un seul mois)   sur 6 observations
+--     MAREES      corrélation -0,96  ·  sortino -3,56                 sur 5 observations
+-- Même seuil de 20 observations appliqué aux deux, plus un seuil de 2 mois pour
+-- meilleur_mois / pire_mois / pct_mois_positifs. n_observations est exposé.
+--
+-- 7) UN SHARPE ABSENT ARRIVAIT À L'ÉCRAN COMME « 0 »
+-- -------------------------------------------------------------------------------------
+-- oracle-inbox faisait sharpe[serie] = Number(p.sharpe). Number(null) vaut 0.
+-- La vue refusait de calculer, la console affichait « 0 » — un chiffre qui a l'air d'une
+-- mesure de performance nulle. oracle-inbox v23 conserve null, l'écran affiche « — ».
+--
+-- 8) LE POINT DU MATIN ARRIVAIT DEUX FOIS
+-- -------------------------------------------------------------------------------------
+-- Deux producteurs écrivaient dans oracle_journal :
+--     06:10:00  pg_cron generate_daily_journal('matin')  -> « AETHER — Point du … (matin). »
+--     06:13:38  une Routine Claude créée le 10/08         -> « RAPPORT AETHER — … »
+-- Le garde-fou de generate_daily_journal ne teste que son PROPRE format
+-- (resume like '%(matin)%'), donc il ne bloquait jamais le second.
+-- 6 entrées par jour au lieu de 3, tous les jours depuis le 10/08.
+-- Corrigé côté Routine : elle n'écrit plus dans oracle_journal (elle garde la notification
+-- et world_regime_journal). Les doublons du 10 au 23/08 restent en base : ce sont des
+-- enregistrements réels, je ne les supprime pas sans accord.
+--
+-- 9) DEUX ONGLETS PRÉSENTAIENT LE VIRTUEL COMME LE RÉEL
+-- -------------------------------------------------------------------------------------
+-- Onglet Portefeuilles : un graphique intitulé « L'Alchimiste — brut vs net de frais »
+-- (portefeuille VIRTUEL, 7 jours, +17,4 %) placé deux blocs au-dessus de
+-- « L'Alchimiste — capital réel (Revolut X) ». Renommé « L'Alchimiste VIRTUEL », avec la
+-- durée sur la légende et une phrase qui dit que ce portefeuille ne détient pas d'argent.
+-- Onglet Stratégies : nouvelle colonne « Période mesurée », en ambre sous 15 jours.
