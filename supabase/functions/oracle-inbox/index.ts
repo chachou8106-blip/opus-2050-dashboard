@@ -1,3 +1,9 @@
+// oracle-inbox v25 — LE LIVRE CIBLE DES MAREES. La console lisait v_marees_virtuel_positions,
+// qui decrit le SIMULATEUR d'evaluation (marees_virtual_trades) : celui-ci ferme d'office toute
+// proposition au bout de 96 h pour pouvoir la noter. Le 25/08 il annoncait 0 position ouverte
+// alors que marees_propositions en portait 3 (EUR-GBP, EUR-USD, USD-JPY). Le bloc marees_virtuel
+// transporte desormais aussi `livre_cible` (vue v_marees_livre_cible), et c'est lui que la
+// console affiche.
 // oracle-inbox v24 — SEPARATION DE L'ALCHIMISTE REEL ET DU VIRTUEL. Le meme identifiant
 // 'ALCHIMISTE' designait le portefeuille VIRTUEL dans v_comparaison (et ses 5 vues derivees)
 // et le compte REEL dans v_equity_points. Les deux series s'appellent desormais ALC_VIRT et
@@ -110,10 +116,17 @@ Deno.serve(async (req) => {
       const avj = await sb('v_alc_virtuel_jour?select=jour,n_trades,gagnants,wr_pct,ret_pct,cumul_pct&order=jour.asc')
       const avp = await sb('v_alc_virtuel_positions?select=paire,side,prix_entree,montant,prix_actuel,unreal_pct&order=montant.desc')
       const alc_virtuel = { resume: (arr(avr.body)[0] || null), jours: arr(avj.body), positions: arr(avp.body) }
-      // Marées — portefeuille virtuel forex (positions ouvertes valorisées au dernier cours)
+      // Marées — DEUX choses distinctes, qu'il ne faut pas confondre :
+      //  · livre_cible = ce que l'Archimage déclare tenir maintenant (marees_propositions non
+      //    clôturées, valorisé au dernier cours). C'est le portefeuille réel du robot.
+      //  · resume/positions = le SIMULATEUR d'évaluation (marees_virtual_trades), qui ferme
+      //    d'office au bout de 96 h pour pouvoir noter chaque proposition. Il sert au win rate,
+      //    pas à décrire les positions tenues. Le 25/08 il disait 0 position alors que le livre
+      //    cible en portait 3 — d'où l'ajout de la vue v_marees_livre_cible.
       const mvr = await sb('v_marees_virtuel_resume?select=*')
       const mvp = await sb('v_marees_virtuel_positions?select=paire,side,prix_entree,prix_actuel,unreal_pct,montant,tp_pct,sl_pct,age_h&order=unreal_pct.desc')
-      const marees_virtuel = { resume: (arr(mvr.body)[0] || null), positions: arr(mvp.body) }
+      const mlc = await sb('v_marees_livre_cible?select=paire,side,poids_pct,confidence,prix_entree,prix_actuel,unreal_pct,tp_pct,sl_pct,age_h,run_id,proposed_at')
+      const marees_virtuel = { resume: (arr(mvr.body)[0] || null), positions: arr(mvp.body), livre_cible: arr(mlc.body) }
       // Valorisation crypto EN DIRECT (24/7, week-end compris) — recalculée à la lecture depuis price_history.
       // Seule la crypto bouge quand le scénario Make est éteint ; actions/ETF/forex restent au dernier close.
       const lcr = await sb('v_live_crypto_resume?select=archimage,n_crypto,tout_live,dernier_cours,valo_crypto_usd,valo_crypto_eur,pnl_latent_usd&order=valo_crypto_usd.desc')

@@ -1,5 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v42 : COUPE-CIRCUIT DRAWDOWN BRANCHE A L'EXECUTION. Les coupe-circuits existaient et se
+//       declenchaient (check_circuit_breakers, toutes les 2 h), mais RIEN ne les lisait au moment
+//       de passer les ordres : sur les 7 jours precedents, 116 ordres, 116 executes, 0 refuse,
+//       alors que GIL etait a 10,23 % de drawdown, au-dessus du seuil de 8 %. Desormais
+//       execute-trades lit oracle_brain_state et oracle_circuit_breakers avant toute OUVERTURE
+//       et refuse achats d'ouverture et nouveaux shorts en mode defensif. Ce qui REDUIT
+//       l'exposition passe toujours : rachat de short, vente, sorties automatiques TP/SL,
+//       desendettement. La fonction iron_sentinel_validate_order n'est volontairement PAS
+//       appelee : son cap interne est de 2 000 $ par ordre, incompatible avec des portefeuilles
+//       a 500 k$ ou MAX_NOTIONAL_PER_ORDER vaut 190 000 $. Seule sa REGLE de drawdown est reprise.
 // v41 : CORRECTIF D'UN BUG QUE J'AI INTRODUIT EN v39. Le rachat de short soldait TOUJOURS la
 //       position entiere en ignorant le montant demande. Le 20/08 SYL a demande 6 000 $ sur IEF
 //       et 1 361 754 $ ont ete executes (6 ordres de 226 959 $, run 20260820-1747) ; meme cause
@@ -70,6 +80,10 @@ const RENFORT_SHORT_PERTE_MAX = -0.05
 // GLD, TLT et IEF ont ete rejetes pour « insufficient buying power ». Ne bloque JAMAIS ce qui
 // REDUIT l'exposition : rachat de short, vente d'une position detenue, sorties automatiques.
 const LEVIER_MAX_OUVERTURE = 3.0
+// Drawdown au-dela duquel l'archimage passe en DEFENSIF : plus aucune OUVERTURE ni renfort.
+// Meme seuil que check_circuit_breakers, iron_sentinel_validate_order, get_oracle_context,
+// dashboard_snapshot et la console. Une seule regle partout.
+const DRAWDOWN_DEFENSIF = 0.08
 
 const CRYPTO_EXCLUSIF_GIL = ['BTCUSD','ETHUSD','SOLUSD','AVAXUSD','LINKUSD','XRPUSD','DOGEUSD','LTCUSD']
 const INTERDIT_GIL = ['SPY','QQQ']
@@ -118,6 +132,32 @@ async function dbg(row: any) {
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/oracle_exec_debug`, { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify(row) })
   } catch {}
+}
+
+// v42 : etat du coupe-circuit de l'archimage, lu dans Supabase avant toute OUVERTURE.
+// Deux sources, on retient la plus prudente, comme partout ailleurs (console, prompts, sentinelle) :
+//   - oracle_brain_state : GREATEST(current_drawdown, alpaca_drawdown_from_peak)
+//   - oracle_circuit_breakers : une ligne drawdown_8pct non resolue
+// Ne bloque QUE ce qui ouvre ou renforce. Vendre, racheter un short, sortir en TP/SL reste permis :
+// un coupe-circuit protege le capital, il n'enferme pas dans une position.
+async function getCoupeCircuit(archimage: string): Promise<{ drawdown: number | null, defensif: boolean, motif: string | null }> {
+  const vide = { drawdown: null, defensif: false, motif: null }
+  if (!SUPABASE_KEY || !archimage) return vide
+  try {
+    const h = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    const [rBrain, rCb] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/oracle_brain_state?archimage=eq.${encodeURIComponent(archimage)}&select=current_drawdown,alpaca_drawdown_from_peak`, { headers: h, signal: AbortSignal.timeout(6000) }),
+      fetch(`${SUPABASE_URL}/rest/v1/oracle_circuit_breakers?archimage=eq.${encodeURIComponent(archimage)}&breaker_type=eq.drawdown_8pct&resolved_at=is.null&select=fired_at,trigger_value&order=fired_at.desc&limit=1`, { headers: h, signal: AbortSignal.timeout(6000) })
+    ])
+    const brain = rBrain.ok ? (await rBrain.json())[0] : null
+    const cb = rCb.ok ? (await rCb.json())[0] : null
+    const n = (x: any) => { const v = Number(x); return (x === null || x === undefined || !isFinite(v)) ? null : v }
+    const connus = [n(brain?.current_drawdown), n(brain?.alpaca_drawdown_from_peak), n(cb?.trigger_value)].filter((x): x is number => x !== null)
+    const dd = connus.length ? Math.max(...connus) : null
+    if (cb) return { drawdown: dd, defensif: true, motif: `coupe_circuit_drawdown_8pct (${((dd ?? 0) * 100).toFixed(2)}%, declenche le ${String(cb.fired_at).slice(0, 16)})` }
+    if (dd !== null && dd >= DRAWDOWN_DEFENSIF) return { drawdown: dd, defensif: true, motif: `drawdown_${(dd * 100).toFixed(2)}pct_superieur_a_8pct` }
+    return { drawdown: dd, defensif: false, motif: null }
+  } catch { return vide }
 }
 
 async function getConcentrationCroisee(tickers: string[], archimageActuel: string): Promise<Record<string, { long: number, short: number }>> {
@@ -285,6 +325,7 @@ serve(async (req) => {
     const priceMap = _mightShort ? await getPrices(alpaca_key, alpaca_secret, _stockSyms, _cryptoSyms) : {}
     const momMap = await getMomentum(alpaca_key, alpaca_secret, _stockSyms, _cryptoSyms)
     const concentration = await getConcentrationCroisee(allTrades.map(t => t.ticker), archimage || '')
+    const coupeCircuit = await getCoupeCircuit(archimage || '')
 
     const toExec: any[] = []
     const skipped: any[] = []
@@ -406,6 +447,16 @@ serve(async (req) => {
         continue
       }
 
+      // v42 — COUPE-CIRCUIT DRAWDOWN. Place APRES le bloc de rachat de short ci-dessus, pour la
+      // meme raison : racheter un short REDUIT l'exposition et doit toujours passer. Les ventes,
+      // les sorties automatiques (TP/SL) et les liquidations passent aussi : elles ne sont pas
+      // dans cette branche isBuy, ou elles sont deja dans toExec via autoExits.
+      if (isBuy && coupeCircuit.defensif) {
+        skipped.push({ ticker: t.ticker, side: t.side, reason: 'coupe_circuit_defensif',
+          motif: coupeCircuit.motif, drawdown: coupeCircuit.drawdown })
+        continue
+      }
+
       // v40 — PLAFOND DE LEVIER. Place APRES le bloc de rachat ci-dessus : un rachat de short
       // reduit l'exposition et doit toujours passer, meme a levier sature.
       if (isBuy && levierSature) {
@@ -438,6 +489,12 @@ serve(async (req) => {
         if (!marketOpen) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_market_closed' }); continue }
         if (_px <= 0) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_no_price' }); continue }
         if (pending.has(sym) || (heldMV[sym] || 0) > 0) { skipped.push({ ticker: t.ticker, side: t.side, reason: 'short_blocked_position' }); continue }
+        // v42 — un short OUVRE une position : interdit en mode defensif, comme un achat.
+        if (coupeCircuit.defensif) {
+          skipped.push({ ticker: t.ticker, side: t.side, reason: 'coupe_circuit_defensif_short',
+            motif: coupeCircuit.motif, drawdown: coupeCircuit.drawdown })
+          continue
+        }
         // v40 — un nouveau short AUGMENTE l'exposition brute : interdit a levier sature.
         if (levierSature) {
           skipped.push({ ticker: t.ticker, side: t.side, reason: 'levier_sature_short_bloque',
@@ -539,7 +596,7 @@ serve(async (req) => {
     if (toExecFinal.length === 0) {
       console.log('RUN_EMPTY ' + JSON.stringify({ archimage, run_id, market_open: marketOpen, total: allTrades.length, skipped: skipped.length, skipped_detail: skipped }))
       await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: allTrades.length, accepted: 0, rejected: 0, skipped: skipped.length, payload: { skipped_detail: skipped, results: [] } })
-      return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, levier: Math.round(levierCompte*100)/100, levier_sature: levierSature, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: 0, rejected: 0, skipped: skipped.length, skipped_detail: skipped, take_profit: 0, stop_loss: 0, deleverage_sells: 0, results: [], message: marketOpen ? 'Aucune action (achats filtres momentum/risque, aucune sortie declenchee)' : 'Marche US ferme: run crypto uniquement' }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, levier: Math.round(levierCompte*100)/100, levier_sature: levierSature, coupe_circuit: coupeCircuit, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: 0, rejected: 0, skipped: skipped.length, skipped_detail: skipped, take_profit: 0, stop_loss: 0, deleverage_sells: 0, results: [], message: marketOpen ? 'Aucune action (achats filtres momentum/risque, aucune sortie declenchee)' : 'Marche US ferme: run crypto uniquement' }), { headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
     const tradesToExec = toExecFinal.slice(0, 60)
@@ -563,7 +620,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, levier: Math.round(levierCompte*100)/100, levier_sature: levierSature, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: accepted, rejected, skipped: skipped.length, skipped_detail: skipped, take_profit: tpCount, stop_loss: slCount, deleverage_sells: deleverageCount, shorts: shortCount, covers: coverCount, results: executed }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ archimage, run_id, market_phase: market_phase || 'ND', account: { buying_power: buyingPower, cash, equity, exposure_cap: Math.round(exposureCap), buy_budget: buyBudgetStart, market_open: marketOpen, frozen: accountFrozen, levier: Math.round(levierCompte*100)/100, levier_sature: levierSature, coupe_circuit: coupeCircuit, positions: Array.isArray(positions)?positions.length:null }, total_trades: allTrades.length, executed: accepted, rejected, skipped: skipped.length, skipped_detail: skipped, take_profit: tpCount, stop_loss: slCount, deleverage_sells: deleverageCount, shorts: shortCount, covers: coverCount, results: executed }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch(e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }

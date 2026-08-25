@@ -388,7 +388,7 @@ svg{max-width:100%}
 <!-- Cette carte porte le badge RÉEL : elle affichait le win rate du portefeuille VIRTUEL.
      Elle montre desormais le rendement du compte, hors apports. -->
 <div class="kv"><span class="k">Rendement (hors apports)</span><span class="v" id="tsAlcW">—</span></div><div class="kv"><span class="k">Verdict staking</span><span class="v" id="tsAlcS">—</span></div></div>
-      <div class="card mini c6"><div class="h"><span class="dot" style="color:var(--s-mar);background:var(--s-mar)"></span><div><div class="nm">🌊 Marées</div><div class="rl">Forex · EUR-USD, GBP-JPY… (validation)</div></div><span class="badge val" style="margin-left:auto">Validation</span></div><div class="kv"><span class="k">Positions ouvertes</span><span class="v" id="tsMarP">—</span></div><div class="kv"><span class="k">Trades clos</span><span class="v" id="tsMarT">—</span></div><div class="kv"><span class="k">Destination réel</span><span class="v" style="color:var(--gold)">Darwinex</span></div></div>
+      <div class="card mini c6"><div class="h"><span class="dot" style="color:var(--s-mar);background:var(--s-mar)"></span><div><div class="nm">🌊 Marées</div><div class="rl">Forex · EUR-USD, GBP-JPY… (validation)</div></div><span class="badge val" style="margin-left:auto">Validation</span></div><div class="kv"><span class="k">Positions tenues</span><span class="v" id="tsMarP">—</span></div><div class="kv"><span class="k">Trades évalués</span><span class="v" id="tsMarT">—</span></div><div class="kv"><span class="k">Destination réel</span><span class="v" style="color:var(--gold)">Darwinex</span></div></div>
     </div>
   </div>
 
@@ -447,7 +447,7 @@ svg{max-width:100%}
     <div class="chips" id="posCount" style="margin:0 0 10px"></div>
     <div class="card pad scroll"><table class="tbl" id="positions"></table></div></div>
   <div class="sect"><div class="sect-h">Cryptos de l'Alchimiste — Revolut X (réel)</div><div class="card pad scroll"><table class="tbl" id="holdings"></table></div></div>
-  <div class="sect"><div class="sect-h">🌊 Marées — Forex (positions ouvertes)</div><div class="card pad scroll"><table class="tbl" id="marees"></table></div></div>
+  <div class="sect"><div class="sect-h">🌊 Marées — livre cible forex (positions tenues)</div><div class="card pad scroll"><table class="tbl" id="marees"></table></div></div>
   <div class="sect"><div class="sect-h gold">Classement des portefeuilles</div>
     <div class="note" style="margin-bottom:12px">Les agents rangés par gain, avec ce qui compte vraiment à côté : la régularité (part de décisions gagnantes), la douleur (perte depuis le plus haut) et le poids que le Méta-Cerveau leur accorde.</div>
     <div class="rank" id="comparatif"></div></div>
@@ -1523,8 +1523,11 @@ function rTables(){
   +(D.posDust?' <span class="chip warn">'+D.posDust+' poussière'+(D.posDust>1?'s':'')+' crypto écartée'+(D.posDust>1?'s':'')+'</span>':'');
  const hold=D.suivi?.alc_reel_live?.positions||[];
  T('holdings',["Coin","Qté","Valeur live","Snapshot 8h","Staké","Live"],hold.slice(0,20).map(p=>[esc(p.devise||'—'),(p.qty!=null?Number(p.qty).toLocaleString('fr-FR',{maximumFractionDigits:6}):'—'),fmt$(num(p.valeur_live_usd)),fmt$(num(p.valeur_snapshot_usd)),(p.en_stake?'oui':'non'),(p.est_live?'✅':'⏸️')]),'Aucune ligne.');
- const mar=D.suivi?.marees_virtuel?.positions||[];
- T('marees',["Paire","Sens","Entrée","Actuel","Latent","TP/SL","Âge"],mar.slice(0,15).map(p=>[esc(p.paire||'—'),(String(p.side).toLowerCase().includes('sell')?'Vente':'Achat'),(p.prix_entree!=null?Number(p.prix_entree).toFixed(4):'—'),(p.prix_actuel!=null?Number(p.prix_actuel).toFixed(4):'—'),sgn(num(p.unreal_pct)),(p.tp_pct??'—')+'/'+(p.sl_pct??'—'),(p.age_h!=null?Math.round(p.age_h)+' h':'—')]),'Aucune position ouverte.');
+ // Marées : on affiche le LIVRE CIBLE (ce que l'Archimage déclare tenir), pas le simulateur
+ // d'évaluation. Le simulateur ferme d'office au bout de 96 h pour pouvoir noter chaque
+ // proposition : il disait « 0 position » le 25/08 alors que le livre cible en portait 3.
+ const mar=D.suivi?.marees_virtuel?.livre_cible||[];
+ T('marees',["Paire","Sens","Poids","Entrée","Actuel","Latent","TP/SL","Âge"],mar.slice(0,15).map(p=>[esc(p.paire||'—'),(String(p.side).toLowerCase().includes('sell')?'Vente':'Achat'),(p.poids_pct!=null?num(p.poids_pct).toLocaleString('fr-FR',{maximumFractionDigits:1})+' %':'—'),(p.prix_entree!=null?Number(p.prix_entree).toFixed(4):'—'),(p.prix_actuel!=null?Number(p.prix_actuel).toFixed(4):'—'),sgn(num(p.unreal_pct)),(p.tp_pct??'—')+'/'+(p.sl_pct??'—'),(p.age_h!=null?Math.round(p.age_h)+' h':'—')]),'Livre cible vide — aucune position tenue.');
  rClassement(c);}
 
 /* --- Classement des portefeuilles (remplace l'ancien tableau « comparatif ») --- */
@@ -1618,7 +1621,9 @@ function rSpec(){const alc=D.suivi?.alc_reel_live?.resume||{};const mar=D.suivi?
  if($('tsAlcV'))$('tsAlcV').textContent=fmt$(num(alc.total_live_usd));
  if($('tsAlcW'))$('tsAlcW').innerHTML=wr;
  if($('tsAlcS')){$('tsAlcS').textContent=vig?vig.etat:'—';$('tsAlcS').style.color=vig&&vig.etat!=='OK'?'var(--amber)':'var(--grn)';}
- if($('tsMarP'))$('tsMarP').textContent=mar.positions_ouvertes??'—';
+ // Positions tenues = le LIVRE CIBLE, pas le simulateur d'évaluation (qui ferme à 96 h).
+ const lc=D.suivi?.marees_virtuel?.livre_cible;
+ if($('tsMarP'))$('tsMarP').textContent=Array.isArray(lc)?lc.length:(mar.positions_ouvertes??'—');
  if($('tsMarT'))$('tsMarT').textContent=mar.trades_clos??'—';}
 
 /* ================= RAPPORT INVESTISSEURS (document clair, imprimable) ================= */
