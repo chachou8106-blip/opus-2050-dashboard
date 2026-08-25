@@ -49,6 +49,49 @@ sur les 80. Elle a tourné aujourd'hui à 14:35 : **statut 1, 76 opérations**. 
 par module sont dans le document Maia, et après application le corps est identique **octet pour
 octet** à celui de la copie qui marche.
 
+### Le `DataError` du Sage Mémoire : les jetons de réflexion mangent la réponse
+
+Clé Gemini refaite par Chachou, le 207 répond — et le module 208 renvoie
+`DataError — Source is not valid JSON`. **Testé pour de vrai**, 12 appels avec le corps exact du
+module : `gemini-3.5-flash` est un modèle à raisonnement et ses jetons de réflexion sont décomptés
+de `maxOutputTokens`, qui vaut 2000.
+
+| Configuration | Réflexion | Réponse | Résultat |
+|---|---|---|---|
+| actuelle | **1900** | **84** | `MAX_TOKENS` → JSON tronqué |
+| actuelle | 1620 / 1718 / 1679 | 134 / 190 / 139 | valide |
+| `thinkingBudget: 0` | 0 | 145 | valide, à chaque fois |
+
+**Un appel sur quatre part en `MAX_TOKENS`.** Correctif : ajouter
+`"thinkingConfig":{"thinkingBudget":0}` au `generationConfig` du 207. Effet secondaire : 145 jetons
+de sortie au lieu de ~1900, **13 fois moins de quota Gemini par run** — et c'est le dépassement de
+quota Groq qui avait justifié le passage à Gemini et à Mistral. Mon conseil de « remettre le 207
+sur Groq » était donc à jeter : c'est corrigé dans le document Maia.
+
+Le module 20015 (Marées) tourne sur le même modèle avec `thinkingConfig` vide : même exposition.
+
+### Les Marées écrivent, en fait — et les coupe-circuits existent
+
+Deux affirmations à moi, fausses toutes les deux, corrigées sur pièces :
+
+- **Marées** : log Supabase du run de 12:35 →
+  `12:38:02 POST | 200 | /rest/v1/rpc/marees_record_propositions | Make/production`. Le module 20018
+  appelle bien Supabase et Supabase répond 200. Rien ne bouge dans la table parce que depuis ma
+  réécriture du 20/08 c'est un **livre cible** : les trois positions ouvertes ont été reproposées
+  telles quelles → 3 tenues, 0 nouvelle, 0 fermée. Avant, chaque run réinsérait tout — d'où
+  l'impression que « ça écrivait ».
+- **Coupe-circuits** : `check_circuit_breakers` écrit aussi dans `oracle_circuit_breakers`, et c'est
+  elle qui a posé `GIL / drawdown_8pct / 0.1023` le 25/08 à 16:19 (job pg_cron
+  `directional_kelly_breakers`, `19 */2 * * *`). Le trou réel est que
+  `iron_sentinel_validate_order` **n'est appelée par personne**.
+
+### Le planning est dans Supabase, pas dans Make
+
+`scenario_fire_5min` → `scenario_fire(false)` lit `scenario_runs_planifies` : quatre créneaux
+lun–ven, 09:00 / 15:45 / 18:30 / 21:15 (Paris), tous actifs, tous « dernier tir 21/08 ». Le
+scénario visé est bien le **6183820**. Mais `scenario_control.actif = false` **depuis le 23/08 à
+00:04** : tant que cet interrupteur maître est OFF, rien ne part, quoi qu'on répare.
+
 ### Ce qui a rendu la panne invisible
 
 Les cinq modules Sages ont `stopOnHttpError = false` et **aucun `onerror`**. Gemini répondait
