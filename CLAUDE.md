@@ -83,7 +83,25 @@ Le 20/08 j'ai affirmé « je n'ai jamais touché aux prompts des Archimages » a
 uniquement que `{{CTX}}` y figurait encore. Le prompt système est une autre partie du module.
 Avant d'affirmer qu'une chose n'a pas changé, **lire l'objet entier**, pas un champ.
 
+## RÈGLE ABSOLUE — Chachou n'écrit pas de code. Si c'est cassé, c'est moi (25/08/2026)
+
+Chachou ne sait pas écrire une ligne de code : **tout ce qui est dans Supabase, dans les edge
+functions et dans les modules Make vient de moi**, directement ou via les consignes que je lui
+fais passer à Maia. La date d'un commit ou d'un dump ne prouve rien : un objet présent le 14/08
+au matin peut très bien avoir été écrit par moi le 13/08 au soir. **Cesser de discuter la
+paternité.** Le seul débat utile est : qu'est-ce qui est cassé, et comment on le répare.
+
+Quand il dit « ça marchait avant », la réponse n'est pas « non » — c'est **comparer**. Le
+blueprint d'avant le 13/08 qu'il a fourni est dans `scratchpad/ancien_bp.txt` ; le comparer
+module par module avant toute affirmation. Le 25/08 cette comparaison lui a donné raison sur
+trois points d'un coup : le Sage Mémoire tournait bien sur Groq, les Marées n'ont jamais changé
+de moteur, et aucun module n'a disparu — c'est un seul module cassé (303) qui bloquait tout
+le reste du scénario.
+
 ## Rappels système (contexte)
 - Modifs Make **uniquement via l'assistant Maia** (jamais le blueprint en direct).
+- Un blueprint complet fait ~620 ko : `scenarios_update` avec blueprint est hors de portée d'un
+  appel d'outil. Les correctifs Make se livrent donc **en chaînes exactes à chercher/remplacer**,
+  extraites du blueprint en direct et vérifiées contre une version qui tourne.
 - Ne jamais armer/désarmer le kill_switch ni passer dry_run=false sans accord explicite de Chachou.
 - 100 % Supabase pour la logique data ; ne pas committer de secrets (webhooks → Vault).

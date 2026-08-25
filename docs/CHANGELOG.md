@@ -8,6 +8,56 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-25 — Pourquoi le scénario ne tourne plus : un seul module, le 303
+
+Détail et instructions Maia : `docs/decisions/PROMPT-MAIA-RELANCE-SCENARIO-2026-08-25.md`.
+
+Chachou avait raison sur les trois points qu'il répétait, et j'avais tort de discuter. Comparaison
+faite entre **le blueprint qu'il a fourni, celui d'avant le 13/08**, et celui de Make aujourd'hui :
+
+- **78 modules avant, 80 aujourd'hui.** Aucun supprimé, deux ajoutés (20022, 20023).
+- **Le Sage Mémoire (207) tournait bien sur Groq** (`llama-3.3-70b-versatile`). Il est aujourd'hui
+  sur `generativelanguage.googleapis.com`, modèle `gemini-3.5-flash`, avec une clé qui renvoie
+  `API_KEY_INVALID`. Dernière ligne dans `oracle_sages_report` : **21/08 15:20**. Les quatre autres
+  Sages ont écrit aujourd'hui.
+- **Le module 205 (Risque) est passé de Groq à Mistral** — autre changement non documenté. Il
+  fonctionne, mais il n'était pas demandé.
+- **Les Marées n'ont jamais été déplacées** : module 20015, app Gemini, connexion « Zen Chez Toi
+  Gemini » (7346284), identique avant et après.
+
+### La cause unique de l'arrêt
+
+Le scénario 6183820 meurt à **29 opérations sur 80**. Le 29ᵉ module dans l'ordre d'exécution est le
+**303 🌙 LE PROPHÈTE D'ARGENT — SYL** : `InvalidConfigurationError — The provided JSON body content
+is not valid JSON`. Son `jsonStringBodyContent` contient quatre séquences `\ ` (antislash + espace,
+échappement interdit en JSON) et un fragment parasite `{{\}} ## \` :
+
+```
+map(105.data.brain_states.SYL.learnings; \ + "bias\"); \ + " ## \"))
+```
+
+**Tout ce qui vient après le 303 n'a donc pas tourné depuis le 21/08 09:19** : GIL, les ordres
+Alpaca, l'Alchimiste, **les Marées**, les hérauts Discord. Les Marées ne sont pas en panne — le
+scénario ne les atteint pas. C'est aussi pour ça que `marees_propositions` s'arrête au 21/08 09:05.
+
+Le module 305 (GIL) porte la même déformation sous une autre forme (`\"bias\"` au lieu de `"bias"`).
+
+### Le correctif existe déjà et il est prouvé
+
+La copie **7051944** ne diffère de 6183820 que par **ces deux champs** — vérifié module par module
+sur les 80. Elle a tourné aujourd'hui à 14:35 : **statut 1, 76 opérations**. Les deux remplacements
+par module sont dans le document Maia, et après application le corps est identique **octet pour
+octet** à celui de la copie qui marche.
+
+### Ce qui a rendu la panne invisible
+
+Les cinq modules Sages ont `stopOnHttpError = false` et **aucun `onerror`**. Gemini répondait
+HTTP 400 au module 207, Make passait à la suite, le Sceau n'écrivait rien pour ce Sage. Quatre
+jours sans le moindre signal. Le CHANGELOG du 17/08 l'avait déjà noté comme leçon d'observabilité ;
+elle n'avait pas été appliquée.
+
+---
+
 ## 2026-08-21 — AUTOCRITIQUE : les 10 agents savent enfin quand ils se trompent
 
 Verifie module par module dans le blueprint apres passage de Maia, en separant le prompt
