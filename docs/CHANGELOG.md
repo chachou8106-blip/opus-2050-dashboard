@@ -8,6 +8,50 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-25 (suite) — Audit complet : tables, vues, prompts, chaîne d'ordres
+
+Détail : `docs/decisions/AUDIT-TABLES-ET-PROMPTS-2026-08-25.md`. 70 tables, 57 vues, 10 modules LLM.
+
+**Appliqué et vérifié en direct :**
+
+- **`execute-trades` v42 — le coupe-circuit bloque enfin les ouvertures.** `check_circuit_breakers`
+  déclenchait bien, mais rien ne le lisait au moment de passer les ordres : 116 ordres sur 7 jours,
+  116 exécutés, 0 refusé, avec GIL à 10,23 % de drawdown. Test de bout en bout sur la fonction
+  déployée : `coupe_circuit = {defensif: true, drawdown: 0.1023}`. GIL n'ouvre plus rien ; JU
+  (0,44 %) et SYL (3,46 %) tradent normalement. Ce qui réduit l'exposition passe toujours.
+  `iron_sentinel_validate_order` n'est **pas** appelée : son `v_cap := 2000` plafonnerait chaque
+  ordre à 2 000 $ sur des portefeuilles à 500 k$. Seule sa règle est reprise.
+- **Marées visibles.** La console lisait `v_marees_virtuel_positions` = le SIMULATEUR d'évaluation,
+  que `marees_rebuild_virtual` ferme d'office à 96 h. Elle affichait 0 position quand le livre en
+  portait 3. Nouvelle vue `v_marees_livre_cible`, `oracle-inbox` v25, `aether` mis à jour.
+- **`oracle_flash_intel` était vide depuis sa création.** Le module 211 appelle
+  `/rpc/log_flash_intel` avec cinq clés nommées, la fonction ne prenait qu'un `p_payload jsonb` :
+  `404 PGRST202`, masqué par `stopOnHttpError = false`. Surcharge ajoutée et testée
+  (`catalysts_logged: 1`, routage vers les 5 agents).
+
+**Trouvé, à corriger via Maia :**
+
+- **Le Sage Flash ne produit pas ce que le 211 lui demande.** Son `json_schema` est strict
+  (`additionalProperties: false`, 8 champs) et ne contient ni `catalysts`, ni `web_intelligence`,
+  ni `trade_1` — les trois champs que le 211 lit. `catalysts` vaudra donc toujours `[]` même après
+  le correctif ci-dessus. Conséquence en bout de chaîne : **GIL reçoit un bloc
+  `flash_intel_latest` vide à chaque run.**
+- **SYL (303) et l'Alchimiste (10012, argent RÉEL) tournent sur `sonar-pro`**, le moteur de
+  recherche web pour lequel le Sage Macro avait été déclaré FIGÉ le 19/08. Aucun des deux n'a de
+  `response_format`.
+- **Aucun des 5 Sages n'a de gestion d'erreur** (`stopOnHttpError = false`, pas d'`onerror`).
+
+**Contrôles passés sans écart :** les 52 chemins `105.data.*` cités dans les prompts résolvent tous
+contre la sortie réelle de `get_oracle_context()` ; les schémas de sortie correspondent à la
+consommation aval pour 9 modules sur 10 ; `FIABILITE_SAGES` lit bien `sages_coaching` ; aucune vue
+en erreur ; `oracle_positions_live` à jour ; `marees_config` respecté par les 3 positions tenues.
+
+**Incohérence non tranchée :** le simulateur des Marées ferme à 96 h, le livre cible ne ferme
+jamais. USD-JPY est tenu depuis 267 h dans le livre et compté comme clos depuis le 18/08 dans
+l'évaluation — le win rate 13W/27L porte sur des sorties que l'Archimage n'a jamais décidées.
+
+---
+
 ## 2026-08-25 — Pourquoi le scénario ne tourne plus : un seul module, le 303
 
 Détail et instructions Maia : `docs/decisions/PROMPT-MAIA-RELANCE-SCENARIO-2026-08-25.md`.

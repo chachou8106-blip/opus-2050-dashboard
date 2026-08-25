@@ -123,6 +123,41 @@ mais il est exposé au même `MAX_TOKENS`. À surveiller ; si le 20016 sort un
 
 ---
 
+## 2 bis. Module 209 ⚡ QUANTUM PULSE — il ne produit pas ce que le 211 lui demande
+
+Détail et preuves : `docs/decisions/AUDIT-TABLES-ET-PROMPTS-2026-08-25.md` §3 et §4.
+
+Son `response_format` est un `json_schema` strict (`additionalProperties: false`) à 8 champs. Le
+module **211 ⚡ FLASH INTEL LOGGER** lit trois champs absents de ce schéma : `web_intelligence`,
+`trade_1` et `catalysts`. Résultat : `catalysts` vaut toujours `[]`, la table `oracle_flash_intel`
+est **vide depuis sa création**, et **GIL reçoit un bloc de renseignement vide à chaque run**
+(son prompt lit `105.data.flash_intel_latest`).
+
+**Dans le module 209**, à l'intérieur de `"schema": { "properties": { ... } }`, ajouter :
+
+```
+"web_intelligence": {"type": "string"},
+"catalysts": {"type": "array", "items": {"type": "object", "properties": {
+  "ticker": {"type": "string"}, "type": {"type": "string"}, "headline": {"type": "string"}},
+  "required": ["ticker", "type", "headline"], "additionalProperties": false}}
+```
+
+et ajouter `"web_intelligence"` et `"catalysts"` à la liste `"required"`.
+
+**Dans le module 211**, remplacer :
+```
+"top_ticker": "{{trim(upper(ifempty(210.trade_1.ticker; MARKET)))}}", "top_direction": "{{lower(ifempty(210.trade_1.side; neutral))}}"
+```
+par :
+```
+"top_ticker": "{{trim(upper(ifempty(210.catalysts[1].ticker; MARKET)))}}", "top_direction": "{{lower(ifempty(210.flash_sentiment; neutral))}}"
+```
+
+Le 404 côté Supabase qui bloquait ce module est **déjà corrigé** (surcharge `log_flash_intel`
+à cinq arguments, testée : `catalysts_logged: 1`, routage vers les 5 agents).
+
+---
+
 ## 3. Rendre les pannes visibles
 
 Les cinq modules Sages ont `stopOnHttpError = false` et **aucun `onerror`**. C'est pour ça que le
