@@ -192,6 +192,45 @@ Le 404 côté Supabase qui bloquait ce module est **déjà corrigé** (surcharge
 
 ---
 
+## 2 ter. Module 10012 — le dé-staking n'a plus de verdict
+
+**Constat.** Depuis le 25/08, `alc_destake_reco` reçoit bien ses 7 lignes à chaque run, mais
+`verdict`, `raison` et `gain_trade_attendu_pct` sont **NULL**. Jusqu'au 21/08 09:05 inclus, chaque
+run écrivait `verdict = GARDER` avec une raison. C'est pour ça que la proposition de dé-staking a
+disparu des messages.
+
+**Cause.** La fonction `alc_record_propositions` lit `v_delem->>'verdict'` et `v_delem->>'raison'`
+dans chaque élément de `destake_recommande`. Or **ces deux mots n'apparaissent NULLE PART dans le
+prompt du module 10012.** Vérifié sur trois versions — le blueprint d'avant le 13/08, la sauvegarde
+du 22/08 et la version en direct du 26/08 : `verdict` = 0 occurrence, `GARDER` = 0, `DESTAKER` = 0,
+`gain_trade_attendu_pct` = 0. Le prompt ne nomme que `montant_usd`, `apy_staking_pct` et
+`delai_deblocage_jours`, et son format de sortie déclare `"destake_recommande":[]` sans dire ce que
+contient un élément.
+
+Jusqu'au 21/08 le modèle ajoutait `verdict` de lui-même ; depuis, il ne le fait plus. Ce n'était
+pas une fonctionnalité, c'était un coup de chance.
+
+**Correctif — un seul remplacement dans le corps du module 10012.** Chercher (une occurrence) :
+
+```
+{\"propositions\":[],\"destake_recommande\":[],\"commentaire\":\"<synthèse courte du cycle>\"}
+```
+
+remplacer par :
+
+```
+{\"propositions\":[],\"destake_recommande\":[{\"devise\":\"TON\",\"montant_usd\":7.91,\"apy_staking_pct\":17.67,\"delai_deblocage_jours\":2,\"gain_trade_attendu_pct\":0,\"verdict\":\"GARDER\",\"raison\":\"une phrase courte sans guillemets\"}],\"commentaire\":\"<synthèse courte du cycle>\"}\n\nChaque element de destake_recommande DOIT porter les sept cles ci-dessus. verdict vaut exactement GARDER ou DESTAKER, jamais autre chose. gain_trade_attendu_pct est le gain net que tu attends du trade que ce capital permettrait, en pourcentage. raison explique en une phrase pourquoi tu gardes ou tu destakes.
+```
+
+Attention aux `\"` : ce texte vit **à l'intérieur** du corps JSON du module, les guillemets doivent
+rester échappés exactement comme ci-dessus.
+
+Vérifié par simulation sur le corps réel : une seule occurrence, corps 6 886 → 7 395 caractères,
+**3 accolades ouvertes et 3 fermées**, et le corps reste du JSON valide (`model` = `sonar-pro`,
+2 messages).
+
+---
+
 ## 3. Rendre les pannes visibles
 
 Les cinq modules Sages ont `stopOnHttpError = false` et **aucun `onerror`**. C'est pour ça que le

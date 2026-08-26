@@ -8,6 +8,59 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-26 — Le scénario tourne de bout en bout. Deux causes trouvées dans la foulée
+
+### Le run de 16:15 : 76 opérations, statut 1, les 5 Sages écrivent
+
+`oracle_sages_report` : **Macro, Technique, Risque, Mémoire, Flash**, tous `status = ok` à 16:15:55.
+Le Sage Mémoire reparle après cinq jours de silence.
+
+Avant lui, le run de 16:03 s'était arrêté à **20 opérations** — le module 207 exactement — sur
+`InvalidConfigurationError`. Cause : l'ajout de `"thinkingConfig":{"thinkingBudget":0}` la veille
+avait **mangé l'accolade fermante du corps**, 7 ouvertes contre 6 fermées. Un caractère. Le
+contrôle est maintenant outillé : `docs/outils/verifier-accolades-blueprint.mjs`.
+
+### Le coupe-circuit a bloqué un vrai ordre, en conditions réelles
+
+Première application de `execute-trades` v42 sur un run complet :
+
+```
+GIL  SQQQ  buy   -> coupe_circuit_defensif
+     drawdown 0.1030 — "coupe_circuit_drawdown_8pct (10.30%, declenche le 2026-08-25T14:19)"
+GIL  LINKUSD sell -> exécuté
+```
+
+GIL ne peut plus ouvrir, il peut toujours sortir. JU et SYL, sous le seuil, ont passé leurs
+5 ordres normalement. 6 ordres au total, 6 exécutés, 1 rejeté par Alpaca
+(`asset "USO" cannot be sold short` — refus du courtier, pas du système).
+
+À noter : la colonne `oracle_college_runs.circuit_breaker_fired` vaut `false` sur ce run alors que
+le coupe-circuit a bien agi. Elle est écrite par le module 960 depuis une autre source et ne voit
+pas le garde-fou d'exécution.
+
+### Le dé-staking a perdu son verdict — et il n'a jamais été demandé
+
+`alc_destake_reco` reçoit bien ses 7 lignes à chaque run, mais depuis le 25/08 `verdict`, `raison`
+et `gain_trade_attendu_pct` sont **NULL**. Jusqu'au 21/08 09:05, c'était `verdict = GARDER` avec
+une raison — d'où la disparition de la proposition dans les messages.
+
+`alc_record_propositions` lit `v_delem->>'verdict'` et `v_delem->>'raison'`. **Ces deux mots
+n'apparaissent nulle part dans le prompt du module 10012** : vérifié sur le blueprint d'avant le
+13/08, sur la sauvegarde du 22/08 et sur la version en direct — `verdict` 0 occurrence, `GARDER` 0,
+`DESTAKER` 0, `gain_trade_attendu_pct` 0. Le format de sortie déclare `"destake_recommande":[]`
+sans dire ce que contient un élément. Le modèle ajoutait `verdict` de lui-même jusqu'au 21/08 ;
+depuis, il ne le fait plus. **Ce n'était pas une fonctionnalité, c'était un coup de chance.**
+Correctif dans le document Maia, §2 ter.
+
+### Les Marées ont fermé une position, pour la première fois
+
+Le run de 16:18 a clôturé **EUR-GBP**, ouverte le 21/08 : l'Archimage a cessé de la proposer, la
+sémantique du livre cible a fait le reste. Le livre passe de 3 à 2 lignes (EUR-USD vente 192 h,
+USD-JPY achat 286 h). Le mécanisme écrit dans Supabase et fonctionne
+(`14:18:05 POST | 200 | /rpc/marees_record_propositions`).
+
+---
+
 ## 2026-08-25 (suite) — Audit complet : tables, vues, prompts, chaîne d'ordres
 
 Détail : `docs/decisions/AUDIT-TABLES-ET-PROMPTS-2026-08-25.md`. 70 tables, 57 vues, 10 modules LLM.
