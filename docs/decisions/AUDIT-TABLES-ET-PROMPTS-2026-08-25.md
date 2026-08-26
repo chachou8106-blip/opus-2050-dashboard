@@ -114,22 +114,57 @@ Retirer la référence à `210.trade_1` dans le module 211, ou la remplacer par 
 
 ---
 
-## ⚠️ 5. Deux agents décident sur un moteur de recherche web
+## ✅ 5. « Deux agents sur un moteur de recherche » — j'avais tort, la mesure le dit
 
-| Module | Moteur | Enjeu |
+J'ai écrit que SYL (303) et l'Alchimiste (10012) tournant sur `sonar-pro` risquaient le mal du
+Sage Macro du 19/08 (« il cherche les champs sur le web au lieu de les analyser »). **C'était une
+hypothèse tirée d'un cas ancien, et je ne l'avais pas vérifiée. Elle est fausse.**
+
+Le symptôme d'un moteur figé, c'est une sortie qui ne bouge plus. Sur 55 runs des 14 derniers jours :
+
+| Archimage | moteur | valeurs de `confidence` distinctes | étendue |
+|---|---|---|---|
+| **SYL** | Perplexity `sonar-pro` | **11** | 62 → 82 |
+| GIL | Mistral `mistral-large-latest` | 3 | 65 → 78 |
+| JU | Anthropic `claude-sonnet-4-5` | 2 | 6 → 7 |
+
+**SYL est le plus variable des trois**, pas le moins. Et l'Alchimiste, sur 42 runs :
+57 propositions, **17 paires différentes**, 22 valeurs de confiance (0,35 → 5,80),
+**55 justifications distinctes sur 57**. Aucun signe de figement.
+
+Ce qui avait rendu le Sage Macro malade n'était pas `sonar-pro` seul : c'était `sonar-pro` **plus**
+un message de 8 421 caractères de champs collés par des barres verticales, que le modèle a traité
+comme une requête de recherche — il l'écrivait lui-même dans `news_catalyst` : « CTX est ambigu ».
+SYL et l'Alchimiste reçoivent un prompt rédigé, pas un CTX à plat. **Rien à changer.**
+
+Ce qui reste vrai et vérifiable : ni 303 ni 10012 n'ont de `response_format`. Ils s'en sortent
+grâce aux nettoyages des modules 304 et 10014. Le seul contrôle utile est celui du 19/08 : si les
+valeurs de SYL se figent d'un run à l'autre, alors le mal est là. Aujourd'hui, non.
+
+---
+
+## ⚠️ 5 bis. Deux blocs du contexte injecté sont vides en permanence
+
+`get_oracle_context()` renvoie 12 blocs. Deux sont des tableaux vides **à chaque run** :
+
+| Bloc | Taille | Cause |
 |---|---|---|
-| **303 SYL** | Perplexity `sonar-pro` | portefeuille papier ~500 k$ |
-| **10012 Alchimiste** | Perplexity `sonar-pro` | **ARGENT RÉEL** (Revolut X) |
+| `flash_intel_latest` | `[]` | le Sage Flash ne produit pas `catalysts` (§4) |
+| `visionary_signals` | `[]` | la table `oracle_visionary_signals` n'a **jamais** reçu une ligne |
 
-C'est exactement le diagnostic posé le 19/08 pour le Sage Macro : *« sonar-pro traite le message
-comme une requête de recherche. On lui envoie 8 421 caractères de champs séparés par des barres
-verticales ; il les cherche sur le web au lieu de les analyser. »* Le Macro a été basculé sur Groq
-pour cette raison. SYL reçoit 6,6 ko de contexte, l'Alchimiste davantage — et aucun des deux n'a
-`response_format`.
+Pour `visionary_signals`, la fonction d'écriture **existe** — `log_visionary_signals(p_payload jsonb)`,
+qui attend `{run_id, signals:[{signal_type, ticker, signal_value, signal_label, conviction,
+time_horizon, source}]}` — mais **aucun module Make ne l'appelle**. Vérifié sur les 80 modules :
+zéro occurrence. Le module 901 cite bien « visionary », mais c'est la colonne `visionary_score` de
+`oracle_college_runs` qu'il lit, pas cette fonction.
 
-Je ne propose pas de bascule à chaud sur l'Alchimiste : c'est de l'argent réel et il fonctionne.
-Mais **le contrôle de guérison du 19/08 s'applique** : si `market_phase` ou `confidence` de SYL ne
-bougent plus d'un run à l'autre, c'est le même mal.
+C'est la même maladie que le Flash Intel, au stade au-dessus : là il y avait un appel avec la
+mauvaise signature, ici il n'y a pas d'appel du tout. Deux blocs sur douze du contexte des agents
+ne transportent rien.
+
+**Deux issues, au choix :** brancher un module Make sur `log_visionary_signals`, ou retirer le bloc
+de `get_oracle_context()`. Je n'en applique aucune sans décision : la première ajoute une donnée
+aux prompts, la seconde en retire une.
 
 ---
 
@@ -181,20 +216,53 @@ Seul le module 10012 (Alchimiste) a `stopOnHttpError = true`.
 
 ---
 
-## Ménage possible — rien n'est supprimé sans accord
+## Ménage — ce qui peut encore servir, objet par objet
 
-**13 tables vides depuis leur création** : `market_data_cache`, `oracle_flash_intel` (§3-4),
-`alpaca_orders`, `app_users`, `marees_positions`, `market_signals`, `oracle_market_cache`,
-`oracle_runs`, `portfolio_virtual`, `positions_recommended`, `oracle_logs`,
-`oracle_visionary_signals`, `fonds_versements`.
+Question posée : « avant de faire le ménage ça serait utile de savoir si quelque chose peut
+réellement servir ». J'ai ouvert chaque objet. Trois catégories, pas une.
 
-**12 vues qu'aucune fonction, aucune vue, aucune edge function et aucun module Make ne lit** :
-`oracle_recent_runs_v2`, `v_alc_bt_daily`, `v_alc_bt_resume`, `v_alc_riskoff_resume`,
-`v_oracle_performance`, `v_oracle_stats`, `v_perf_anomalies`, `v_portfolio_open`,
-`v_rapport_mensuel_virtuels`, `v_rapport_periodes`, `v_recent_performance`, `v_vigie_incidents`.
+### À GARDER — ça sert, ou ça contient déjà quelque chose d'utile
 
-**8 tables de sauvegarde**, ~1 700 lignes : `bak_20260813_*` (5), `bak_20260820_*` (2),
-`bak_20260821_*`, `bak_20260823_*`, `_ju_brain_backup`.
+| Objet | Contenu réel | Pourquoi le garder |
+|---|---|---|
+| **`v_perf_anomalies`** | **6 lignes** | Compare l'equity **mesurée** à l'equity **Alpaca** et chiffre l'écart. C'est le contrôle qui aurait attrapé le faux +55 % : il montre encore JU à +174 432 $ d'écart le 18/08 (17,45 % du capital), marqué `fiable = false`. **À brancher dans la Vigie et dans la console.** |
+| **`v_vigie_incidents`** | **9 incidents** | Historique ouvert/clos des pannes détectées, avec durée. La console affiche l'état courant mais pas l'historique. |
+| **`oracle_visionary_signals`** | 0 ligne | **Ce n'est pas une table morte : c'est un canal branché sur les prompts** (`get_oracle_context().visionary_signals`) que personne n'alimente. Voir §5 bis. Supprimer la table casserait le bloc. |
+| **`v_oracle_performance`** | 5 lignes | PnL, win rate, drawdown et poids par archimage, croisés avec le nombre d'ordres. Plus complet que `v_perf_resume` sur la partie ordres. |
+| **`oracle_recent_runs_v2`** | **276 runs** | Les 276 runs du Collège avec consensus, ordres, overlap, coupe-circuit. Données vivantes. Le module 901 refait la même requête à la main sur `oracle_college_runs`. |
+| **`v_alc_bt_resume`** / `v_alc_bt_daily` | **10 stratégies** | Les backtests de l'Alchimiste, par stratégie, win rate net et rendement. `refresh_backtest_cache` ne les lit pas (vérifié) : `oracle_backtest_cache` est rempli autrement. Utile pour comparer stratégie contre stratégie. |
+| **`v_alc_riskoff_resume`** | 2 lignes | Stratégie risk-off : jours en cash contre jours investis, cumul. |
+| **`v_rapport_periodes`** / `v_rapport_mensuel_virtuels` | 24 / 2 lignes | Rendements par période des **virtuels** (ALC_VIRT, MAREES). Doublonnent partiellement `v_rendements_periodes`, mais sur un périmètre que celle-ci ne couvre pas de la même façon. |
+| **`market_data_cache`** | 0 ligne | 20 colonnes de données de marché (VIX, taux, CPI, BTC, Fear&Greed, qualité). **Rien ne persiste aujourd'hui le CTX d'un run** : il ne vit que dans le journal d'exécution Make. Cette table permettrait de rejouer et d'auditer un run passé. |
+| **`app_users`** | 0 ligne | Comptes abonnés, profil de risque, capital, clés Alpaca par utilisateur. C'est le socle de la vitrine d'abonnés. À garder. |
+| **`fonds_versements`** | 0 ligne | Versements du fonds. `fonds_config` dit « inactif, calcul seulement, 50 % des gains » — la table est le pendant, prête pour l'activation. |
+
+### À SUPPRIMER — architecture v1, remplacée, et plus rien ne les lit
+
+Toute cette grappe tourne autour de **`oracle_runs`** (un run = une ligne, 90 colonnes,
+`master_word`, `synth_a_phase`…), remplacée par `oracle_college_runs` (276 lignes vivantes).
+
+| Objet | Remplacé par |
+|---|---|
+| `oracle_runs` (0 ligne, 90 colonnes) | `oracle_college_runs` |
+| `portfolio_virtual` (0) | `oracle_positions_live` (77 lignes) |
+| `positions_recommended` (0) | `oracle_college_orders` (1 577 lignes) |
+| `alpaca_orders` (0, 30 colonnes) | `oracle_college_orders` |
+| `oracle_logs` (0) | `oracle_exec_debug` (726 lignes) |
+| `oracle_market_cache` (0) | jamais alimentée, doublon de `market_data_cache` |
+| `marees_positions` (0) | `marees_propositions` (116 lignes) |
+| `market_signals` (0) | jamais alimentée (géopolitique, séismes, alertes météo) |
+| `v_portfolio_open` (0) | lit `portfolio_virtual` + `oracle_runs`, deux tables vides |
+| `v_recent_performance` (0) | lit `oracle_runs`, vide |
+| `v_oracle_stats` (1 ligne bidon) | compte des `market_phase` dans `oracle_runs`, vide |
+
+### SAUVEGARDES — à trancher
+
+8 tables, ~1 700 lignes : `bak_20260813_*` (5 tables, la casse de l'Alchimiste),
+`bak_20260820_*` (2), `bak_20260821_alc_virtual_trades`, `bak_20260823_lecon_manuelle`,
+`_ju_brain_backup`. Les plus anciennes ont 13 jours. Elles ne coûtent presque rien et elles sont
+la seule trace d'avant mes corrections. **Mon avis : garder celles du 13/08 tant que le scénario
+n'a pas retrouvé un régime stable, supprimer le reste quand tu me le diras.**
 
 ---
 
