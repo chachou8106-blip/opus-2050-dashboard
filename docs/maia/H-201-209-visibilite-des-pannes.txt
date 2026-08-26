@@ -1,0 +1,31 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- Tu ne modifies AUCUN prompt, AUCUNE URL, AUCUNE cle, AUCUN corps de requete.
+- Tu ne supprimes ni module, ni champ, ni variable, ni connexion.
+- Les deux points ci-dessous vont ENSEMBLE sur chacun des cinq modules. Ne fais jamais le
+  premier sans le second : sans route d erreur, activer l option ARRETE le scenario entier
+  a la premiere erreur HTTP d un des cinq modeles.
+- Si un module ne te laisse pas ajouter la route d erreur, ARRETE-TOI, remets l option sur
+  desactive pour ce module, et dis-le.
+
+MODULES : 201 (AURORA BOREALIS), 203 (STELLAR NAVIGATOR), 205 (IRON SENTINEL),
+          207 (DEEP MEMORY), 209 (QUANTUM PULSE)
+
+Sur chacun de ces cinq modules, et sur eux seuls :
+
+1) Activer l option « Evaluate all states as errors (except for 2xx and 3xx) ».
+   Elle est aujourd hui sur desactive sur les cinq (stopOnHttpError = false).
+
+2) Ajouter a chacun une route d erreur (error handler) contenant une directive « Resume »
+   qui renvoie un objet JSON vide : {}
+
+Aujourd hui aucun module du scenario n a de route d erreur. Quand Groq repond 429 ou quand
+Gemini repond 400, le module renvoie l erreur comme si c etait une reponse normale, le
+scenario continue, et rien nulle part ne dit qu un sage n a pas parle. C est ce qui a laisse
+le Sage Memoire muet du 21 au 26 aout.
+
+Avec Resume, le comportement reste le meme pour la suite du scenario - le module rend {} et
+la chaine continue - mais l execution apparait en erreur dans l historique Make.
+
+CONTROLE : apres l intervention, les cinq modules doivent avoir stopOnHttpError = true ET une
+route d erreur. Confirme-moi les deux pour chacun des cinq, module par module.

@@ -1,0 +1,64 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module dans ce message : le 209. Ne touche a aucun autre.
+- Tu fais QUATRE remplacements de texte dans ce seul module, dans l ordre donne.
+  Tu ne reformules jamais un prompt, tu ne le reecris jamais entierement, tu ne supprimes
+  ni module, ni champ, ni variable, ni connexion.
+- Si tu ne trouves pas un texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+  Ne devine pas, ne remplace pas par approximation.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- Apres les modifications, verifie que le nombre d accolades { est egal au nombre d accolades }.
+
+MODULE : 209 (QUANTUM PULSE - le Sage Flash)
+CHAMP  : jsonStringBodyContent
+
+Le module produit aujourd hui huit champs. Le module 211 qui le suit en lit trois autres
+(web_intelligence, catalysts, le ticker du principal catalyseur) qui n existent nulle part :
+c est pour cela que la table oracle_flash_intel est vide. On ajoute donc ces trois champs.
+
+--- REMPLACEMENT 1 sur 4 ---
+Chercher (une seule occurrence) :
+
+  "max_tokens": 1500,
+
+Remplacer par :
+
+  "max_tokens": 2500,
+
+--- REMPLACEMENT 2 sur 4 ---
+Chercher (une seule occurrence) :
+
+          "immediate_action": {"type": "string", "enum": ["BUY_AGGRESSIVELY", "BUY_DIP", "HOLD", "REDUCE", "SELL_AGGRESSIVELY", "HEDGE"]}
+        },
+
+Remplacer par :
+
+          "immediate_action": {"type": "string", "enum": ["BUY_AGGRESSIVELY", "BUY_DIP", "HOLD", "REDUCE", "SELL_AGGRESSIVELY", "HEDGE"]},
+          "web_intelligence": {"type": "string"},
+          "top_catalyst_ticker": {"type": "string"},
+          "catalysts": {"type": "string"}
+        },
+
+--- REMPLACEMENT 3 sur 4 ---
+Chercher (une seule occurrence) :
+
+        "required": ["top_headline_1", "top_headline_2", "market_shock", "shock_type", "btc_breaking_news", "urgency_level", "flash_sentiment", "immediate_action"],
+
+Remplacer par :
+
+        "required": ["top_headline_1", "top_headline_2", "market_shock", "shock_type", "btc_breaking_news", "urgency_level", "flash_sentiment", "immediate_action", "web_intelligence", "top_catalyst_ticker", "catalysts"],
+
+--- REMPLACEMENT 4 sur 4 ---
+Ce texte se trouve a l interieur du prompt systeme, ou les guillemets sont echappes par
+un antislash. Recopie-les exactement tels quels.
+Chercher (une seule occurrence) :
+
+\"immediate_action\":\"BUY_AGGRESSIVELY|BUY_DIP|HOLD|REDUCE|SELL_AGGRESSIVELY|HEDGE\"} LANGUE :
+
+Remplacer par :
+
+\"immediate_action\":\"BUY_AGGRESSIVELY|BUY_DIP|HOLD|REDUCE|SELL_AGGRESSIVELY|HEDGE\",\"web_intelligence\":\"synthese factuelle 400 chars max\",\"top_catalyst_ticker\":\"ticker du catalyseur le plus important, ou MARKET\",\"catalysts\":\"chaine delimitee, voir CATALYSEURS\"} CATALYSEURS : catalysts est une CHAINE de caracteres, jamais un tableau. Un catalyseur par bloc, blocs separes par deux points-virgules. Dans un bloc, sept champs separes par un tilde, dans cet ordre exact : ticker~catalyst_type~direction~strength~headline~horizon~confidence. ticker = symbole boursier ou crypto en majuscules, ou MARKET si le catalyseur est general. catalyst_type = macro, fed, rate, geopolitique, crypto, resultats ou reglementaire. direction = bullish, bearish ou neutral. strength = entier de 1 a 10. headline = 80 caracteres maximum. horizon = intraday, 1d, 1w ou 1m. confidence = entier de 0 a 100. Entre un et cinq blocs, du plus important au moins important ; chaine vide si aucun catalyseur. AUCUN guillemet, AUCUN tilde et AUCUN point-virgule a l interieur d un champ. Exemple : SPY~macro~neutral~6~Powell maintient les taux sans surprise~1w~72;;BTC~crypto~bullish~7~Entrees nettes record sur les ETF spot~1d~68 LANGUE :
+
+CONTROLE : apres les quatre remplacements, le champ doit faire exactement 6203 caracteres
+(il en fait 4873 avant). 18 accolades ouvrantes et 18 fermantes hors chaines de caracteres.
+Ne modifie ni l URL perplexity, ni le modele sonar-pro, ni la temperature, ni le message user.

@@ -1,0 +1,26 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module dans ce message : le 211. Ne touche a aucun autre.
+- Tu fais UN SEUL remplacement de texte. Tu ne supprimes ni module, ni champ, ni variable,
+  ni connexion.
+- Si tu ne trouves pas le texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+
+MODULE : 211 (FLASH INTEL LOGGER)
+CHAMP  : jsonStringBodyContent
+
+Ce module lit aujourd hui 210.trade_1.ticker et 210.trade_1.side, deux champs qui n existent
+dans aucun module du scenario : il envoie donc toujours MARKET et neutral. On le repointe sur
+les champs que le module 209 produit desormais.
+
+Chercher (une seule occurrence, tout est sur une seule ligne) :
+
+"top_ticker": "{{trim(upper(ifempty(210.trade_1.ticker; MARKET)))}}", "top_direction": "{{lower(ifempty(210.trade_1.side; neutral))}}", "catalysts": "{{ifempty(toString(210.catalysts); "[]")}}"
+
+Remplacer par :
+
+"top_ticker": "{{trim(upper(ifempty(210.top_catalyst_ticker; MARKET)))}}", "top_direction": "{{lower(ifempty(210.flash_sentiment; neutral))}}", "catalysts": "{{replace(replace(ifempty(210.catalysts; emptystring); quote; ); newline; )}}"
+
+CONTROLE : apres la modification, le champ doit faire exactement 412 caracteres
+(il en fait 369 avant). Ne modifie ni l URL supabase, ni les en-tetes, ni le champ run_id,
+ni le champ summary.
