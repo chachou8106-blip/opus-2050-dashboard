@@ -98,6 +98,36 @@ trois points d'un coup : le Sage Mémoire tournait bien sur Groq, les Marées n'
 de moteur, et aucun module n'a disparu — c'est un seul module cassé (303) qui bloquait tout
 le reste du scénario.
 
+## RÈGLE ABSOLUE — Un agent reçoit la MESURE, jamais la CONCLUSION (26/08/2026)
+
+Le robot doit apprendre de ses erreurs et se corriger **lui-même**. C'est son ADN. À trois endroits
+j'ai mis mes conclusions sur ce chemin, et Chachou l'a vu :
+
+1. **`sages_coaching()`** : le taux de réussite est une mesure, mais « garde ta ligne », « affine »,
+   « baisse ta conviction et sois prudent » sont des ordres de ma main. Cette chaîne part dans le
+   prompt des cinq Sages (`COACHING`) et dans `FIABILITE_SAGES` du module 215.
+2. **`oracle_circuit_breakers.notes`**, écrites par `check_circuit_breakers` : « le probleme est la
+   SELECTION, pas la frequence. Moins de decisions, plus de conviction. » Ça atteint tous les agents
+   via `active_circuit_breakers`.
+3. **`generate_daily_journal` §6** : « Garder de preference les APY eleves (ATOM 21%, TON 17.67%) » —
+   mon arbitrage, avec des valeurs en dur, dans les messages de Chachou trois fois par jour.
+4. Les blocs **AUTOCRITIQUE** ajoutés aux 10 prompts le 21/08 ne demandent pas à l'agent de se
+   corriger : ils lui dictent la correction, motif par motif.
+
+**Règle : je transmets le chiffre, le motif, le seuil et l'observation. Jamais le verbe d'action.**
+Un garde-fou d'EXÉCUTION (plafond de levier, plafond de notionnel, blocage d'ouverture sur
+drawdown) est autre chose et reste légitime : il n'entre pas dans la tête de l'agent, il borne ce
+qui part au courtier.
+
+## RÈGLE — Une chaîne livrée à moitié finit par lâcher (26/08/2026)
+
+Le dé-staking : le module Discord 10031 et `alc_record_propositions` attendent tous deux `verdict`,
+`raison` et `gain_trade_attendu_pct`. Le prompt du 10012 ne nomme **aucune** de ces clés. Le modèle
+les déduisait de la prose ; ça a tenu du 17/08 au 21/08, puis les colonnes sont passées à NULL.
+**Avant de dire qu'une fonctionnalité « tenait par chance », vérifier les DEUX bouts de la chaîne :
+qui écrit, qui lit, et si quelqu'un l'a jamais demandé.** Ici c'est ma livraison qui était
+incomplète, pas la fonctionnalité qui était fragile.
+
 ## Rappels système (contexte)
 - Modifs Make **uniquement via l'assistant Maia** (jamais le blueprint en direct).
 - Un blueprint complet fait ~620 ko : `scenarios_update` avec blueprint est hors de portée d'un
