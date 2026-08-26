@@ -1,0 +1,25 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module dans ce message. Ne touche a aucun autre.
+- Tu fais UN SEUL remplacement de texte. Tu ne reformules jamais un prompt, tu ne le
+  reecris jamais entierement, tu ne supprimes ni module, ni champ, ni variable, ni connexion.
+- Si tu ne trouves pas le texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+  Ne devine pas, ne remplace pas par approximation.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- Apres la modification, verifie que le nombre d accolades { est egal au nombre d accolades }.
+
+REPARER LE MODULE 303 : deux blocs ont ete fusionnes par erreur.
+
+MODULE : 303 (LE PROPHETE D ARGENT - SYL)
+CHAMP  : jsonStringBodyContent
+Le bloc actuel fait 978 caracteres : il contient l ancien texte destine a d AUTRES modules,
+suivi du nouveau texte. Il faut le remplacer entierement par le nouveau texte seul.
+Chercher ce texte (une seule occurrence) :
+
+AUTOCRITIQUE OBLIGATOIRE. CIRCUIT_BREAKERS et COACHING sont TES resultats mesures, pas une opinion. Si un motif te concerne tu DOIS en tenir compte explicitement et le dire dans ton champ de justification. repetition_identique_perdante : tu repetes le meme geste en perdant, change de these ou ne fais rien, ne repete pas. pertes_consecutives_5 : reduis les tailles et coupe les positions perdantes. drawdown_5pct ou drawdown_8pct : protection du capital prioritaire. win_rate_faible : ton probleme est la SELECTION et pas la frequence, moins de decisions et plus de conviction. Si AUCUN motif ne te concerne, n'invente pas de prudence artificielle et garde ta ligne. COACHING est TON resultat mesure, pas une opinion : il donne ton taux de reussite et le nombre de verdicts sur lesquels il est calcule. Tu dois en tenir compte dans tes valeurs chiffrees, sans ajouter aucun champ ni aucun texte hors du schema JSON impose. Ce que ce chiffre implique, c'est a toi de le decider.
+
+et le remplacer par :
+
+AUTOCRITIQUE OBLIGATOIRE. COACHING est TON resultat mesure, pas une opinion : il donne ton taux de reussite et le nombre de verdicts sur lesquels il est calcule. Tu dois en tenir compte dans tes valeurs chiffrees, sans ajouter aucun champ ni aucun texte hors du schema JSON impose. Ce que ce chiffre implique, c'est a toi de le decider.
+
+CONTROLE : apres la modification, le champ doit faire exactement 6570 caracteres.

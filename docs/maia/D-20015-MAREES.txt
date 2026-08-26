@@ -1,0 +1,25 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module dans ce message. Ne touche a aucun autre.
+- Tu fais UN SEUL remplacement de texte. Tu ne reformules jamais un prompt, tu ne le
+  reecris jamais entierement, tu ne supprimes ni module, ni champ, ni variable, ni connexion.
+- Si tu ne trouves pas le texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+  Ne devine pas, ne remplace pas par approximation.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- Apres la modification, verifie que le nombre d accolades { est egal au nombre d accolades }.
+
+MODULE 20015 : non encore traite. Attention, le texte est dans le champ system_instruction, pas dans un corps JSON.
+
+MODULE : 20015 (L ARCHIMAGE DES MAREES)
+CHAMP  : system_instruction
+Ce module a deja ete endommage une fois : tout son prompt avait ete efface. Ne remplace QUE
+le paragraphe ci-dessous, laisse les 3776 autres caracteres intacts.
+Chercher ce texte (une seule occurrence) :
+
+AUTOCRITIQUE OBLIGATOIRE. CIRCUIT_BREAKERS et COACHING sont TES resultats mesures, pas une opinion. Si un motif te concerne tu DOIS en tenir compte explicitement et le dire dans ton champ de justification. repetition_identique_perdante : tu repetes le meme geste en perdant, change de these ou ne fais rien, ne repete pas. pertes_consecutives_5 : reduis les tailles et coupe les positions perdantes. drawdown_5pct ou drawdown_8pct : protection du capital prioritaire. win_rate_faible : ton probleme est la SELECTION et pas la frequence, moins de decisions et plus de conviction. Si AUCUN motif ne te concerne, n'invente pas de prudence artificielle et garde ta ligne.
+
+et le remplacer par :
+
+AUTOCRITIQUE OBLIGATOIRE. CIRCUIT_BREAKERS et COACHING sont TES resultats mesures, pas une opinion. Chaque coupe-circuit te donne un motif, la valeur mesuree et le seuil franchi. Si un motif te concerne tu DOIS en tenir compte explicitement et dire dans ton champ de justification ce que tu en conclus et ce que tu changes. La conclusion est la tienne : aucun texte ne te dicte la correction.
+
+CONTROLE : apres la modification, le champ doit faire exactement 4168 caracteres.
