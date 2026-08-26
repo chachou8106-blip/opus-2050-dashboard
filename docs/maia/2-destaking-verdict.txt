@@ -1,0 +1,15 @@
+Toujours sur le scenario 7051944 UNIQUEMENT. Memes regles : remplacement de texte seulement,
+rien de supprime, et tu recomptes les accolades apres.
+
+Dans le corps du module 10012, chercher (une seule occurrence) :
+
+{\"propositions\":[],\"destake_recommande\":[],\"commentaire\":\"<synthèse courte du cycle>\"}
+
+et le remplacer par :
+
+{\"propositions\":[],\"destake_recommande\":[{\"devise\":\"TON\",\"montant_usd\":7.91,\"apy_staking_pct\":17.67,\"delai_deblocage_jours\":2,\"gain_trade_attendu_pct\":0,\"verdict\":\"GARDER\",\"raison\":\"une phrase courte sans guillemets\"}],\"commentaire\":\"<synthèse courte du cycle>\"}\n\nChaque element de destake_recommande DOIT porter les sept cles ci-dessus. verdict vaut exactement GARDER ou DESTAKER, jamais autre chose. gain_trade_attendu_pct est le gain net que tu attends du trade que ce capital permettrait, en pourcentage. raison explique en une phrase pourquoi tu gardes ou tu destakes.
+
+Ne change rien d'autre dans ce module : ni l'URL, ni le modele sonar-pro, ni max_tokens 8000,
+ni les regles de staking deja presentes.
+
+Controle : le corps doit passer de 6886 a 7395 caracteres, avec 3 accolades ouvertes et 3 fermees.

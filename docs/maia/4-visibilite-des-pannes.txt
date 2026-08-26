@@ -1,0 +1,11 @@
+Toujours sur le scenario 7051944 UNIQUEMENT. Sur les cinq modules 201, 203, 205, 207 et 209 :
+
+- activer l'option "Evaluate all states as errors" (elle est desactivee sur les cinq aujourd'hui) ;
+- ajouter a chacun une route d'erreur (error handler) de type Resume qui renvoie un objet JSON
+  vide {}.
+
+Objectif : quand un de ces modeles repond une erreur HTTP, le scenario continue son cours mais
+l'echec apparait dans l'historique d'execution. Aujourd'hui l'erreur passe totalement inapercue,
+c'est ce qui a laisse le Sage Memoire mort pendant cinq jours sans aucun signal.
+
+Ne modifie ni les prompts, ni les URL, ni les cles de ces modules.

@@ -1,0 +1,22 @@
+Toujours sur le scenario 7051944 UNIQUEMENT. Deux modules a modifier, rien a supprimer.
+
+MODULE 209 : dans response_format > json_schema > schema > properties, AJOUTER ces deux
+proprietes aux huit qui existent deja (n'en supprime aucune) :
+
+"web_intelligence": {"type": "string"},
+"catalysts": {"type": "array", "items": {"type": "object", "properties": {"ticker": {"type": "string"}, "type": {"type": "string"}, "headline": {"type": "string"}}, "required": ["ticker", "type", "headline"], "additionalProperties": false}}
+
+et AJOUTER "web_intelligence" et "catalysts" a la liste "required" du meme schema, sans retirer
+les entrees existantes.
+
+MODULE 211 : chercher
+
+"top_ticker": "{{trim(upper(ifempty(210.trade_1.ticker; MARKET)))}}", "top_direction": "{{lower(ifempty(210.trade_1.side; neutral))}}"
+
+et remplacer par
+
+"top_ticker": "{{trim(upper(ifempty(210.catalysts[1].ticker; MARKET)))}}", "top_direction": "{{lower(ifempty(210.flash_sentiment; neutral))}}"
+
+Pourquoi : le module 211 lit aujourd'hui trois champs que le schema du 209 ne produit pas.
+Resultat, la table oracle_flash_intel est vide depuis sa creation et GIL recoit un bloc de
+renseignement vide a chaque run.

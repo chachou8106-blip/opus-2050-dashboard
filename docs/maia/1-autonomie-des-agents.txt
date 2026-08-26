@@ -1,0 +1,36 @@
+Bonjour Maia. Travaille UNIQUEMENT sur le scenario 7051944. Ne touche pas au 6183820.
+
+Regles imperatives pour cette intervention :
+- Tu fais UNIQUEMENT des remplacements de texte. Tu ne supprimes aucun module, aucun champ,
+  aucune variable, aucune connexion. Tu n'ajoutes rien d'autre que ce qui est demande.
+- Recopie les textes exactement, caractere pour caractere, apostrophes comprises.
+- Apres chaque modification, verifie que le nombre d'accolades ouvertes { est egal au nombre
+  d'accolades fermantes } dans le corps du module. Une modification precedente en avait mange
+  une et le scenario s'est arrete.
+
+A) Dans les SEPT modules 201, 203, 205, 207, 209, 303 et 305, chercher ce texte
+   (identique dans les sept, une seule occurrence par module) :
+
+AUTOCRITIQUE OBLIGATOIRE. COACHING est TON resultat mesure, pas une opinion : il donne ton taux de reussite sur tes propres verdicts passes. Si ton score est FAIBLE, baisse ta conviction et resserre tes fourchettes ; s'il est FIABLE, garde ta ligne. Tu dois en tenir compte dans tes valeurs chiffrees, sans ajouter aucun champ ni aucun texte hors du schema JSON impose.
+
+   et le remplacer par :
+
+AUTOCRITIQUE OBLIGATOIRE. COACHING est TON resultat mesure, pas une opinion : il donne ton taux de reussite et le nombre de verdicts sur lesquels il est calcule. Tu dois en tenir compte dans tes valeurs chiffrees, sans ajouter aucun champ ni aucun texte hors du schema JSON impose. Ce que ce chiffre implique, c'est a toi de le decider.
+
+B) Dans les DEUX modules 301 et 20015, chercher :
+
+AUTOCRITIQUE OBLIGATOIRE. CIRCUIT_BREAKERS et COACHING sont TES resultats mesures, pas une opinion. Si un motif te concerne tu DOIS en tenir compte explicitement et le dire dans ton champ de justification. repetition_identique_perdante : tu repetes le meme geste en perdant, change de these ou ne fais rien, ne repete pas. pertes_consecutives_5 : reduis les tailles et coupe les positions perdantes. drawdown_5pct ou drawdown_8pct : protection du capital prioritaire. win_rate_faible : ton probleme est la SELECTION et pas la frequence, moins de decisions et plus de conviction. Si AUCUN motif ne te concerne, n'invente pas de prudence artificielle et garde ta ligne.
+
+   et le remplacer par :
+
+AUTOCRITIQUE OBLIGATOIRE. CIRCUIT_BREAKERS et COACHING sont TES resultats mesures, pas une opinion. Chaque coupe-circuit te donne un motif, la valeur mesuree et le seuil franchi. Si un motif te concerne tu DOIS en tenir compte explicitement et dire dans ton champ de justification ce que tu en conclus et ce que tu changes. La conclusion est la tienne : aucun texte ne te dicte la correction.
+
+C) Dans le module 10012 UNIQUEMENT, chercher (attention, le debut differe : pas de "et COACHING") :
+
+AUTOCRITIQUE OBLIGATOIRE. CIRCUIT_BREAKERS sont TES resultats mesures, pas une opinion. Si un motif te concerne tu DOIS en tenir compte explicitement et le dire dans ton champ de justification. repetition_identique_perdante : tu repetes le meme geste en perdant, change de these ou ne fais rien, ne repete pas. pertes_consecutives_5 : reduis les tailles et coupe les positions perdantes. drawdown_5pct ou drawdown_8pct : protection du capital prioritaire. win_rate_faible : ton probleme est la SELECTION et pas la frequence, moins de decisions et plus de conviction. Si AUCUN motif ne te concerne, n'invente pas de prudence artificielle et garde ta ligne.
+
+   et le remplacer par :
+
+AUTOCRITIQUE OBLIGATOIRE. CIRCUIT_BREAKERS sont TES resultats mesures, pas une opinion. Chaque coupe-circuit te donne un motif, la valeur mesuree et le seuil franchi. Si un motif te concerne tu DOIS en tenir compte explicitement et dire dans ton champ de justification ce que tu en conclus et ce que tu changes. La conclusion est la tienne : aucun texte ne te dicte la correction.
+
+Confirme-moi le nombre de modules modifies : il doit etre de 10.
