@@ -98,7 +98,41 @@ Douze appels réels avec le corps exact du module et la nouvelle clé :
 reste que 84 jetons pour la réponse, le JSON est coupé au milieu — et c'est exactement le
 `DataError — Source is not valid JSON` que le module 208 renvoie derrière.
 
-### Le correctif, dans le corps du module 207 — un seul remplacement
+### ⛔ ERRATUM 26/08 — le correctif appliqué a mangé une accolade
+
+Le `thinkingBudget: 0` a bien été appliqué sur 7051944 le 25/08 à 18:37, **mais l'accolade
+fermante du corps a disparu au passage**. Le run du 26/08 à 16:03 s'arrête à **20 opérations**,
+soit exactement le module 207 :
+`InvalidConfigurationError — The provided JSON body content is not valid JSON`.
+
+Comptage sur le corps réel du module, expressions `{{ }}` neutralisées :
+**7 accolades ouvertes, 6 fermées.** C'est le seul module des 80 dans ce cas.
+
+- Avant : `..."responseMimeType":"application/json"}}` → `}` ferme `generationConfig`, `}` ferme le corps.
+- Aujourd'hui : `..."thinkingConfig":{"thinkingBudget":0}}` → `}` ferme `thinkingConfig`,
+  `}` ferme `generationConfig`, **et plus rien ne ferme le corps**.
+
+**Le correctif est d'un seul caractère.** Dans le corps du module 207, chercher (une seule
+occurrence, tout à la fin) :
+
+```
+"responseMimeType":"application/json","thinkingConfig":{"thinkingBudget":0}}
+```
+
+remplacer par (**trois** accolades fermantes à la fin) :
+
+```
+"responseMimeType":"application/json","thinkingConfig":{"thinkingBudget":0}}}
+```
+
+Vérifié : avec cette accolade, le corps est du JSON valide et l'appel réel à Gemini répond
+`HTTP 200`, `finishReason: STOP`, **0 jeton de réflexion**, 141 jetons de réponse, JSON exploitable.
+
+**Même piège pour 6183820** : quand le correctif y sera appliqué, le corps doit se terminer par
+`}}}` et non `}}`. Contrôle en une ligne : le nombre d'accolades ouvertes doit être égal au nombre
+de fermantes.
+
+### Le correctif d'origine (pour mémoire) — dans le corps du module 207
 
 Chercher exactement :
 ```
