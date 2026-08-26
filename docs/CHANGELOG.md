@@ -8,6 +8,46 @@ Format : `AAAA-MM-JJ` — **Sujet** — quoi + pourquoi + où.
 
 ---
 
+## 2026-08-26 (suite) — L'agent reçoit la mesure, jamais la conclusion
+
+Chachou : « c'est une réflexion que les archimages et sages doivent eux-mêmes se corriger, c'est
+tout le but de leur apprentissage ». Il a raison. Trois canaux où j'avais mis MES conclusions sur
+ce chemin, **retirés et vérifiés en direct** (`supabase/schema/18_adn_mesure_pas_conclusion_2026-08-26.sql`,
+sauvegarde `bak_20260826_breakers_notes`) :
+
+| Où | Avant | Après |
+|---|---|---|
+| `sages_coaching()` | `Memoire=82.4pct FIABLE garde ta ligne` | `Memoire=82.4pct sur 188 verdicts evalues` |
+| `oracle_circuit_breakers.notes` | `Win rate 30.8% sur 39 decisions : le probleme est la SELECTION, pas la frequence. Moins de decisions, plus de conviction.` | `Win rate 30.8% ; seuil 40%` |
+| `generate_daily_journal` §6 | `Regle : … Garder de preference les APY eleves (ATOM 21%, TON 17.67%)` | supprimé ; le tableau des 7 lignes stakées reste, chiffres en direct |
+
+`action_taken` a été trié de la même façon : `poids_plancher_0.05`, `poids_coupe_moitie` et
+`force_contrarian` décrivent une action que le système **applique** — ce sont des faits, gardés.
+`selection_a_revoir` ne correspondait à aucune action automatique (vérifié : aucune fonction ne lit
+cette valeur) — c'était une consigne déguisée en libellé, remplacée par `aucune_action_automatique`.
+
+Les lignes **déjà en base** ont été corrigées aussi : corriger la fonction ne suffit pas, ce sont
+les lignes non résolues qui partent dans les prompts à chaque run. Ce que les agents reçoivent
+maintenant :
+
+```
+GIL    drawdown_8pct    "Drawdown mesure 10.23% ; seuil 8%"
+GIL    drawdown_5pct    "Drawdown mesure 6.26% ; seuil 5%"
+MAREES win_rate_faible  "Win rate 30.8% ; seuil 40%"
+```
+
+Reste le quatrième canal, dans Make : les blocs AUTOCRITIQUE des 10 prompts, qui dictent la
+correction motif par motif. Trois textes seulement à remplacer pour les dix modules —
+`docs/decisions/PROMPT-MAIA-A-FAIRE-2026-08-26.md`, chantier 1.
+
+**Ce qui n'est pas retiré, et pourquoi** : le coupe-circuit branché dans `execute-trades` v42.
+Ce n'est pas une consigne à un agent, c'est un garde-fou d'exécution — comme le plafond de levier
+et le plafond de notionnel qui existaient déjà. Il n'entre pas dans la tête de GIL, il borne ce qui
+part au courtier. Même statut pour les corrections de plomberie des prompts (clés de CTX à lire,
+réalité spot de Revolut X) : sans elles, les agents produisent du JSON inexploitable.
+
+---
+
 ## 2026-08-26 — Le scénario tourne de bout en bout. Deux causes trouvées dans la foulée
 
 ### Le run de 16:15 : 76 opérations, statut 1, les 5 Sages écrivent
