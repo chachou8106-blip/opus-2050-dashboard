@@ -1,0 +1,32 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module : le 215 (LA MATRICE DES SIGNAUX). UN SEUL remplacement de texte.
+- Le champ a modifier n est PAS un corps de requete : c est le champ "value" du module,
+  celui qui definit la variable SAGES.
+- Si tu ne trouves pas le texte EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+
+POURQUOI : le champ PERF_SUMMARY injecte 105.data.performance_summary, qui est un OBJET et non
+du texte. replace(objet ; quote ; ) ne peut rien retirer : Make serialise l objet en JSON APRES
+le replace. La variable SAGES contient donc, en clair :
+
+  PERF_SUMMARY={"total_runs":258,"avg_sell_ratio":0.556,"avg_completeness":89,...}
+
+Le premier guillemet ferme la chaine du corps du module 301 et le JSON devient invalide. C est
+la cause exacte de l arret sur l Archimage JU. Ses deux voisins immediats, FLASH_INTEL et
+CIRCUIT_BREAKERS, passent par toString() et sortent proprement : eux ne cassent rien.
+
+On remplace l objet par ses chiffres, en clair et sans guillemet. Aucune information n est
+perdue : avg_sell_ratio et avg_overlap_score sont deja extraits juste apres, dans SELL_RATIO
+et OVERLAP_SCORE.
+
+Chercher (une seule occurrence) :
+
+PERF_SUMMARY={{replace(replace(ifempty(105.data.performance_summary; ND); newline; ); quote; )}}
+
+Remplacer par :
+
+PERF_SUMMARY=runs {{ifempty(105.data.performance_summary.total_runs; 0)}} completude {{ifempty(105.data.performance_summary.avg_completeness; 0)}} circuit_breakers {{ifempty(105.data.performance_summary.circuit_breakers; 0)}} visionary {{ifempty(105.data.performance_summary.avg_visionary_score; 0)}}
+
+CONTROLE : le champ value du module 215 doit faire exactement 3885 caracteres (3681 avant).
+Ne modifie ni le nom de la variable SAGES, ni sa portee, ni aucun autre champ.
