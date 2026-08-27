@@ -128,6 +128,26 @@ les déduisait de la prose ; ça a tenu du 17/08 au 21/08, puis les colonnes son
 qui écrit, qui lit, et si quelqu'un l'a jamais demandé.** Ici c'est ma livraison qui était
 incomplète, pas la fonctionnalité qui était fragile.
 
+## RÈGLE — Un corps de module Make n'est pas du JSON ordinaire (27/08/2026)
+
+Le 26/08, en appliquant mon prompt A sur le module 305, Maia a réécrit le champ et **échappé les
+guillemets à l'intérieur des `{{...}}`** : `\"bias\"` au lieu de `"bias"`. Make garde l'antislash
+dans la valeur produite. Le corps envoyé à Mistral contenait
+`MEMORY_CORRECTION= ## \ ## \ ## \ …` — un antislash seul dans une chaîne JSON. Le run du 27/08
+s'est arrêté à 31 opérations sur `Bad escaped character in JSON`.
+
+Mes trois contrôles — taille exacte, équilibre des accolades, `JSON.parse` — n'ont rien vu.
+Pire : l'échappement rend le corps **plus** valide au sens JSON strict. Les modules 301 et 303,
+qui écrivent `"bias"` nu, échouent `JSON.parse` brut — et ce sont eux qui tournent.
+
+**À l'intérieur d'un `{{...}}`, les guillemets restent nus.** Ajouter au contrôle après chaque
+passage de Maia : aucune expression `{{...}}` ne doit contenir d'antislash.
+
+**Et `toString()` sur un tableau de collections Make ne produit PAS du JSON** : il rend
+`[{object},{object}]`. Ne jamais supposer qu'une valeur Make se sérialise comme en JavaScript —
+le panneau INPUT de l'historique d'exécution est la seule source de vérité sur ce qui part
+vraiment.
+
 ## Rappels système (contexte)
 - Modifs Make **uniquement via l'assistant Maia** (jamais le blueprint en direct).
 - Un blueprint complet fait ~620 ko : `scenarios_update` avec blueprint est hors de portée d'un

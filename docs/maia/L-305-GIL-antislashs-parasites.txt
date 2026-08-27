@@ -1,0 +1,46 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module dans ce message : le 305. Ne touche a aucun autre.
+- Tu fais DEUX remplacements de texte dans ce seul module.
+  Tu ne reformules aucun prompt, tu ne supprimes ni module, ni champ, ni variable, ni connexion.
+- Si tu ne trouves pas un texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+
+MODULE : 305 (L ARBITRE DORE - GIL)
+CHAMP  : jsonStringBodyContent
+
+Deux expressions de ce module ecrivent leurs guillemets internes precedes d un antislash :
+\"bias\" au lieu de "bias", \"erreur\" au lieu de "erreur", \" ## \" au lieu de " ## ".
+Make garde ces antislashs dans la valeur produite. Le corps envoye contenait ceci :
+
+  MEMORY_CORRECTION= ## \ ## \ ## \ ... |MES_ERREURS= ## \ ## \ ...
+
+Un antislash seul dans une chaine JSON n est pas un echappement valide : le module a plante
+sur "Bad escaped character in JSON". Les modules 301 (JU) et 303 (SYL) portent exactement les
+memes expressions SANS antislash, et eux passent. On aligne donc le 305 sur les deux autres.
+
+IMPORTANT : les guillemets de remplacement ne doivent PAS etre precedes d un antislash.
+C est tout l objet du correctif. Ne les "corrige" pas en les rechappant.
+
+--- REMPLACEMENT 1 sur 2 (MEMORY_CORRECTION) ---
+Chercher (une seule occurrence, sur une seule ligne) :
+
+{{replace(replace(replace(replace(ifempty(toString(join(map(105.data.brain_states.GIL.learnings; \"bias\"); \" ## \")); emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space)}}
+
+Remplacer par :
+
+{{replace(replace(replace(replace(ifempty(toString(join(map(105.data.brain_states.GIL.learnings; "bias"); " ## ")); emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space)}}
+
+--- REMPLACEMENT 2 sur 2 (MES_ERREURS) ---
+Chercher (une seule occurrence) :
+
+{{join(map(105.data.brain_states.GIL.mistakes_history; \"erreur\"); \" ## \")}}
+
+Remplacer par :
+
+{{join(map(105.data.brain_states.GIL.mistakes_history; "erreur"); " ## ")}}
+
+CONTROLE : apres les deux remplacements, le champ doit faire exactement 6401 caracteres
+(il en fait 6409 avant : huit antislashs en moins, et rien d autre).
+Ne modifie ni l URL, ni le modele mistral-large-latest, ni la temperature, ni max_tokens,
+ni le prompt systeme, ni le bloc AUTOCRITIQUE.
