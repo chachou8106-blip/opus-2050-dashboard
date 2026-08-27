@@ -1,0 +1,48 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module : le 10012 (L Alchimiste de la Crypte). TROIS remplacements, dans l ordre.
+- Si tu ne trouves pas un texte EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- AUCUN guillemet ne doit etre precede d un antislash dans les textes ci-dessous.
+
+MODULE : 10012 (L Alchimiste de la Crypte)
+CHAMP  : jsonStringBodyContent
+
+POURQUOI : deux corrections et un ajout.
+1 et 2. Le module lit base64(CTX) et base64(SAGES). Ces deux formes nues ne resolvent pas,
+   exactement comme pour les Archimages : l Alchimiste travaille sans contexte de marche ni
+   synthese des Sages. La forme qui fonctionne est 110.value et 215.value.
+3. L Alchimiste ne recoit AUCUNE de ses propres mesures : ni win rate, ni gain moyen, ni perte
+   moyenne, alors que la base en tient le compte a chaque run. On lui transmet ces chiffres.
+   Ce sont des mesures, pas des consignes : il en tire ce qu il veut.
+
+--- REMPLACEMENT 1 sur 3 ---
+Chercher (une seule occurrence) :
+
+{{base64(CTX)}}
+
+Remplacer par :
+
+{{base64(110.value)}}
+
+--- REMPLACEMENT 2 sur 3 ---
+Chercher (une seule occurrence) :
+
+{{base64(SAGES)}}
+
+Remplacer par :
+
+{{base64(215.value)}}
+
+--- REMPLACEMENT 3 sur 3 ---
+Chercher (une seule occurrence) :
+
+|CIRCUIT_BREAKERS={{replace
+
+Remplacer par :
+
+|MEMOIRE_CRYPTE={{base64(ifempty(105.data.brain_states.CRYPTE_JU.current_bias; emptystring))}}|CIRCUIT_BREAKERS={{replace
+
+CONTROLE : apres les trois remplacements, le champ doit faire exactement 7697 caracteres
+(7593 avant). Ne modifie ni l URL, ni le modele sonar-pro, ni max_tokens 8000, ni le prompt
+systeme, ni les regles de staking, ni le bloc AUTOCRITIQUE, ni le FORMAT DE SORTIE.
