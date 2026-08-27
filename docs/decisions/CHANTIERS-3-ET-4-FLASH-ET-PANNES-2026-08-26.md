@@ -67,6 +67,25 @@ Contrôles : module 209 à **6203** caractères (4873 avant), module 211 à **41
 à 2500, bloc `CATALYSEURS` présent, prompt système intact. Aucun autre module touché — les dix
 modules d'agents sont tous à leur compte cible et le blueprint ne contient aucun monologue.
 
+**G fait et vérifié le 27/08** : module 211 à 412 caractères exactement, il lit désormais
+`210.top_catalyst_ticker`, `210.flash_sentiment` et `210.catalysts`. Diff des 80 modules entre
+les deux enregistrements : **un seul module modifié, le 211**. Sa représentation JSON grossit de
+1243 caractères de plus que les 43 attendus — ce sont les descripteurs d'interface
+`metadata.restore.expect` que Make réécrit quand on ouvre un module dans l'éditeur. Aucun effet
+à l'exécution.
+
+### La chaîne, vérifiée bout en bout
+
+`209` produit `ticker~catalyst_type~direction~strength~headline~horizon~confidence`
+→ `211` transmet la chaîne débarrassée des guillemets et des sauts de ligne
+→ `log_flash_intel` la découpe et écrit dans `oracle_flash_intel`
+→ `flash_route` route chaque catalyseur vers les archimages concernés
+→ `get_oracle_context().flash_intel_latest` relit `ticker`, `direction`, `strength`,
+  `catalyst_type`, `headline`, `horizon`, `confidence`, `routed_to` sur 6 h.
+
+Les **sept** champs du format sont consommés en bout de chaîne. Aucun de trop, aucun manquant.
+Reste le run réel pour le prouver sur le terrain.
+
 ---
 
 ## Chantier 4 — la visibilité des pannes
