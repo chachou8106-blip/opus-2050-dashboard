@@ -62,6 +62,11 @@ l'identique (sauvegarde `bak_20260826_flash_test`, créée puis supprimée).
 `docs/maia/F-209-flash-schema.txt` puis `docs/maia/G-211-flash-logger.txt`.
 Contrôles : module 209 à **6203** caractères (4873 avant), module 211 à **412** (369 avant).
 
+**F fait et vérifié le 27/08** : module 209 à 6203 caractères exactement, 11 propriétés et
+11 entrées dans `required`, corps JSON valide, 18 accolades ouvrantes / 18 fermantes, `max_tokens`
+à 2500, bloc `CATALYSEURS` présent, prompt système intact. Aucun autre module touché — les dix
+modules d'agents sont tous à leur compte cible et le blueprint ne contient aucun monologue.
+
 ---
 
 ## Chantier 4 — la visibilité des pannes
@@ -82,12 +87,22 @@ Le Sage Mémoire muet du 21 au 26, Aurora muet toute la journée du 20 : c'étai
 `oracle_sages_report` depuis le premier jour. Le défaut n'est pas que Make avale l'erreur —
 c'est que **personne ne pose la question**.
 
-### `v_sages_pannes`
+### `v_sages_pannes` — et la correction du 27/08
 
-Vérifié avant de créer, comme le veut la règle : `v_data_health` couvre la fraîcheur des
-données de marché, `oracle_datasource_health` les sources externes, `evaluate_sages` et
-`sages_coaching` mesurent la **justesse** des verdicts. Aucun objet ne dit « ce sage n'a pas
-répondu ». D'où cette vue, et elle seule.
+**J'avais écrit « aucun objet ne dit ce sage n'a pas répondu ». C'est faux.** La Vigie le dit,
+et mieux que ma vue : `vigie_scan()` teste les cinq Sages sur la fenêtre du run (−15 min /
++5 min), connaît le planning réel de `scenario_runs_planifies`, distingue `MUET` de `VEILLE`, et
+porte déjà en commentaire le correctif du 21/08 sur le Sage Macro. Elle affiche en ce moment
+« Sage Memoire — OK — produit + varie », composant par composant.
+
+Pourquoi je ne l'avais pas vue : mon contrôle cherchait des noms contenant `sage`, `panne` ou
+`health`. `vigie_status` et `vigie_scan` n'y répondaient pas. Le contrôle était trop étroit — la
+même erreur que le 20/08 avec `{{CTX}}`.
+
+Ce que la Vigie ne fait pas : `vigie_status` est **supprimée puis réécrite à chaque scan**
+(`delete from public.vigie_status` en tête de `vigie_scan`). Elle dit ce qui va mal maintenant,
+jamais ce qui est allé mal. `v_sages_pannes` n'ajoute que cette mémoire — 14 jours d'historique
+de présence — et rien d'autre. L'état courant reste du ressort de la Vigie.
 
 Piège rencontré : `oracle_sages_report.run_id` et `oracle_college_runs.run_id` ne coïncident
 **jamais**. Le scénario met environ deux minutes ; les sages sont horodatés au début
@@ -107,11 +122,14 @@ de ± 5 minutes.
 
 Seuil `PANNE` : 3 runs consécutifs sans réponse.
 
-### Ce que la vue ne fait pas encore
+### Où elle s'affiche — 27/08
 
-Elle n'est branchée sur rien que tu lises. Deux options, à ton choix :
-- une ligne dans le §7 du message trois fois par jour (`generate_daily_journal`) ;
-- un encart dans la console AETHER, à côté de la santé des données.
+Dans AETHER, onglet **Poste de commande** (la zone scellée sous Face ID), juste sous la Vigie :
+« Les cinq Sages — ont-ils parlé, run par run ». `oracle-inbox` passe en **v26** et transporte
+le bloc `sages_pannes` dans l'action `suivi`.
+
+Vérifié de bout en bout : appel réel de la fonction → HTTP 200, clé `sages_pannes` présente,
+5 lignes. Aucun calcul n'est fait dans la page — la vue fournit tout, seuil compris.
 
 ### Et la route d'erreur dans Make
 

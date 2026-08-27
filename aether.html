@@ -582,6 +582,12 @@ svg{max-width:100%}
 
   <div class="sect"><div class="sect-h">🔭 La Vigie — santé du Collège</div><div class="card pad"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="chip ok" id="vigieChip">● …</span><span class="mono" id="vigieHead" style="font-size:11.5px;color:var(--dim)">chargement…</span></div><div class="vigie-grid" id="vigie"></div></div></div>
 
+  <div class="sect"><div class="sect-h">Les cinq Sages — ont-ils parlé, run par run</div><div class="card pad scroll">
+    <div class="chart-sub" style="margin-bottom:12px">La Vigie ci-dessus dit ce qui va mal <b>maintenant</b> : sa table est effacée et réécrite à chaque scan, elle ne garde aucune trace. Ce tableau est la mémoire — sur 14 jours, combien de runs chaque Sage a manqués. Le Sage Mémoire s'est tu du 21 au 26 août sans que rien ne le dise.</div>
+    <table class="tbl" id="sagesPannes"></table>
+    <div class="note" style="margin-top:12px">Source : <span class="mono">v_sages_pannes</span> — un Sage est déclaré en panne au-delà de 3 runs consécutifs sans réponse.</div>
+  </div></div>
+
   <div class="sect"><div class="sect-h">Audit &amp; garde-fous — dernier run</div><div class="bento" id="audit"></div></div>
 
   <div class="sect"><div class="sect-h">Journal technique — debug d'exécution</div><div class="card pad scroll"><table class="tbl" id="debug"></table></div></div>
@@ -1906,6 +1912,20 @@ function rOps(){
  if(chipEl&&r){const nv=NIV[r.niveau]||['warn','● '+(r.niveau||'?')];chipEl.className='chip '+nv[0];chipEl.textContent=nv[1];}
  $('vigie').innerHTML=(v.detail||[]).map(c2=>{const warn=c2.etat!=='OK';
   return '<div class="vg"><span class="b'+(warn?' warn':'')+'">'+esc(c2.etat)+'</span><span style="flex:1;min-width:0"><b>'+esc(c2.composant)+'</b><div class="d">'+esc(c2.detail||c2.categorie||'')+'</div></span></div>';}).join('')||'<div style="color:var(--mute);font-size:13px">Vigie indisponible.</div>';
+ // Les cinq Sages sur 14 jours — l'historique que vigie_status ne garde pas (elle est vidée à
+ // chaque scan). Aucune valeur n'est calculée ici : la vue v_sages_pannes fournit tout, seuil compris.
+ const sp=Array.isArray(D.suivi?.sages_pannes)?D.suivi.sages_pannes:[];
+ T('sagesPannes',["Sage","État","Muet depuis","Runs manqués / 14 j","Dernière réponse"],
+   sp.map(s=>{const st=String(s.statut||'—');
+     const col=st==='PANNE'?'var(--red)':st==='A SURVEILLER'?'var(--amber)':'var(--grn)';
+     const muet=Number(s.runs_muets_consecutifs||0);
+     const age=s.age_derniere_reponse_h==null?null:Number(s.age_derniere_reponse_h);
+     return [esc(s.sage_name||'—'),
+       '<span style="color:'+col+';font-weight:600">'+esc(st==='A SURVEILLER'?'À SURVEILLER':st)+'</span>',
+       muet===0?'—':(muet+' run'+(muet>1?'s':'')),
+       esc(String(s.runs_muets_14j??'—'))+' / '+esc(String(s.runs_14j??'—')),
+       s.derniere_reponse?((dj(s.derniere_reponse)+' '+hm(s.derniere_reponse)).trim()+(age==null?'':' <span style="color:var(--mute)">('+age.toFixed(1)+' h)</span>')):'jamais'];}),
+   'Historique des Sages indisponible.');
  // audit / garde-fous
  const sf=D.snap?.sante_flux||{};const G=gatesCalc();
  $('audit').innerHTML=[[(sf.data_completeness??sf.completude??sf.score)!=null?(sf.data_completeness??sf.completude??sf.score)+'/100':'—','Complétude des données',''],

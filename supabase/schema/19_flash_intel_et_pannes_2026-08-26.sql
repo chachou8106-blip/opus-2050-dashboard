@@ -24,10 +24,19 @@
 --
 -- CONTEXTE 2 — pourquoi personne n'a vu le Sage Memoire mourir.
 -- La panne etait deja lisible en base : Macro 0/4 runs le 20/08, Technique 1/8 et Memoire
--- 2/8 le 21/08, Memoire 0 le 22/08 et le 25/08. Aucun objet ne posait la question.
--- Verifie avant creation : v_data_health couvre la fraicheur des donnees de marche,
--- oracle_datasource_health les sources externes, evaluate_sages et sages_coaching mesurent
--- la JUSTESSE des verdicts. Aucun ne dit "ce sage n'a pas repondu". D'ou v_sages_pannes.
+-- 2/8 le 21/08, Memoire 0 le 22/08 et le 25/08.
+--
+-- CORRECTION [27/08] — j'avais ecrit "aucun objet ne dit ce sage n'a pas repondu". C'est FAUX.
+-- La VIGIE le dit, et mieux que cette vue : vigie_scan() teste les 5 sages sur la fenetre du
+-- run (-15 min / +5 min), connait le planning reel de scenario_runs_planifies, distingue MUET
+-- de VEILLE, et porte deja en commentaire le correctif du 21/08 sur le Sage Macro. Mon
+-- controle initial cherchait des noms contenant sage / panne / health : vigie_status et
+-- vigie_scan n'y repondaient pas. Le controle etait trop etroit, pas la base incomplete.
+--
+-- Ce que la Vigie ne fait pas : vigie_status est SUPPRIMEE puis reecrite a chaque scan
+-- (delete from public.vigie_status au debut de vigie_scan). Elle dit ce qui va mal maintenant,
+-- jamais ce qui est alle mal. v_sages_pannes n'ajoute que cette memoire — 14 jours d'historique
+-- de presence — et rien d'autre. L'etat courant reste du ressort de la Vigie.
 --
 -- PIEGE — oracle_sages_report.run_id et oracle_college_runs.run_id ne coincident jamais :
 -- le scenario met environ deux minutes, les sages sont horodates au debut (20260826-1615)
@@ -161,7 +170,7 @@ END;
 $function$;
 
 -- -----------------------------------------------------------------------------
--- v_sages_pannes — quel sage n'a pas repondu, run par run
+-- v_sages_pannes — l'HISTORIQUE de presence des sages (l'etat courant est a la Vigie)
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE VIEW public.v_sages_pannes AS
 WITH runs AS (

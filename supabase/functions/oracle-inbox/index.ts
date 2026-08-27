@@ -1,3 +1,9 @@
+// oracle-inbox v26 — L'HISTORIQUE DERRIERE LA VIGIE. vigie_status est effacee et reecrite a
+// chaque scan : elle dit ce qui va mal MAINTENANT, jamais ce qui est alle mal. Le Sage Memoire
+// est reste muet du 21 au 26/08 ; chaque scan le voyait, aucun ne gardait la trace. Le bloc
+// suivi transporte desormais `sages_pannes` (vue v_sages_pannes) : sur 14 jours, combien de runs
+// chaque sage a manques et depuis combien de runs il se tait. La Vigie reste la source de
+// l'etat courant ; cette vue n'ajoute que la memoire.
 // oracle-inbox v25 — LE LIVRE CIBLE DES MAREES. La console lisait v_marees_virtuel_positions,
 // qui decrit le SIMULATEUR d'evaluation (marees_virtual_trades) : celui-ci ferme d'office toute
 // proposition au bout de 96 h pour pouvoir la noter. Le 25/08 il annoncait 0 position ouverte
@@ -25,7 +31,8 @@
 // suivi : traders, perf, perf_avancee, stats_indice, mensuel, rendements, periodes, equity, comparaison,
 //         sharpe, contexte, fx, gains (v_gains_traders), + alc_virtuel + marees_virtuel (positions forex)
 //         + live_crypto (crypto des Sages en direct 24/7) + alc_reel_live (Alchimiste RÉEL Revolut X
-//         valorisé en direct au dernier cours) + vigie (santé du Collège : PANNE/FIGÉ par composant).
+//         valorisé en direct au dernier cours) + vigie (santé du Collège : PANNE/FIGÉ par composant)
+//         + sages_pannes (historique 14 j : quel sage n'a pas répondu, sur combien de runs).
 //         Tout en 100% lecture.
 // journal (défaut) : journal (historique étendu), problemes, rappels (pour le calendrier).
 
@@ -142,7 +149,12 @@ Deno.serve(async (req) => {
       const vgr = await sb('v_vigie_resume?select=*')
       const vgd = await sb('v_vigie_detail?select=composant,categorie,etat,detail,derniere_sortie,run_auditee')
       const vigie = { resume: (arr(vgr.body)[0] || null), detail: arr(vgd.body) }
-      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: rpRows, equity, equityUnite, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie })
+      // Historique derrière l'instantané de la Vigie : vigie_status est effacée et réécrite à
+      // chaque scan, elle ne garde donc aucune trace. Cette vue dit, sur 14 jours, combien de
+      // runs chaque sage a manqués et depuis combien de runs il se tait.
+      const sgp = await sb('v_sages_pannes?select=sage_name,runs_14j,runs_muets_14j,runs_muets_consecutifs,derniere_reponse,age_derniere_reponse_h,seuil_panne_runs,statut')
+      const sages_pannes = arr(sgp.body)
+      return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: rpRows, equity, equityUnite, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie, sages_pannes })
     }
 
     const jrn = await sb('oracle_journal?select=jour,resume,snapshot,problemes_traites,created_at&order=created_at.desc&limit=150')
