@@ -78,7 +78,25 @@ j'avais laissé `toString(210.catalysts)` dans le module 211, `oracle_flash_inte
 **1. `CTX` et `SAGES` sont vides.** Le corps envoyé commence par `CTX=|SAGES=|GIL_WR=0.5|…`.
 Les deux variables du scénario (modules 110 et 215) arrivent vides au module 305 : l'Archimage
 décide sans aucun contexte de marché ni aucune synthèse des Sages. Les champs `GIL_*` sont bien
-remplis, eux, car ils viennent directement du module 105. À creuser une fois le 305 réparé.
+remplis, eux, car ils viennent directement du module 105.
+
+Ce n'est **pas** une régression de mon fait : les trois Archimages référencent la variable sous
+la forme `{{CTX}}` (et non `{{110.CTX}}`), et cette forme est **identique dans le blueprint
+d'avant le 13/08, dans le scénario principal 6183820 et dans la copie d'aujourd'hui**. Les
+modules 110 et 215 déclarent bien `name: CTX` / `name: SAGES`, `scope: roundtrip`, et tous deux
+s'exécutent (opérations 13 et 25) avant les Archimages (27, 29, 31).
+
+Un `CTX=` totalement vide n'est pas un CTX dont les valeurs seraient vides : dans ce cas on
+verrait les libellés (`DATE=|VIX=|FED=…`). C'est la variable elle-même qui n'arrive pas.
+À confirmer au prochain run en regardant aussi le panneau INPUT du module **301** : si JU
+affiche lui aussi `CTX=` vide, le problème est systémique et ancien.
+
+## Correctif appliqué et vérifié — 27/08 15:09
+
+Module 305 : **6401 caractères** (6409 avant). Plus aucune expression `{{...}}` ne contient
+d'antislash, ni dans le 305, ni dans le 301, ni dans le 303. `mistral-large-latest`,
+`max_tokens 8000`, prompt système et bloc AUTOCRITIQUE intacts. Diff des 80 modules entre les
+deux enregistrements : **un seul module modifié, le 305**.
 
 **2. La clé `erreur` n'existe pas.** Les éléments de `mistakes_history` portent les clés
 `at, consec_losses, dd, eval, phase, pnl, pnl_delta, run`. `map(…; "erreur")` renvoie donc du
