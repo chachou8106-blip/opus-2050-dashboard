@@ -1,0 +1,26 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module dans ce message : le 301. Ne touche a aucun autre.
+- Tu fais UN SEUL remplacement de texte. Tu ne reformules aucun prompt, tu ne supprimes ni
+  module, ni champ, ni variable, ni connexion.
+- Si tu ne trouves pas le texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- Apres la modification, verifie que le nombre d accolades { est egal au nombre d accolades }.
+
+MODULE : 301 (L ARCHIMAGE SOUVERAIN - JU)
+CHAMP  : jsonStringBodyContent
+
+Meme correctif que sur les modules 305 et 303 : une valeur injectee dans le corps JSON sans
+etre nettoyee des guillemets et des antislashs.
+
+Chercher (une seule occurrence ; les guillemets ne sont PAS precedes d un antislash) :
+
+{{join(map(105.data.brain_states.JU.mistakes_history; "erreur"); " ## ")}}
+
+Remplacer par :
+
+{{replace(replace(replace(replace(ifempty(toString(join(map(105.data.brain_states.JU.mistakes_history; "erreur"); " ## ")); emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space)}}
+
+CONTROLE : apres la modification, le champ doit faire exactement 6918 caracteres
+(il en fait 6767 avant). Ne modifie ni l URL, ni le modele, ni la temperature, ni le prompt
+systeme, ni le bloc AUTOCRITIQUE.

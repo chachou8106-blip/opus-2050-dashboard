@@ -1,0 +1,61 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module dans ce message : le 305. Ne touche a aucun autre.
+- Tu fais QUATRE remplacements de texte dans ce seul module, dans l ordre donne.
+  Tu ne reformules aucun prompt, tu ne supprimes ni module, ni champ, ni variable, ni connexion.
+- Si tu ne trouves pas un texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- Apres les modifications, verifie que le nombre d accolades { est egal au nombre d accolades }.
+
+MODULE : 305 (L ARBITRE DORE - GIL)
+CHAMP  : jsonStringBodyContent
+
+Quatre valeurs sont injectees dans le corps JSON sans etre nettoyees. Deux ne le sont pas du
+tout, deux le sont a moitie (guillemets et sauts de ligne retires, antislashs conserves). Des
+qu une de ces valeurs contient un guillemet ou un antislash, le corps du module cesse d etre du
+JSON valide et le scenario s arrete sur ce module.
+
+Le blindage demande ci-dessous est EXACTEMENT celui qui protege deja GIL_BIAS et GIL_LEARNINGS
+dans ce meme module. On ne fait que l appliquer aux quatre valeurs qui en manquent.
+
+--- REMPLACEMENT 1 sur 4 (FLASH_INTEL) ---
+Chercher (une seule occurrence, sur une seule ligne) :
+
+{{replace(replace(ifempty(toString(105.data.flash_intel_latest); emptystring); newline; ); quote; )}}
+
+Remplacer par :
+
+{{replace(replace(replace(replace(ifempty(toString(105.data.flash_intel_latest); emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space)}}
+
+--- REMPLACEMENT 2 sur 4 (CIRCUIT_BREAKERS) ---
+Chercher (une seule occurrence, sur une seule ligne) :
+
+{{replace(replace(ifempty(toString(105.data.active_circuit_breakers); emptystring); newline; ); quote; )}}
+
+Remplacer par :
+
+{{replace(replace(replace(replace(ifempty(toString(105.data.active_circuit_breakers); emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space)}}
+
+--- REMPLACEMENT 3 sur 4 (MISTAKES) ---
+Attention : les guillemets sont precedes d un antislash dans le texte a chercher comme dans le
+texte de remplacement. Recopie-les exactement tels quels.
+Chercher (une seule occurrence) :
+
+{{join(map(105.data.brain_states.GIL.mistakes_history; \"erreur\"); \" ## \")}}
+
+Remplacer par :
+
+{{replace(replace(replace(replace(ifempty(toString(join(map(105.data.brain_states.GIL.mistakes_history; \"erreur\"); \" ## \")); emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space)}}
+
+--- REMPLACEMENT 4 sur 4 (CATALYSEURS) ---
+Chercher (une seule occurrence) :
+
+{{toString(105.data.brain_states.GIL.latest_web_catalysts)}}
+
+Remplacer par :
+
+{{replace(replace(replace(replace(ifempty(toString(105.data.brain_states.GIL.latest_web_catalysts); emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space)}}
+
+CONTROLE : apres les quatre remplacements, le champ doit faire exactement 6863 caracteres
+(il en fait 6409 avant). Ne modifie ni l URL, ni le modele, ni la temperature, ni le prompt
+systeme, ni le bloc AUTOCRITIQUE.
