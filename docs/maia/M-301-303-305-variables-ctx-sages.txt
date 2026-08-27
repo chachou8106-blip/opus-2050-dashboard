@@ -1,0 +1,40 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- TROIS modules concernes : 301, 303 et 305. Aucun autre.
+- Dans chacun, DEUX remplacements de texte, toujours les memes.
+  Tu ne reformules aucun prompt, tu ne supprimes ni module, ni champ, ni variable, ni connexion.
+- Si tu ne trouves pas un texte a chercher EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+
+POURQUOI : les trois Archimages lisent la variable de contexte sous la forme {{CTX}} et la
+synthese des Sages sous la forme {{SAGES}}. Ces deux formes ne resolvent pas : le corps envoye
+commence par CTX=|SAGES=| et les Archimages decident sans aucune donnee de marche ni synthese
+des Sages. La forme qui fonctionne est celle des modules 10003, 10004, 10005, 10023, 20013 et
+20018, qui lisent {{101.value}} et recoivent bien la valeur. On aligne les trois Archimages
+sur cette forme.
+
+--- Dans le module 301, puis le 303, puis le 305, MEMES DEUX REMPLACEMENTS ---
+
+REMPLACEMENT 1 sur 2. Chercher (une seule occurrence par module) :
+
+{{CTX}}
+
+Remplacer par :
+
+{{110.value}}
+
+REMPLACEMENT 2 sur 2. Chercher (une seule occurrence par module) :
+
+{{SAGES}}
+
+Remplacer par :
+
+{{215.value}}
+
+CONTROLE, champ jsonStringBodyContent :
+  module 301 : 6767 caracteres avant, 6777 apres
+  module 303 : 6570 caracteres avant, 6580 apres
+  module 305 : 6401 caracteres avant, 6411 apres
+
+Ne modifie ni les URL, ni les modeles, ni les temperatures, ni les prompts systeme,
+ni les blocs AUTOCRITIQUE.

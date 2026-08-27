@@ -1,0 +1,36 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module : le 10012. DEUX remplacements de texte, dans l ordre.
+- Si tu ne trouves pas un texte EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- Les guillemets precedes d un antislash le sont dans le texte a chercher COMME dans le texte
+  de remplacement : recopie-les exactement, n en ajoute pas, n en retire pas.
+
+POURQUOI : le FORMAT DE SORTIE montre propositions comme un tableau vide, sans decrire une
+seule de ses cles. La fonction Supabase alc_record_propositions attend paire, side, montant,
+confidence et raison. Le modele inventait donc ses propres noms : depuis le 25/08 les lignes
+sont inserees avec paire, side, montant, confidence et raison tous NULL, et le 27/08 aucune
+proposition n a ete enregistree. C est exactement le meme defaut que celui du de-staking,
+sur l autre tableau du meme module.
+
+--- REMPLACEMENT 1 sur 2 ---
+Chercher (une seule occurrence) :
+
+{\"propositions\":[],\"destake_recommande\":
+
+Remplacer par :
+
+{\"propositions\":[{\"paire\":\"BTC-USD\",\"side\":\"buy\",\"montant\":25.0,\"confidence\":0.62,\"raison\":\"une phrase courte sans guillemets\"}],\"destake_recommande\":
+
+--- REMPLACEMENT 2 sur 2 ---
+Chercher (une seule occurrence) :
+
+Chaque element de destake_recommande DOIT porter les sept cles ci-dessus.
+
+Remplacer par :
+
+Chaque element de propositions DOIT porter les cinq cles ci-dessus. paire est le symbole Revolut X au format BASE-USD en majuscules. side vaut exactement buy ou sell. montant est en dollars. confidence est un nombre entre 0 et 1. raison explique en une phrase pourquoi tu proposes ce trade. Si tu ne proposes aucun trade, renvoie un tableau vide. Chaque element de destake_recommande DOIT porter les sept cles ci-dessus.
+
+CONTROLE : apres les deux remplacements, le champ jsonStringBodyContent doit faire exactement
+7593 caracteres (7120 avant). Ne modifie ni l URL, ni le modele sonar-pro, ni max_tokens 8000,
+ni les regles de staking, ni le bloc AUTOCRITIQUE.

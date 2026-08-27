@@ -210,3 +210,35 @@ SELECT c.sage_name,
  ORDER BY t.runs_muets_consecutifs DESC, c.sage_name;
 
 GRANT SELECT ON public.v_sages_pannes TO anon, authenticated, service_role;
+
+-- =============================================================================
+-- 27/08/2026 — batch_write_college_run_v2 enregistre syl_catalyst_direction
+-- =============================================================================
+-- La colonne etait NULL sur les 278 runs : personne ne l'ecrivait. log_flash_intel sait le
+-- faire, mais son UPDATE ne peut jamais aboutir — le module 211 tourne a l'operation 24 et la
+-- ligne du college n'est creee qu'a l'operation 59 par le module 982.
+-- La fonction fait 7542 caracteres : on la modifie par remplacement de chaine sur sa propre
+-- definition plutot que de la retaper, avec un garde-fou qui refuse d'agir si l'ancrage n'est
+-- pas trouve une fois et une seule.
+do $$
+declare d text; n1 int; n2 int;
+begin
+  select pg_get_functiondef(p.oid) into d
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'batch_write_college_run_v2';
+
+  select count(*) into n1 from regexp_matches(d, 'syl_web_catalysts, syl_top_catalyst_ticker,', 'g');
+  select count(*) into n2 from regexp_matches(d, 'p_payload->>''syl_top_catalyst'',', 'g');
+  if n1 <> 1 or n2 <> 1 then
+    raise exception 'ancrage introuvable ou multiple : colonnes=% valeurs=%', n1, n2;
+  end if;
+
+  d := replace(d,
+    'syl_web_catalysts, syl_top_catalyst_ticker,',
+    'syl_web_catalysts, syl_top_catalyst_ticker, syl_catalyst_direction,');
+  d := replace(d,
+    'p_payload->>''syl_top_catalyst'',',
+    'p_payload->>''syl_top_catalyst'',' || E'\n    ' || 'p_payload->>''syl_catalyst_direction'',');
+
+  execute d;
+end $$;

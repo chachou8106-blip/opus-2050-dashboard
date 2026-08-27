@@ -1,0 +1,35 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- SIX modules concernes : 211, 10032, 401, 960, 981 et 982. Aucun autre.
+- Un seul et meme remplacement mecanique dans chacun. Rien d autre ne bouge.
+- Si tu ne trouves pas le texte dans un module, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+
+POURQUOI : le module 101 fabrique l identifiant du run. Six modules le lisent sous la forme
+101.RUN_ID, qui ne resout pas : chacun retombe alors sur sa propre horloge et fabrique un
+identifiant different. Un meme run porte aujourd hui trois identifiants : 20260827-1736 pour
+les catalyseurs, 20260827-1737 pour les Sages, 20260827-1738 pour le college.
+
+La preuve est en base : les tables ecrites par les modules qui lisent 101.value portent toutes
+le prefixe COLLEGE- (203 lignes sur 203 pour le de-staking, 117 sur 117 pour les Marees) ;
+celles ecrites par les modules qui lisent 101.RUN_ID n en portent aucun (0 sur 278 pour le
+college, 0 sur 1002 pour les Sages).
+
+--- Dans chacun des six modules, chercher toutes les occurrences de ---
+
+101.RUN_ID
+
+--- et les remplacer par ---
+
+101.value
+
+Ne change rien d autre dans l expression : ni les ifempty, ni les valeurs de repli, ni les
+parentheses.
+
+CONTROLE, champ jsonStringBodyContent :
+  module 211   : 412 caracteres avant, 411 apres   (1 occurrence)
+  module 10032 : 410 avant, 409 apres              (1 occurrence)
+  module 401   : 4796 avant, 4795 apres            (1 occurrence)
+  module 960   : 1423 avant, 1422 apres            (1 occurrence)
+  module 981   : 3597 avant, 3596 apres            (1 occurrence)
+  module 982   : 1701 avant, 1699 apres            (2 occurrences)

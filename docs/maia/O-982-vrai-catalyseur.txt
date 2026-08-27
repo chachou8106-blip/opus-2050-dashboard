@@ -1,0 +1,25 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module : le 982. A faire APRES le message N (le module doit deja faire 1699 caracteres).
+- UN SEUL remplacement de texte.
+- Si tu ne trouves pas le texte EXACTEMENT tel quel, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+
+POURQUOI : le champ syl_top_catalyst envoie 304.trade_1.ticker, c est-a-dire le PREMIER TRADE
+de l Archimage SYL, pas un catalyseur. SYL trade GLD a chaque run, d ou la colonne
+syl_top_catalyst_ticker qui vaut GLD sur les 278 runs enregistres. Le vrai catalyseur principal
+est produit par le Sage Flash, module 210, sous le nom top_catalyst_ticker, et sa direction sous
+le nom flash_sentiment. La colonne syl_catalyst_direction, elle, n etait ecrite par personne :
+elle est NULL sur les 278 runs. La fonction Supabase sait desormais l enregistrer.
+
+Chercher (une seule occurrence, tout sur une seule ligne) :
+
+"syl_top_catalyst": "{{replace(replace(ifempty(304.trade_1.ticker; ND); newline; ); quote; )}}"
+
+Remplacer par :
+
+"syl_top_catalyst": "{{replace(replace(ifempty(210.top_catalyst_ticker; ND); newline; ); quote; )}}", "syl_catalyst_direction": "{{lower(replace(replace(ifempty(210.flash_sentiment; ND); newline; ); quote; ))}}"
+
+CONTROLE : le champ jsonStringBodyContent doit faire exactement 1815 caracteres
+(1699 avant, si le message N a bien ete applique).
+Ne modifie ni l URL, ni les en-tetes, ni les autres champs du corps.
