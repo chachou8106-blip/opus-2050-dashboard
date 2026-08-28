@@ -1,0 +1,28 @@
+ATTENTION - regles absolues pour cette intervention :
+- Scenario 7051944 UNIQUEMENT. Ne touche pas au 6183820.
+- UN SEUL module : le 211. Le corps entier est remplace.
+- Si le texte a chercher ne correspond pas EXACTEMENT, ARRETE-TOI et dis-le.
+- N ecris jamais ton raisonnement dans la configuration du module.
+- AUCUN guillemet ne doit etre precede d un antislash.
+
+MODULE : 211 (FLASH INTEL LOGGER)
+CHAMP  : jsonStringBodyContent
+
+POURQUOI : le blindage precedent ecrit replace(valeur; backslash; ) et replace(valeur; quote; )
+avec le TROISIEME ARGUMENT OMIS. Aucune autre expression du scenario n ecrit backslash de cette
+facon : les modules 301, 303 et 305 ecrivent tous backslash; emptystring et quote; emptystring.
+Resultat du run du 28/08 : le Sage Flash a bien produit ses trois catalyseurs, la fonction
+Supabase les accepte sans broncher quand on les lui passe a la main, mais le module 211 n a
+rien transmis. On aligne sur la forme prouvee.
+
+Chercher (tout le contenu du champ, une seule ligne) :
+
+{"run_id": "{{ifempty(101.value; "COLLEGE-" & formatDate(now; "YYYYMMDD-HHmm"))}}", "summary": "{{replace(replace(replace(replace(replace(ifempty(210.web_intelligence; ND); backslash; ); quote; ); newline; space); carriagereturn; space); tab; space)}}", "top_ticker": "{{trim(upper(replace(replace(replace(replace(ifempty(210.top_catalyst_ticker; MARKET); backslash; ); quote; ); newline; ); tab; )))}}", "top_direction": "{{lower(replace(replace(replace(replace(ifempty(210.flash_sentiment; neutral); backslash; ); quote; ); newline; ); tab; ))}}", "catalysts": "{{replace(replace(replace(replace(replace(ifempty(210.catalysts; emptystring); backslash; ); quote; ); newline; space); carriagereturn; space); tab; space)}}"}
+
+Remplacer par :
+
+{"run_id": "{{ifempty(101.value; "COLLEGE-" & formatDate(now; "YYYYMMDD-HHmm"))}}", "summary": "{{replace(replace(replace(replace(replace(ifempty(210.web_intelligence; ND); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space); tab; space)}}", "top_ticker": "{{trim(upper(replace(replace(replace(replace(ifempty(210.top_catalyst_ticker; MARKET); backslash; emptystring); quote; emptystring); newline; ); tab; )))}}", "top_direction": "{{lower(replace(replace(replace(replace(ifempty(210.flash_sentiment; neutral); backslash; emptystring); quote; emptystring); newline; ); tab; ))}}", "catalysts": "{{replace(replace(replace(replace(replace(ifempty(210.catalysts; emptystring); backslash; emptystring); quote; emptystring); newline; space); carriagereturn; space); tab; space)}}"}
+
+CONTROLE : le champ doit faire exactement 811 caracteres (723 avant). La seule difference est
+que backslash; ) devient backslash; emptystring) et quote; ) devient quote; emptystring),
+quatre fois chacun. Ne modifie ni l URL supabase, ni la methode, ni les en-tetes.
