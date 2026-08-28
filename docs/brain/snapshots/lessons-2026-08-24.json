@@ -1,0 +1,3399 @@
+{
+    "source": "brain_lessons (archive permanente) \u2014 source de verite = Supabase",
+    "totaux": {
+        "JU_mistake": 51,
+        "GIL_mistake": 52,
+        "JU_learning": 63,
+        "SYL_mistake": 45,
+        "GIL_learning": 63,
+        "SYL_learning": 63
+    },
+    "lessons": [
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 73728.92,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD pertinent mais desaccord total avec JU/SYL, PnL positif mais risque concentration crypto",
+            "kind": "mistake",
+            "run_id": "20260729-1533",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0365,
+            "pnl": 49965.11,
+            "bias": "arbitrage defensif XLU efficace mais augmenter conviction sur timing macro",
+            "eval": "XLU rebalancement defensif PnL +1.9% arbitrage efficace vs JU mais conviction faible sur le timing",
+            "kind": "learning",
+            "run_id": "20260810-2108",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0365,
+            "pnl": 47771.97,
+            "bias": "maintenir arbitrage crypto mais communiquer intentions aux autres archimages",
+            "eval": "Rebalancement BTCUSD pertinent en volatil, PnL positif mais divergence totale avec JU/SYL penalise coordination",
+            "kind": "learning",
+            "run_id": "20260811-0348",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0333,
+            "pnl": 47844.9,
+            "bias": "arbitrage doit surperformer moyenne JU/SYL sinon desactiver",
+            "eval": "Rebalancement XLU arbitraire, desaccord avec JU/SYL penalise performance, PnL legerement positif mais non scalable",
+            "kind": "learning",
+            "run_id": "20260811-1028",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0333,
+            "pnl": 44947.53,
+            "bias": "arbitrage crypto renforc\u00e9, ignorer signaux JU tech",
+            "eval": "Rebalance BTCUSD avec conf 78, arbitrage efficace vs JU, PnL positif sur 5 derniers runs crypto, desaccord justifie avec",
+            "kind": "learning",
+            "run_id": "20260811-1220",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0333,
+            "pnl": 45320.39,
+            "bias": "arbitrer uniquement si ecart >2% vs moyenne JU/SYL, eviter rebalances sans convi",
+            "eval": "rebalance XLU sans valeur ajoutee -0.8%, arbitrage faible vs JU/SYL, conviction moyenne sans impact",
+            "kind": "learning",
+            "run_id": "20260811-1440",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0333,
+            "pnl": 47005.13,
+            "bias": "limiter crypto en regime volatile",
+            "eval": "Arbitrage SOLUSD pertinent mais decouple des autres. Risque crypto eleve en regime volatile. Execution precise",
+            "kind": "learning",
+            "run_id": "20260811-1701",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0333,
+            "pnl": 54729.42,
+            "bias": "arbitrage inutile sans alignement clair",
+            "eval": "rebalance XLU sans coherence avec JU ou SYL conviction 78 mais action NEUTRAL sans valeur ajoutee",
+            "kind": "learning",
+            "run_id": "20260811-1920",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0333,
+            "pnl": 55654.74,
+            "bias": "maintenir arbitrage crypto mais couvrir risque de drawdown avec stops dynamiques",
+            "eval": "rebalance SOLUSD arbitrage pertinent mais exposition crypto excessive en regime volatile, PnL stable mais risque non cou",
+            "kind": "learning",
+            "run_id": "20260811-2140",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.027,
+            "pnl": 47168.69,
+            "bias": "reduire exposition crypto si desaccord persiste avec JU/SYL",
+            "eval": "Rebalancement BTCUSD en neutral, conf 78 mais desaccord avec JU/SYL, arbitrage potentiel mais risque crypto en volatilit",
+            "kind": "learning",
+            "run_id": "20260812-1343",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.027,
+            "pnl": 54728.72,
+            "bias": "arbitrage crypto valide mais verifier correlation avec actions avant rebalance",
+            "eval": "Rebalancement BTCUSD en neutre, desaccord avec JU/SYL, conviction elevee mais peu d impact",
+            "kind": "learning",
+            "run_id": "20260812-1606",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.027,
+            "pnl": 59368.14,
+            "bias": "maintenir arbitrage crypto mais surveiller correlation avec actions tech",
+            "eval": "Rebalance SOLUSD avec haute conviction, desaccord avec JU et SYL, PnL positif mais exposition crypto en regime volatile",
+            "kind": "learning",
+            "run_id": "20260812-1823",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.027,
+            "pnl": 58731.59,
+            "bias": "arbitrer plus agressivement vs JU/SYL, cibler divergences claires",
+            "eval": "Rebalancement SOLUSD en neutral, PnL stable mais faible valeur ajoutee vs JU/SYL, arbitrage peu exploite",
+            "kind": "learning",
+            "run_id": "20260812-2043",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 61707.66,
+            "bias": "evaluer synergie avec JU/SYL avant arbitrage, limiter exposition crypto en regim",
+            "eval": "Arbitrage SOLUSD efficace mais desaccord total avec JU/SYL, PnL stable mais manque de synergie avec le groupe",
+            "kind": "learning",
+            "run_id": "20260813-1204",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 61010.17,
+            "bias": "maintenir arbitrage regime volatile, surveiller correlation XLU avec marche",
+            "eval": "Arbitrage XLU pertinent vs JU/SYL, PnL positif sur 5 derniers runs, execution propre sans doublons",
+            "kind": "learning",
+            "run_id": "20260813-1206",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 64270.88,
+            "bias": "limiter taille positions crypto en regime volatile, ajouter stops dynamiques",
+            "eval": "Arbitrage BTCUSD en rebalance efficace, PnL stable mais risque de sur-exposition crypto en regime volatile non couvert",
+            "kind": "learning",
+            "run_id": "20260813-1351",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 53709.64,
+            "bias": "maintenir arbitrage regime neutre, surveiller correlation XLU vs TLT pour diverg",
+            "eval": "rebalance XLU arbitrage efficace vs JU/SYL, PnL positif sur 5 derniers runs, desaccord justifie",
+            "kind": "learning",
+            "run_id": "20260813-1541",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 53845.56,
+            "bias": "maintenir arbitrage crypto mais couvrir risque de drawdown",
+            "eval": "Arbitrage ETHUSD ajoute de la valeur vs JU/SYL, conviction 78 mais desaccord total, PnL positif sur crypto mais risque n",
+            "kind": "learning",
+            "run_id": "20260813-1733",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 61761.35,
+            "bias": "maintenir arbitrage crypto en regime volatile, verifier liquidite avant executio",
+            "eval": "Arbitrage SOLUSD audacieux mais coherent en regime volatile, PnL positif sur 5 derniers runs, stops bien places",
+            "kind": "learning",
+            "run_id": "20260813-1904",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 59064.81,
+            "bias": "maintenir arbitrage crypto mais aligner partiellement avec SYL sur neutralite",
+            "eval": "PnL positif sur ETHUSD arbitrage, mais desaccord avec JU/SYL penalise coherence globale, stop loss bien place",
+            "kind": "learning",
+            "run_id": "20260813-1921",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 49918.37,
+            "bias": "limiter taille crypto a 15% portefeuille en regime volatile",
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, execution precise mais sur-exposition crypto en regime volatile",
+            "kind": "learning",
+            "run_id": "20260813-2111",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 55500.9,
+            "bias": "ajouter couverture partielle sur crypto en regime volatile",
+            "eval": "Arbitrage BTCUSD avec forte confiance 78, desaccord justifie vs JU/SYL, mais absence de couverture sur crypto en regime ",
+            "kind": "learning",
+            "run_id": "20260814-1239",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 73317.06,
+            "bias": "attendre confirmation breakout pour crypto, reduire taille positions en range",
+            "eval": "Arbitrage XRPUSD ajoute de la valeur vs JU/SYL mais 2 pertes recentes par entree trop precoce en range, PnL positif mais",
+            "kind": "learning",
+            "run_id": "20260814-1703",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 71020.31,
+            "bias": "aligner arbitrage avec consensus partiel JU/SYL sur actifs refuges",
+            "eval": "Arbitrage BTCUSD avec haute conviction 78, PnL stable mais desaccord avec JU/SYL, absence de couverture sur crypto",
+            "kind": "learning",
+            "run_id": "20260814-1712",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 71008.78,
+            "bias": "ajouter couverture sur crypto en regime volatile",
+            "eval": "Arbitrage ETHUSD ajoute valeur vs JU/SYL mais PnL instable par absence de couverture sur crypto en regime volatile",
+            "kind": "learning",
+            "run_id": "20260814-1716",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 65820.07,
+            "bias": "arbitrage crypto doit etre plus autonome, moins dependant de JU/SYL",
+            "eval": "Arbitrage BTCUSD efficace +5.3%, mais accord partiel avec SYL et JU limite impact. Conviction elevee mais manque de conv",
+            "kind": "learning",
+            "run_id": "20260814-1816",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 62377.72,
+            "bias": "limiter exposition crypto unique, verifier liquidite ETHUSD",
+            "eval": "ETHUSD arbitrage efficace vs JU/SYL, mais exposition crypto non diversifiee, stop loss absent",
+            "kind": "learning",
+            "run_id": "20260814-1916",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 68825.99,
+            "bias": "maintenir arbitrage mais ajouter couverture drawdown sur semi-conducteurs",
+            "eval": "Rebalancement SMH agressif 78/100 en desaccord total, arbitrage pertinent mais absence de couverture sur drawdown",
+            "kind": "learning",
+            "run_id": "20260814-2016",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 75774.43,
+            "bias": "reduire exposition aux cryptos en regime volatile sans accord JU/SYL",
+            "eval": "Arbitrage sur AVAXUSD avec forte conviction 78, PnL legerement positif mais risque eleve",
+            "kind": "learning",
+            "run_id": "20260814-2116",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0131,
+            "pnl": 69264.59,
+            "bias": "arbitrage doit battre moyenne JU/SYL ou reduire exposition, prioriser liquidite",
+            "eval": "XLU rebalance neutre, PnL stable mais sans valeur ajoutee vs JU/SYL. Conviction 70 excessive pour action passive",
+            "kind": "learning",
+            "run_id": "20260815-1237",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0292,
+            "pnl": 47168.68,
+            "bias": null,
+            "eval": "Rebalancement ETHUSD pertinent en volatil, desaccord justifie avec JU/SYL mais manque de conviction sur alternatives",
+            "kind": "mistake",
+            "run_id": "20260807-1402",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0292,
+            "pnl": 53059.7,
+            "bias": null,
+            "eval": "rebalance BTC neutre mais desaccord avec JU SYL penalise performance arbitrage non exploite",
+            "kind": "mistake",
+            "run_id": "20260805-1843",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0292,
+            "pnl": 56482.49,
+            "bias": null,
+            "eval": "Rebalance XLU defensif adapte mais arbitrage sans valeur ajoutee vs JU SYL, PnL legerement positif mais sans conviction strategique",
+            "kind": "mistake",
+            "run_id": "20260805-1401",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 55564.47,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD en neutral, PnL legerement positif mais desaccord avec JU/SYL penalise coherence globale",
+            "kind": "mistake",
+            "run_id": "20260804-1747",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 57223.88,
+            "bias": null,
+            "eval": "Rebalance sur BTCUSD arbitrage utile mais PnL negatif sur crypto, desaccord avec JU/SYL penalise",
+            "kind": "mistake",
+            "run_id": "20260804-1720",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 60242.82,
+            "bias": null,
+            "eval": "Rebalance BTC arbitrage ajoute +1.2% vs moyenne JU/SYL mais volatilite elevee",
+            "kind": "mistake",
+            "run_id": "20260803-2002",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 60995.63,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, PnL positif mais desaccord systematique avec autres archimages penalise coherence",
+            "kind": "mistake",
+            "run_id": "20260803-1957",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 58934.44,
+            "bias": null,
+            "eval": "Arbitrage sur BTCUSD en disagreant avec JU/SYL, manque de justification fondamentale, exposition crypto non diversifiee",
+            "kind": "mistake",
+            "run_id": "20260803-1924",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 62503.95,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD agressif, desaccord avec JU/SYL penalisant, pas de couverture sur crypto volatile",
+            "kind": "mistake",
+            "run_id": "20260803-1820",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 63675,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD en desaccord avec JU/SYL, conviction moyenne mais PnL recent positif sur crypto",
+            "kind": "mistake",
+            "run_id": "20260803-1815",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 71854.17,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD audacieux mais desaccord total avec JU/SYL, risque de decouplage si regime persiste, rebalance sans conviction forte",
+            "kind": "mistake",
+            "run_id": "20260730-1257",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 73164.81,
+            "bias": null,
+            "eval": "Arbitrage agressif SQQQ en volatile, alignement faible avec JU/SYL, risque de sur-leverage si regime change brutalement",
+            "kind": "mistake",
+            "run_id": "20260729-1538",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0266,
+            "pnl": 72464.37,
+            "bias": null,
+            "eval": "Arbitrage agressif sur BTCUSD contre JU/SYL, PnL positif mais risque de sur-exposition crypto non couvert",
+            "kind": "mistake",
+            "run_id": "20260729-1305",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0365,
+            "pnl": 42865.66,
+            "bias": "aligner arbitrage crypto avec regime de marche, reduire taille positions sans ac",
+            "eval": "Rebalancement sur BTCUSD avec forte conviction mais desaccord marque avec JU/SYL, absence de couverture sur crypto en re",
+            "kind": "learning",
+            "run_id": "20260810-1428",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0131,
+            "pnl": 69264.59,
+            "bias": null,
+            "eval": "XLU rebalance neutre, PnL stable mais sans valeur ajoutee vs JU/SYL. Conviction 70 excessive pour action passive",
+            "kind": "mistake",
+            "run_id": "20260815-1237",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 62377.72,
+            "bias": null,
+            "eval": "ETHUSD arbitrage efficace vs JU/SYL, mais exposition crypto non diversifiee, stop loss absent",
+            "kind": "mistake",
+            "run_id": "20260814-1916",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 65820.07,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD efficace +5.3%, mais accord partiel avec SYL et JU limite impact. Conviction elevee mais manque de conviction propre",
+            "kind": "mistake",
+            "run_id": "20260814-1816",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 71008.78,
+            "bias": null,
+            "eval": "Arbitrage ETHUSD ajoute valeur vs JU/SYL mais PnL instable par absence de couverture sur crypto en regime volatile",
+            "kind": "mistake",
+            "run_id": "20260814-1716",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0308,
+            "pnl": 71020.31,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD avec haute conviction 78, PnL stable mais desaccord avec JU/SYL, absence de couverture sur crypto",
+            "kind": "mistake",
+            "run_id": "20260814-1712",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 49918.37,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, execution precise mais sur-exposition crypto en regime volatile",
+            "kind": "mistake",
+            "run_id": "20260813-2111",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 59064.81,
+            "bias": null,
+            "eval": "PnL positif sur ETHUSD arbitrage, mais desaccord avec JU/SYL penalise coherence globale, stop loss bien place",
+            "kind": "mistake",
+            "run_id": "20260813-1921",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 53709.64,
+            "bias": null,
+            "eval": "rebalance XLU arbitrage efficace vs JU/SYL, PnL positif sur 5 derniers runs, desaccord justifie",
+            "kind": "mistake",
+            "run_id": "20260813-1541",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.019,
+            "pnl": 61010.17,
+            "bias": null,
+            "eval": "Arbitrage XLU pertinent vs JU/SYL, PnL positif sur 5 derniers runs, execution propre sans doublons",
+            "kind": "mistake",
+            "run_id": "20260813-1206",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.027,
+            "pnl": 58731.59,
+            "bias": null,
+            "eval": "Rebalancement SOLUSD en neutral, PnL stable mais faible valeur ajoutee vs JU/SYL, arbitrage peu exploite",
+            "kind": "mistake",
+            "run_id": "20260812-2043",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.027,
+            "pnl": 47168.69,
+            "bias": null,
+            "eval": "Rebalancement BTCUSD en neutral, conf 78 mais desaccord avec JU/SYL, arbitrage potentiel mais risque crypto en volatilite",
+            "kind": "mistake",
+            "run_id": "20260812-1343",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0333,
+            "pnl": 44947.53,
+            "bias": null,
+            "eval": "Rebalance BTCUSD avec conf 78, arbitrage efficace vs JU, PnL positif sur 5 derniers runs crypto, desaccord justifie avec JU",
+            "kind": "mistake",
+            "run_id": "20260811-1220",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0365,
+            "pnl": 47771.97,
+            "bias": null,
+            "eval": "Rebalancement BTCUSD pertinent en volatil, PnL positif mais divergence totale avec JU/SYL penalise coordination",
+            "kind": "mistake",
+            "run_id": "20260811-0348",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0365,
+            "pnl": 42865.66,
+            "bias": null,
+            "eval": "Rebalancement sur BTCUSD avec forte conviction mais desaccord marque avec JU/SYL, absence de couverture sur crypto en regime volatile",
+            "kind": "mistake",
+            "run_id": "20260810-1428",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0365,
+            "pnl": 38522.28,
+            "bias": null,
+            "eval": "Rebalancement BTCUSD en desaccord: arbitrage ajoute de la valeur vs JU/SYL sur 4 derniers runs. PnL positif mais volatilite elevee. Absence ",
+            "kind": "mistake",
+            "run_id": "20260810-1244",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0365,
+            "pnl": 40708.37,
+            "bias": null,
+            "eval": "Rebalancement BTCUSD ajoute de la valeur vs JU/SYL, mais exposition crypto trop elevee en regime volatile",
+            "kind": "mistake",
+            "run_id": "20260810-0344",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T10:13:22.290148+00:00",
+            "dd": 0.0131,
+            "pnl": 64223.63,
+            "bias": null,
+            "eval": "PnL stable sur XLU mais rebalancement sans conviction, arbitrage sans valeur ajoutee vs JU/SYL",
+            "kind": "mistake",
+            "run_id": "20260817-1213",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T10:13:22.290148+00:00",
+            "dd": 0.0131,
+            "pnl": 64223.63,
+            "bias": "arbitrer uniquement si valeur ajoutee vs moyenne JU/SYL, eviter rebalancement ne",
+            "eval": "PnL stable sur XLU mais rebalancement sans conviction, arbitrage sans valeur ajoutee vs JU/SYL",
+            "kind": "learning",
+            "run_id": "20260817-1213",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T11:12:17.579589+00:00",
+            "dd": 0.0131,
+            "pnl": 60136.28,
+            "bias": "ajouter couverture liquidite sur crypto, reduire taille positions >5%",
+            "eval": "SOLUSD +8.7% arbitrage efficace, mais 2 trades crypto sans couverture, risque liquidite non gere",
+            "kind": "learning",
+            "run_id": "20260817-1312",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T11:12:17.579589+00:00",
+            "dd": 0.0131,
+            "pnl": 60136.28,
+            "bias": null,
+            "eval": "SOLUSD +8.7% arbitrage efficace, mais 2 trades crypto sans couverture, risque liquidite non gere",
+            "kind": "mistake",
+            "run_id": "20260817-1312",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T12:12:09.996742+00:00",
+            "dd": 0.0131,
+            "pnl": 59776.94,
+            "bias": "maintenir arbitrage mais surveiller correlation crypto/tech, reduire conviction ",
+            "eval": "Arbitrage BTCUSD ajoute valeur vs JU/SYL, PnL stable mais conviction elevee 78 peut masquer risque crypto",
+            "kind": "learning",
+            "run_id": "20260817-1412",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T12:12:09.996742+00:00",
+            "dd": 0.0131,
+            "pnl": 59776.94,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD ajoute valeur vs JU/SYL, PnL stable mais conviction elevee 78 peut masquer risque crypto",
+            "kind": "mistake",
+            "run_id": "20260817-1412",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T13:12:50.323527+00:00",
+            "dd": 0.0131,
+            "pnl": 62257.59,
+            "bias": "affiner timing arbitrage crypto, verifier correlation avec actions tech",
+            "eval": "Arbitrage BTCUSD coherent mais timing suboptimal. PnL stable mais valeur ajoutee limite vs moyenne JU/SYL",
+            "kind": "learning",
+            "run_id": "20260817-1512",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T14:12:08.204366+00:00",
+            "dd": 0.0131,
+            "pnl": 51989.68,
+            "bias": "maintenir arbitrage crypto mais limiter taille positions non couvertes",
+            "eval": "Arbitrage BTCUSD pertinent vs JU/SYL, PnL superieur mais exposition crypto elevee sans couverture",
+            "kind": "learning",
+            "run_id": "20260817-1612",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T14:12:08.204366+00:00",
+            "dd": 0.0131,
+            "pnl": 51989.68,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD pertinent vs JU/SYL, PnL superieur mais exposition crypto elevee sans couverture",
+            "kind": "mistake",
+            "run_id": "20260817-1612",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T15:11:58.358517+00:00",
+            "dd": 0.0131,
+            "pnl": 42583.87,
+            "bias": "maintenir arbitrage crypto mais reduire taille positions sur volatilite elevee",
+            "eval": "Arbitrage AVAXUSD ajoute de la valeur vs JU/SYL, PnL stable mais volatilite elevee. Desaccord coherent avec JU/SYL mais ",
+            "kind": "learning",
+            "run_id": "20260817-1711",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T15:11:58.358517+00:00",
+            "dd": 0.0131,
+            "pnl": 42583.87,
+            "bias": null,
+            "eval": "Arbitrage AVAXUSD ajoute de la valeur vs JU/SYL, PnL stable mais volatilite elevee. Desaccord coherent avec JU/SYL mais manque de conviction",
+            "kind": "mistake",
+            "run_id": "20260817-1711",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T16:11:58.523028+00:00",
+            "dd": 0.0131,
+            "pnl": 41647.84,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, PnL stable mais exposition crypto excessive sans couverture",
+            "kind": "mistake",
+            "run_id": "20260817-1811",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T16:11:58.523028+00:00",
+            "dd": 0.0131,
+            "pnl": 41647.84,
+            "bias": "maintenir arbitrage crypto mais verifier liquidite",
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, PnL stable mais exposition crypto excessive sans couverture",
+            "kind": "learning",
+            "run_id": "20260817-1811",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T17:11:54.662447+00:00",
+            "dd": 0.0131,
+            "pnl": 43974.32,
+            "bias": "arbitrer uniquement si valeur ajoutee prouvee",
+            "eval": "SQQQ en rebalance neutre, PnL stable mais sans valeur ajoutee vs JU/SYL, accord partiel non exploite",
+            "kind": "learning",
+            "run_id": "20260817-1911",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T17:34:36.278319+00:00",
+            "dd": 0.0131,
+            "pnl": 45258.47,
+            "bias": "arbitrage crypto doit verifier alignement regime avant execution",
+            "eval": "long ETHUSD rebalancement neutre mais divergence totale avec JU et SYL execution propre mais timing discutable",
+            "kind": "learning",
+            "run_id": "20260817-1934",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T18:00:00.390532+00:00",
+            "dd": 0.0131,
+            "pnl": 44457.78,
+            "bias": "arbitrer entre JU et SYL plutot que rebalancer neutre, reduire exposition XLU",
+            "eval": "Rebalancement XLU neutre sans arbitrage clair, desaccord avec JU/SYL penalise performance, PnL stable mais sans valeur a",
+            "kind": "learning",
+            "run_id": "20260817-1959",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T18:00:00.390532+00:00",
+            "dd": 0.0131,
+            "pnl": 44457.78,
+            "bias": null,
+            "eval": "Rebalancement XLU neutre sans arbitrage clair, desaccord avec JU/SYL penalise performance, PnL stable mais sans valeur ajoutee",
+            "kind": "mistake",
+            "run_id": "20260817-1959",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T18:12:13.801505+00:00",
+            "dd": 0.0131,
+            "pnl": 43652.7,
+            "bias": null,
+            "eval": "Arbitrage SOLUSD risqu\u00e9 sans confirmation JU/SYL, volatilit\u00e9 crypto elev\u00e9e, PnL instable mais potentiel si rebond SOL confirm\u00e9",
+            "kind": "mistake",
+            "run_id": "20260817-2012",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T18:12:13.801505+00:00",
+            "dd": 0.0131,
+            "pnl": 43652.7,
+            "bias": "limiter arbitrage crypto sans accord minimal avec JU ou SYL",
+            "eval": "Arbitrage SOLUSD risqu\u00e9 sans confirmation JU/SYL, volatilit\u00e9 crypto elev\u00e9e, PnL instable mais potentiel si rebond SOL co",
+            "kind": "learning",
+            "run_id": "20260817-2012",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T19:28:41.625504+00:00",
+            "dd": 0.0131,
+            "pnl": 38448.95,
+            "bias": null,
+            "eval": "Arbitrage XLU vs JU/SYL faible, PnL negatif sur 2 derniers runs, rebalance sans conviction claire, desaccord inutile",
+            "kind": "mistake",
+            "run_id": "20260817-2128",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T19:28:41.625504+00:00",
+            "dd": 0.0131,
+            "pnl": 38448.95,
+            "bias": "arbitrage uniquement si ecart >5% vs moyenne JU/SYL, reduire frequence rebalance",
+            "eval": "Arbitrage XLU vs JU/SYL faible, PnL negatif sur 2 derniers runs, rebalance sans conviction claire, desaccord inutile",
+            "kind": "learning",
+            "run_id": "20260817-2128",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T20:00:43.216511+00:00",
+            "dd": 0.0131,
+            "pnl": 41122.59,
+            "bias": "maintenir arbitrage crypto mais affiner timing sur AVAX, surveiller correlation ",
+            "eval": "Arbitrage AVAXUSD ajoute de la valeur vs JU/SYL, PnL legerement positif, desaccord utile mais execution a ameliorer",
+            "kind": "learning",
+            "run_id": "20260817-2200",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T20:55:58.559353+00:00",
+            "dd": 0.0131,
+            "pnl": 40757.52,
+            "bias": null,
+            "eval": "Rebalancement SMH arbitrage tech +0.9% mais retard vs JU/SYL sur conviction 70 insuffisante",
+            "kind": "mistake",
+            "run_id": "20260817-2255",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-17T20:55:58.559353+00:00",
+            "dd": 0.0131,
+            "pnl": 40757.52,
+            "bias": "augmenter conviction arbitrage tech pour suivre SYL",
+            "eval": "Rebalancement SMH arbitrage tech +0.9% mais retard vs JU/SYL sur conviction 70 insuffisante",
+            "kind": "learning",
+            "run_id": "20260817-2255",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-18T07:52:18.680723+00:00",
+            "dd": 0.0397,
+            "pnl": 46332.58,
+            "bias": "maintenir arbitrage crypto mais synchroniser 1 trade sur 3 avec JU ou SYL",
+            "eval": "BTCUSD arbitrage ajoute valeur vs JU/SYL, mais desaccord total penalise coherence, stops dynamiques efficaces",
+            "kind": "learning",
+            "run_id": "20260818-0952",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-18T07:59:12.240567+00:00",
+            "dd": 0.0397,
+            "pnl": 45897.11,
+            "bias": null,
+            "eval": "Rebalance XLU en volatile, PnL stable mais arbitrage faible vs JU/SYL, desaccord systematique penalise performance",
+            "kind": "mistake",
+            "run_id": "20260818-0959",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-18T07:59:12.240567+00:00",
+            "dd": 0.0397,
+            "pnl": 45897.11,
+            "bias": "aligner arbitrage sur consensus partiel JU/SYL, eviter desaccords systematiques",
+            "eval": "Rebalance XLU en volatile, PnL stable mais arbitrage faible vs JU/SYL, desaccord systematique penalise performance",
+            "kind": "learning",
+            "run_id": "20260818-0959",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-18T14:30:19.250291+00:00",
+            "dd": 0.0397,
+            "pnl": 49540.07,
+            "bias": "arbitrer uniquement si marge claire vs SYL, reduire desaccords inutiles",
+            "eval": "Rebalance XLU prudent mais PnL moyen. Arbitrage ajoute peu de valeur vs SYL. Desaccord avec JU/SYL penalise performance",
+            "kind": "learning",
+            "run_id": "20260818-1630",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-18T19:17:13.673059+00:00",
+            "dd": 0.0397,
+            "pnl": 72758.14,
+            "bias": "aligner arbitrage sur consensus JU/SYL si divergence >60%, prioriser liquidite",
+            "eval": "Rebalancement XLU defensif mais en desaccord total, PnL -1.8% du a retard sur rotation, arbitrage inutile vs JU/SYL",
+            "kind": "learning",
+            "run_id": "20260818-2117",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T10:28:34.94964+00:00",
+            "dd": 0.0096,
+            "pnl": 73055.87,
+            "bias": "maintenir arbitrage crypto si divergence JU/SYL confirmee",
+            "eval": "Arbitrage BTCUSD ajoute valeur vs JU/SYL, PnL stable mais exposition crypto limitee par regime",
+            "kind": "learning",
+            "run_id": "20260819-1228",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T11:11:40.353918+00:00",
+            "dd": 0.0096,
+            "pnl": 71650.56,
+            "bias": null,
+            "eval": "Rebalancement SOLUSD arbitrage coherent mais exposition crypto en regime volatile peut generer drawdowns",
+            "kind": "mistake",
+            "run_id": "20260819-1311",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T11:11:40.353918+00:00",
+            "dd": 0.0096,
+            "pnl": 71650.56,
+            "bias": "reduire exposition crypto en regime volatile",
+            "eval": "Rebalancement SOLUSD arbitrage coherent mais exposition crypto en regime volatile peut generer drawdowns",
+            "kind": "learning",
+            "run_id": "20260819-1311",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T11:56:32.73678+00:00",
+            "dd": 0.0096,
+            "pnl": 75220.06,
+            "bias": "aligner les arbitrages sur les tendances JU/SYL ou justifier la divergence",
+            "eval": "Arbitrage BTCUSD avec forte conviction 78, PnL stable mais desaccord avec JU/SYL, absence de correlation verifiee",
+            "kind": "learning",
+            "run_id": "20260819-1356",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T12:00:20.14108+00:00",
+            "dd": 0.0096,
+            "pnl": 75679.85,
+            "bias": "maintenir arbitrage crypto mais ajouter stops, verifier liquidite SOLUSD",
+            "eval": "Arbitrage SOLUSD ajoute de la valeur vs JU/SYL, PnL crypto positif mais risque de sur-exposition, desaccord justifie mai",
+            "kind": "learning",
+            "run_id": "20260819-1400",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T13:48:10.394201+00:00",
+            "dd": 0.0096,
+            "pnl": 57051.77,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD coherent mais desaccord avec JU/SYL penalise performance, PnL stable mais faible valeur ajoutee vs moyenne",
+            "kind": "mistake",
+            "run_id": "20260819-1548",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T13:48:10.394201+00:00",
+            "dd": 0.0096,
+            "pnl": 57051.77,
+            "bias": "aligner arbitrage sur consensus partiel JU/SYL",
+            "eval": "Arbitrage BTCUSD coherent mais desaccord avec JU/SYL penalise performance, PnL stable mais faible valeur ajoutee vs moye",
+            "kind": "learning",
+            "run_id": "20260819-1548",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T16:41:35.937978+00:00",
+            "dd": 0.0096,
+            "pnl": 3437.5,
+            "bias": "arbitrage cibl\u00e9 sur divergences JU/SYL, reduire frequence rebalance si faible va",
+            "eval": "Arbitrage BTCUSD coherent avec neutralite, PnL stable mais faible valeur ajoutee vs JU/SYL, rebalance trop frequente",
+            "kind": "learning",
+            "run_id": "20260819-1841",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T16:41:35.937978+00:00",
+            "dd": 0.0096,
+            "pnl": 3437.5,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD coherent avec neutralite, PnL stable mais faible valeur ajoutee vs JU/SYL, rebalance trop frequente",
+            "kind": "mistake",
+            "run_id": "20260819-1841",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T19:16:55.23168+00:00",
+            "dd": 0.0096,
+            "pnl": 22509.43,
+            "bias": "maintenir arbitrage crypto mais aligner partiellement avec SYL sur regimes extre",
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, PnL stable mais desaccord systematique penalise synchro",
+            "kind": "learning",
+            "run_id": "20260819-2116",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T20:03:32.514187+00:00",
+            "dd": 0.0096,
+            "pnl": 14876.58,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD ajoute valeur vs JU/SYL, PnL stable, desaccord utile mais risque crypto en regime volatile",
+            "kind": "mistake",
+            "run_id": "20260819-2203",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T20:03:32.514187+00:00",
+            "dd": 0.0096,
+            "pnl": 14876.58,
+            "bias": "maintenir arbitrage mais surveiller liquidite crypto, limiter taille positions",
+            "eval": "Arbitrage BTCUSD ajoute valeur vs JU/SYL, PnL stable, desaccord utile mais risque crypto en regime volatile",
+            "kind": "learning",
+            "run_id": "20260819-2203",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T20:19:30.578921+00:00",
+            "dd": 0.0096,
+            "pnl": 10916.35,
+            "bias": "limiter exposition crypto a 20 pourcent du capital arbitrage",
+            "eval": "rebalance ETHUSD ajoute valeur arbitrage vs JU SYL mais exposition crypto trop aggressive",
+            "kind": "learning",
+            "run_id": "20260819-2219",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T20:19:30.578921+00:00",
+            "dd": 0.0096,
+            "pnl": 10916.35,
+            "bias": null,
+            "eval": "rebalance ETHUSD ajoute valeur arbitrage vs JU SYL mais exposition crypto trop aggressive",
+            "kind": "mistake",
+            "run_id": "20260819-2219",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T21:23:15.27043+00:00",
+            "dd": 0.0096,
+            "pnl": -8456.34,
+            "bias": "alignement partiel avec JU/SYL sur regimes volatiles, reduire arbitrage isol\u00e9",
+            "eval": "Rebalance XLU arbitrage coherent mais desaccord total avec JU/SYL, risque de divergence non geree",
+            "kind": "learning",
+            "run_id": "20260819-2323",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-19T21:23:15.27043+00:00",
+            "dd": 0.0096,
+            "pnl": -8456.34,
+            "bias": null,
+            "eval": "Rebalance XLU arbitrage coherent mais desaccord total avec JU/SYL, risque de divergence non geree",
+            "kind": "mistake",
+            "run_id": "20260819-2323",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T07:05:24.452442+00:00",
+            "dd": 0.0096,
+            "pnl": -11120.7,
+            "bias": null,
+            "eval": "Rebalancement BTCUSD arbitraire sans accord, PnL stable mais manque de justification strategique, absence de correlation avec JU/SYL",
+            "kind": "mistake",
+            "run_id": "20260820-0905",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T07:05:24.452442+00:00",
+            "dd": 0.0096,
+            "pnl": -11120.7,
+            "bias": "aligner arbitrage sur consensus JU/SYL ou justifier divergence",
+            "eval": "Rebalancement BTCUSD arbitraire sans accord, PnL stable mais manque de justification strategique, absence de correlation",
+            "kind": "learning",
+            "run_id": "20260820-0905",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T13:48:09.827931+00:00",
+            "dd": 0.0626,
+            "pnl": -27234.13,
+            "bias": "maintenir arbitrage crypto mais verifier liquidite en cas de flash crash",
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, PnL stable mais desaccord persistant avec les deux autres",
+            "kind": "learning",
+            "run_id": "20260820-1548",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T13:48:09.827931+00:00",
+            "dd": 0.0626,
+            "pnl": -27234.13,
+            "bias": null,
+            "eval": "Arbitrage BTCUSD ajoute de la valeur vs JU/SYL, PnL stable mais desaccord persistant avec les deux autres",
+            "kind": "mistake",
+            "run_id": "20260820-1548",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T16:32:55.995061+00:00",
+            "dd": 0.0626,
+            "pnl": -29983.2,
+            "bias": null,
+            "eval": "Rebalancement BTCUSD pertinent mais accord partiel revele hesitation, manque de conviction sur autres actifs",
+            "kind": "mistake",
+            "run_id": "20260820-1832",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T16:32:55.995061+00:00",
+            "dd": 0.0626,
+            "pnl": -29983.2,
+            "bias": "clarifier accord avec JU/SYL avant rebalancement, prioriser actifs avec consensu",
+            "eval": "Rebalancement BTCUSD pertinent mais accord partiel revele hesitation, manque de conviction sur autres actifs",
+            "kind": "learning",
+            "run_id": "20260820-1832",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T19:17:04.981128+00:00",
+            "dd": 0.0626,
+            "pnl": -30614.99,
+            "bias": "arbitrer uniquement si valeur ajoutee claire vs JU/SYL, reduire conf si neutre",
+            "eval": "Rebalancement XLU neutre mais arbitrage faible, PnL stable mais sans valeur ajoutee vs JU/SYL, conf 70 excessive",
+            "kind": "learning",
+            "run_id": "20260820-2117",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-20T19:17:04.981128+00:00",
+            "dd": 0.0626,
+            "pnl": -30614.99,
+            "bias": null,
+            "eval": "Rebalancement XLU neutre mais arbitrage faible, PnL stable mais sans valeur ajoutee vs JU/SYL, conf 70 excessive",
+            "kind": "mistake",
+            "run_id": "20260820-2117",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-21T07:05:09.837277+00:00",
+            "dd": 0.0626,
+            "pnl": -36165.38,
+            "bias": null,
+            "eval": "Rebalancement LINKUSD neutre, PnL stable mais sans valeur ajoutee vs JU/SYL. Confiance moyenne sans impact",
+            "kind": "mistake",
+            "run_id": "20260821-0905",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-21T07:05:09.837277+00:00",
+            "dd": 0.0626,
+            "pnl": -36165.38,
+            "bias": "arbitrage doit surperformer moyenne JU/SYL pour justifier poids",
+            "eval": "Rebalancement LINKUSD neutre, PnL stable mais sans valeur ajoutee vs JU/SYL. Confiance moyenne sans impact",
+            "kind": "learning",
+            "run_id": "20260821-0905",
+            "archimage": "GIL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 47900.58,
+            "bias": null,
+            "eval": "Rotation vers JPM coherente mais conviction faible 6, absence de stop sur dernier achat, capital preserve mais peu de gains",
+            "kind": "mistake",
+            "run_id": "20260813-1733",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 54189.39,
+            "bias": null,
+            "eval": "Rotation defensive sur JPM avec faible conviction 6, PnL negatif sur 3 derniers runs, absence de stop sur position precedente",
+            "kind": "mistake",
+            "run_id": "20260814-1712",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 53961.44,
+            "bias": null,
+            "eval": "Defensif mais trop lent sur stops, rotation JPM tardive apres drawdown de 4.2%. Conviction faible 6/10, absence de couverture",
+            "kind": "mistake",
+            "run_id": "20260814-1816",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 52568.22,
+            "bias": null,
+            "eval": "PnL negatif sur JPM en rotation, conviction moyenne mais execution sans stop, doublons sur valeurs bancaires",
+            "kind": "mistake",
+            "run_id": "20260814-1916",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 53937.24,
+            "bias": null,
+            "eval": "Rotation defensive sur JPM sans justification claire, conviction faible 6, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260814-2116",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0014,
+            "pnl": 52856.25,
+            "bias": null,
+            "eval": "Pertes sur shorts tech (NVDA TSLA) mal timing, achats JPM sans stop, doublons sur MSFT. Conviction 7 trop elevee pour execution mediocre",
+            "kind": "mistake",
+            "run_id": "20260815-1237",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 51342.87,
+            "bias": "eviter rotations defensives sans confirmation regime, imposer stops stricts sur ",
+            "eval": "Rotation defensive prematuree sur NVDA sans stop clair, PnL negatif sur 3 derniers runs, biais sur tech sans confirmatio",
+            "kind": "learning",
+            "run_id": "20260813-1204",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0048,
+            "pnl": 49026.79,
+            "bias": "eviter achats sans confirmation regime, imposer stops obligatoires",
+            "eval": "Achat MSFT en phase offensive sans verification regime volatile, absence stop visible, PnL negatif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260812-2043",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0048,
+            "pnl": 48640.98,
+            "bias": "eviter achats sans stop en regime volatile, reduire exposition actions tech",
+            "eval": "Achat GOOGL en phase offensive sans stop clair, conviction moyenne mais risque eleve en regime volatile, PnL negatif sur",
+            "kind": "learning",
+            "run_id": "20260812-1823",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0048,
+            "pnl": 47110.11,
+            "bias": "eviter achats sans stop sur grandes caps, limiter exposition tech a 30%",
+            "eval": "Achat GOOGL sans stop visible, conviction moyenne 7, risque de sur-exposition tech",
+            "kind": "learning",
+            "run_id": "20260812-1606",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0048,
+            "pnl": 47909.85,
+            "bias": "eviter achats tech sans stop en regime volatile",
+            "eval": "Achat GOOGL en phase offensive sans stop visible, conf faible 7, risque de sur-optimisme sur tech en volatilite",
+            "kind": "learning",
+            "run_id": "20260812-1343",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0136,
+            "pnl": 46192.14,
+            "bias": "eviter rotations sans confirmation de tendance, imposer stop loss systematique",
+            "eval": "Rotation selective sur AMD sans justification claire du timing, conviction moyenne mais execution aggressive, absence de",
+            "kind": "learning",
+            "run_id": "20260810-1428",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0014,
+            "pnl": 52856.25,
+            "bias": "eviter shorts tech sans confirmation regime bear, imposer stops obligatoires sur",
+            "eval": "Pertes sur shorts tech (NVDA TSLA) mal timing, achats JPM sans stop, doublons sur MSFT. Conviction 7 trop elevee pour ex",
+            "kind": "learning",
+            "run_id": "20260815-1237",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 53937.24,
+            "bias": "eviter les rotations defensives sans confirmation de tendance",
+            "eval": "Rotation defensive sur JPM sans justification claire, conviction faible 6, PnL negatif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260814-2116",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 54181.26,
+            "bias": "eviter rotations defensives sans confirmation macro, renforcer stops sur positio",
+            "eval": "Rotation defensive sur JPM sans justification macro claire, conviction faible 6/10, risque de sur-diversification",
+            "kind": "learning",
+            "run_id": "20260814-2016",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 52568.22,
+            "bias": "eviter valeurs bancaires en rotation, imposer stop loss stricts",
+            "eval": "PnL negatif sur JPM en rotation, conviction moyenne mais execution sans stop, doublons sur valeurs bancaires",
+            "kind": "learning",
+            "run_id": "20260814-1916",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 53961.44,
+            "bias": "eviter rotations tardives sans stop, renforcer couverture sur positions defensiv",
+            "eval": "Defensif mais trop lent sur stops, rotation JPM tardive apres drawdown de 4.2%. Conviction faible 6/10, absence de couve",
+            "kind": "learning",
+            "run_id": "20260814-1816",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 54396.8,
+            "bias": "eviter positions bancaires sans stop loss strict",
+            "eval": "Rotation defensive sur JPM coherente mais conviction faible 6, PnL negatif sur 3 derniers runs par absence de stop sur p",
+            "kind": "learning",
+            "run_id": "20260814-1716",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 54189.39,
+            "bias": "eviter les rotations defensives sans confirmation de tendance",
+            "eval": "Rotation defensive sur JPM avec faible conviction 6, PnL negatif sur 3 derniers runs, absence de stop sur position prece",
+            "kind": "learning",
+            "run_id": "20260814-1712",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 54554.19,
+            "bias": "eviter positions longues sans stop loss strict, reduire exposition bancaires en ",
+            "eval": "Rotation defensive sur JPM coherente mais conviction faible 6, PnL negatif sur 3 derniers runs par absence de stop sur p",
+            "kind": "learning",
+            "run_id": "20260814-1703",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 54095.95,
+            "bias": "eviter les doublons et appliquer stop loss systematique sur nouvelles positions",
+            "eval": "Rotation defensive sur JPM coherente mais conviction faible 6, absence de stop loss sur dernier achat, doublon avec posi",
+            "kind": "learning",
+            "run_id": "20260814-1239",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 52431.45,
+            "bias": "eviter doublons positions, imposer stop loss 3% sur tout nouveau trade",
+            "eval": "Rotation JPM coherente mais conviction faible 6, absence de stop sur dernier achat, doublon avec position precedente non",
+            "kind": "learning",
+            "run_id": "20260813-2111",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 51129.55,
+            "bias": "eviter les grandes banques en rotation, verifier liquidite avant deployer",
+            "eval": "PnL negatif sur JPM malgre phase rotation, conviction 7 trop elevee, absence de stop loss sur position perdante",
+            "kind": "learning",
+            "run_id": "20260813-1921",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 49814.33,
+            "bias": "eviter rotations sans conviction elevee, renforcer stops sur positions defensive",
+            "eval": "Rotation qualite coherente mais conviction faible 6, manque de conviction sur JPM, PnL stable mais sans eclat",
+            "kind": "learning",
+            "run_id": "20260813-1904",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 47900.58,
+            "bias": "eviter les achats sans stop loss, renforcer conviction sur qualite",
+            "eval": "Rotation vers JPM coherente mais conviction faible 6, absence de stop sur dernier achat, capital preserve mais peu de ga",
+            "kind": "learning",
+            "run_id": "20260813-1733",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 49992.82,
+            "bias": "eviter ventes defensives sans stop loss, verifier liquidite avant execution",
+            "eval": "vente NVDA defensive correcte mais stop absent, PnL negatif sur 3 dernieres ventes meme regime",
+            "kind": "learning",
+            "run_id": "20260813-1541",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 51795.76,
+            "bias": "eviter rotations sans stop loss, renforcer couverture sur positions defensives",
+            "eval": "Defensive coherente mais conviction faible 6, rotation UNH sans stop clair, PnL negatif sur 3 derniers runs par absence ",
+            "kind": "learning",
+            "run_id": "20260813-1351",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 51723.02,
+            "bias": "eviter rotations defensives sans confirmation regime, imposer stops stricts 5",
+            "eval": "Rotation defensive prematuree sur NVDA sans stop clair, PnL negatif sur 3 derniers runs, biais confirmation",
+            "kind": "learning",
+            "run_id": "20260813-1206",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 20601.53,
+            "bias": null,
+            "eval": "Reduction NVDA coherente mais trop tardive apres chute 12%, stop absent sur position precedente",
+            "kind": "mistake",
+            "run_id": "20260727-1813",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 26204.75,
+            "bias": null,
+            "eval": "Selection NVDA en rotation tardive coherente mais risque sur-ponderation tech sans stop clair 2 pertes recentes",
+            "kind": "mistake",
+            "run_id": "20260728-1629",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 25767.73,
+            "bias": null,
+            "eval": "Perte de 1.8 sur COST achat trop tot sans stop, surconfiance en leaders defensifs en phase volatile",
+            "kind": "mistake",
+            "run_id": "20260728-1634",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 22490.35,
+            "bias": null,
+            "eval": "Reduction coherente mais conviction moyenne 0.72, absence de stop sur positions longues anterieures detectee",
+            "kind": "mistake",
+            "run_id": "20260729-1305",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 22276.07,
+            "bias": null,
+            "eval": "paralysie defensive depuis 3 runs, absence totale de prise de position malgre opportunites, capital inactif detruit valeur temps",
+            "kind": "mistake",
+            "run_id": "20260729-1306",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 16957.29,
+            "bias": null,
+            "eval": "faible confiance regime inconnu 3x consecutif sans action concrete destruction capital par inaction",
+            "kind": "mistake",
+            "run_id": "20260729-1528",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 18573.45,
+            "bias": null,
+            "eval": "Aucune decision prise, capital inutilise, phase inconnue penalise reactivite, discipline excessive en regime volatile",
+            "kind": "mistake",
+            "run_id": "20260730-1257",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 28670.75,
+            "bias": null,
+            "eval": "Aucune decision prise, capital sous-utilise, phase void injustifiee avec donnees disponibles",
+            "kind": "mistake",
+            "run_id": "20260803-1820",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 28195.72,
+            "bias": null,
+            "eval": "HOLD_ALL coherent mais manque d opportunites, confiance faible 4, absence de trades actifs detruit capital relatif",
+            "kind": "mistake",
+            "run_id": "20260803-1853",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 29759.78,
+            "bias": null,
+            "eval": "Vente AAPL coherente mais conviction faible 6, absence de stop sur positions anterieures, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260803-1957",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 42252.84,
+            "bias": null,
+            "eval": "Defensive excessive sur NVDA sans justification de risque imminent, conviction faible 6, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260804-1831",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 54768.04,
+            "bias": null,
+            "eval": "Achat META en offensive sans stop visible, conviction 7 mais risque eleve en regime volatile, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260806-1327",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 54544.91,
+            "bias": null,
+            "eval": "Achat META sans stop visible, conviction moyenne 7/10, risque de sur-exposition tech sans couverture",
+            "kind": "mistake",
+            "run_id": "20260806-1541",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0178,
+            "pnl": 52915.5,
+            "bias": null,
+            "eval": "Rotation tech agressive sans confirmation regime, short AMD risqueux en volatil, absence stop visible sur dernier ordre",
+            "kind": "mistake",
+            "run_id": "20260807-1402",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0136,
+            "pnl": 46984.65,
+            "bias": null,
+            "eval": "Rotation selective sur AMD mal justifiee dans phase defensive, absence de stop loss clair, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260810-0344",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0136,
+            "pnl": 46629.98,
+            "bias": null,
+            "eval": "Rotation tech defensive sans justification claire, conviction moyenne 6, AMD sur-ponderation sans stop visible, PnL negatif sur 3 derniers r",
+            "kind": "mistake",
+            "run_id": "20260810-1419",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0136,
+            "pnl": 46192.14,
+            "bias": null,
+            "eval": "Rotation selective sur AMD sans justification claire du timing, conviction moyenne mais execution aggressive, absence de stop visible sur de",
+            "kind": "mistake",
+            "run_id": "20260810-1428",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 52503.33,
+            "bias": null,
+            "eval": "Execution AMD/META sans justification claire du timing, absence de stops visibles, PnL negatif sur rotation recente",
+            "kind": "mistake",
+            "run_id": "20260811-1028",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 52763.89,
+            "bias": null,
+            "eval": "3 achats AMD consecutifs sans stop, destruction capital -12% sur 5j, biais surconfiance tech, compte gele ignore",
+            "kind": "mistake",
+            "run_id": "20260811-1440",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 51182.79,
+            "bias": null,
+            "eval": "achat GOOGL sans stop visible sur compte non gele mais conviction faible 7 sur 10 dans regime VOLATILE destruction capital probable",
+            "kind": "mistake",
+            "run_id": "20260811-1920",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 49387.74,
+            "bias": null,
+            "eval": "achat GOOGL sans stop visible, conviction 7 mais risque eleve en volatile, META AMD maintenus sans justification claire",
+            "kind": "mistake",
+            "run_id": "20260811-2140",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0048,
+            "pnl": 47909.85,
+            "bias": null,
+            "eval": "Achat GOOGL en phase offensive sans stop visible, conf faible 7, risque de sur-optimisme sur tech en volatilite",
+            "kind": "mistake",
+            "run_id": "20260812-1343",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0048,
+            "pnl": 47110.11,
+            "bias": null,
+            "eval": "Achat GOOGL sans stop visible, conviction moyenne 7, risque de sur-exposition tech",
+            "kind": "mistake",
+            "run_id": "20260812-1606",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.005,
+            "pnl": 49992.82,
+            "bias": null,
+            "eval": "vente NVDA defensive correcte mais stop absent, PnL negatif sur 3 dernieres ventes meme regime",
+            "kind": "mistake",
+            "run_id": "20260813-1541",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 49387.74,
+            "bias": "eviter achats sans stop en regime volatile, reduire taille positions grandes cap",
+            "eval": "achat GOOGL sans stop visible, conviction 7 mais risque eleve en volatile, META AMD maintenus sans justification claire",
+            "kind": "learning",
+            "run_id": "20260811-2140",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 51182.79,
+            "bias": "eviter achats sans stop en regime VOLATILE",
+            "eval": "achat GOOGL sans stop visible sur compte non gele mais conviction faible 7 sur 10 dans regime VOLATILE destruction capit",
+            "kind": "learning",
+            "run_id": "20260811-1920",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 54517.73,
+            "bias": "eviter rotations sans confirmation regime",
+            "eval": "Rotation aggressive sur GOOGL sans confirmation regime. Risque de sur-exposition tech. Stop absent sur dernier trade",
+            "kind": "learning",
+            "run_id": "20260811-1701",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 52763.89,
+            "bias": "eviter achats tech sans stop loss immediat, verifier statut compte avant executi",
+            "eval": "3 achats AMD consecutifs sans stop, destruction capital -12% sur 5j, biais surconfiance tech, compte gele ignore",
+            "kind": "learning",
+            "run_id": "20260811-1440",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 53055.21,
+            "bias": "eviter achats tech sans stop, reduire exposition offensive en volatile",
+            "eval": "Achat AMD sans stop visible, conviction faible 7, risque de surconfiance en phase offensive, PnL negatif sur 3 derniers ",
+            "kind": "learning",
+            "run_id": "20260811-1220",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0012,
+            "pnl": 52503.33,
+            "bias": "eviter rotations sans confirmation de volume, imposer stops obligatoires",
+            "eval": "Execution AMD/META sans justification claire du timing, absence de stops visibles, PnL negatif sur rotation recente",
+            "kind": "learning",
+            "run_id": "20260811-1028",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0063,
+            "pnl": 53684.22,
+            "bias": "eviter achats sans stop en volatil, verifier liquidite avant execution",
+            "eval": "Achat AMD sans analyse volume ni stop, risque de drawdown eleve en phase volatile, PnL negatif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260811-0348",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0063,
+            "pnl": 50724.07,
+            "bias": "eviter tech asymetrique sans stop perte stop loss obligatoire 5% max",
+            "eval": "3 echecs consecutifs sur tech asymetrique AMD sans stop perte 4.2% surcapitalisation sur momentum sans gestion risque",
+            "kind": "learning",
+            "run_id": "20260810-2108",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T10:13:22.290148+00:00",
+            "dd": 0.0014,
+            "pnl": 50295.54,
+            "bias": null,
+            "eval": "PnL negatif sur COST achat sans stop en phase defensive, destruction capital par absence de protection",
+            "kind": "mistake",
+            "run_id": "20260817-1213",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T10:13:22.290148+00:00",
+            "dd": 0.0014,
+            "pnl": 50295.54,
+            "bias": "eviter achats sans stop en phase defensive, reduire exposition qualite si compte",
+            "eval": "PnL negatif sur COST achat sans stop en phase defensive, destruction capital par absence de protection",
+            "kind": "learning",
+            "run_id": "20260817-1213",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T11:12:17.579589+00:00",
+            "dd": 0.0014,
+            "pnl": 48887.41,
+            "bias": null,
+            "eval": "Rotation tech defensive sans stops clairs, COST -4.2% sur 3j, 2 doublons sur tech, compte gele ignore",
+            "kind": "mistake",
+            "run_id": "20260817-1312",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T11:12:17.579589+00:00",
+            "dd": 0.0014,
+            "pnl": 48887.41,
+            "bias": "eviter rotations tech sans stops, verifier statut compte avant ordre",
+            "eval": "Rotation tech defensive sans stops clairs, COST -4.2% sur 3j, 2 doublons sur tech, compte gele ignore",
+            "kind": "learning",
+            "run_id": "20260817-1312",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T12:12:09.996742+00:00",
+            "dd": 0.0014,
+            "pnl": 48551.82,
+            "bias": null,
+            "eval": "Rotation qualite tech coherente mais conviction faible 6, PnL negatif sur COST (stop absent), doublons sur tech",
+            "kind": "mistake",
+            "run_id": "20260817-1412",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T12:12:09.996742+00:00",
+            "dd": 0.0014,
+            "pnl": 48551.82,
+            "bias": "eviter doublons tech, imposer stops stricts sur rotations, reduire exposition de",
+            "eval": "Rotation qualite tech coherente mais conviction faible 6, PnL negatif sur COST (stop absent), doublons sur tech",
+            "kind": "learning",
+            "run_id": "20260817-1412",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T13:12:50.323527+00:00",
+            "dd": 0.0014,
+            "pnl": 47016.82,
+            "bias": null,
+            "eval": "Rotation defensive correcte mais manque d opportunites concretes. COST achat sans stop clair, exposition inutile en phase defensive",
+            "kind": "mistake",
+            "run_id": "20260817-1512",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T13:12:50.323527+00:00",
+            "dd": 0.0014,
+            "pnl": 47016.82,
+            "bias": "eviter achats sans stop en phase defensive, reduire exposition quality si pas de",
+            "eval": "Rotation defensive correcte mais manque d opportunites concretes. COST achat sans stop clair, exposition inutile en phas",
+            "kind": "learning",
+            "run_id": "20260817-1512",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T14:12:08.204366+00:00",
+            "dd": 0.0014,
+            "pnl": 49063.19,
+            "bias": "eviter reductions sans stop loss, prioriser actifs liquides en volatil",
+            "eval": "Defensif coherent mais manque d opportunites, GOOGL reduction sans stop clair, PnL stable mais faible",
+            "kind": "learning",
+            "run_id": "20260817-1612",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T15:11:58.358517+00:00",
+            "dd": 0.0014,
+            "pnl": 49373.13,
+            "bias": "eviter rotations defensives sans confirmation macro, prioriser liquidite sur tec",
+            "eval": "Rotation defensive ratee sur GOOGL sans justification macro, conviction faible 6, PnL negatif sur 3 derniers runs. Arret",
+            "kind": "learning",
+            "run_id": "20260817-1711",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T16:11:58.523028+00:00",
+            "dd": 0.0014,
+            "pnl": 49205.09,
+            "bias": null,
+            "eval": "Rotation defensive sur GOOGL sans justification de momentum, PnL negatif sur 3 derniers runs, absence de stop sur position perdante",
+            "kind": "mistake",
+            "run_id": "20260817-1811",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T16:11:58.523028+00:00",
+            "dd": 0.0014,
+            "pnl": 49205.09,
+            "bias": "eviter rotations defensives sans confirmation de tendance",
+            "eval": "Rotation defensive sur GOOGL sans justification de momentum, PnL negatif sur 3 derniers runs, absence de stop sur positi",
+            "kind": "learning",
+            "run_id": "20260817-1811",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T17:11:54.662447+00:00",
+            "dd": 0.0014,
+            "pnl": 48899.65,
+            "bias": "eviter les rotations defensives sans stop loss",
+            "eval": "GOOGL en rotation defensive avec faible conviction 6, absence de stop loss visible, PnL negatif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260817-1911",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T17:11:54.662447+00:00",
+            "dd": 0.0014,
+            "pnl": 48899.65,
+            "bias": null,
+            "eval": "GOOGL en rotation defensive avec faible conviction 6, absence de stop loss visible, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260817-1911",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T17:34:36.278319+00:00",
+            "dd": 0.0014,
+            "pnl": 48102.25,
+            "bias": "eviter shorts sans stop en regime volatile",
+            "eval": "short GOOGL en phase defensive sans stop visible destruction capital si rebond court terme erreur strategique",
+            "kind": "learning",
+            "run_id": "20260817-1934",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T17:34:36.278319+00:00",
+            "dd": 0.0014,
+            "pnl": 48102.25,
+            "bias": null,
+            "eval": "short GOOGL en phase defensive sans stop visible destruction capital si rebond court terme erreur strategique",
+            "kind": "mistake",
+            "run_id": "20260817-1934",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T18:00:00.390532+00:00",
+            "dd": 0.0014,
+            "pnl": 48748.13,
+            "bias": "eviter shorts sans stop loss, renforcer conviction sur rotations defensives",
+            "eval": "Short GOOGL coherent mais conviction faible 6, absence de stop loss detectee sur dernier ordre, rotation defensive mal e",
+            "kind": "learning",
+            "run_id": "20260817-1959",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T18:12:13.801505+00:00",
+            "dd": 0.0014,
+            "pnl": 48736.62,
+            "bias": "eviter shorts defensifs sans confirmation de retournement",
+            "eval": "Rotation defensive prematuree sur GOOGL sans justification de survente ou signal technique clair, stop loss absent, PnL ",
+            "kind": "learning",
+            "run_id": "20260817-2012",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T18:12:13.801505+00:00",
+            "dd": 0.0014,
+            "pnl": 48736.62,
+            "bias": null,
+            "eval": "Rotation defensive prematuree sur GOOGL sans justification de survente ou signal technique clair, stop loss absent, PnL negatif probable",
+            "kind": "mistake",
+            "run_id": "20260817-2012",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T19:28:41.625504+00:00",
+            "dd": 0.0014,
+            "pnl": 47991.61,
+            "bias": "eviter tech US sans confirmation volume, imposer stops 3% minimum, verifier stat",
+            "eval": "3 pertes consecutives sur tech US, achats sans stop, rotation defensive trop tardive apres drawdown de 12%. Compte gele ",
+            "kind": "learning",
+            "run_id": "20260817-2128",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T19:28:41.625504+00:00",
+            "dd": 0.0014,
+            "pnl": 47991.61,
+            "bias": null,
+            "eval": "3 pertes consecutives sur tech US, achats sans stop, rotation defensive trop tardive apres drawdown de 12%. Compte gele sur GOOGL",
+            "kind": "mistake",
+            "run_id": "20260817-2128",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T20:00:43.216511+00:00",
+            "dd": 0.0014,
+            "pnl": 47708.96,
+            "bias": null,
+            "eval": "Rotation defensive trop tardive, 3 pertes consecutives sur V, absence de stop sur position en drawdown, capital erode",
+            "kind": "mistake",
+            "run_id": "20260817-2200",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T20:00:43.216511+00:00",
+            "dd": 0.0014,
+            "pnl": 47708.96,
+            "bias": "eviter V et actifs defensifs en rotation tardive, renforcer stops obligatoires",
+            "eval": "Rotation defensive trop tardive, 3 pertes consecutives sur V, absence de stop sur position en drawdown, capital erode",
+            "kind": "learning",
+            "run_id": "20260817-2200",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T20:55:58.559353+00:00",
+            "dd": 0.0014,
+            "pnl": 47142.18,
+            "bias": null,
+            "eval": "Rotation GOOGL agressive sans stop visible destruction capital -2.3% sur 3 runs meme categorie tech",
+            "kind": "mistake",
+            "run_id": "20260817-2255",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-17T20:55:58.559353+00:00",
+            "dd": 0.0014,
+            "pnl": 47142.18,
+            "bias": "eviter rotations tech sans stop perte cumulee 3x meme categorie",
+            "eval": "Rotation GOOGL agressive sans stop visible destruction capital -2.3% sur 3 runs meme categorie tech",
+            "kind": "learning",
+            "run_id": "20260817-2255",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-18T07:52:18.680723+00:00",
+            "dd": 0.0064,
+            "pnl": 222007.3,
+            "bias": "eviter V et valeurs tech sans confirmation volume, imposer stops 5 pourcent",
+            "eval": "3 pertes consecutives sur V (achats sans stop, surconfiance en rebond), compte gele ignore, doublons sur tech",
+            "kind": "learning",
+            "run_id": "20260818-0952",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-18T07:59:12.240567+00:00",
+            "dd": 0.0064,
+            "pnl": 221985.82,
+            "bias": null,
+            "eval": "Rotation defensive sans conviction claire, PnL negatif sur 3 derniers runs, absence de stops sur V, capital detruit",
+            "kind": "mistake",
+            "run_id": "20260818-0959",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-18T07:59:12.240567+00:00",
+            "dd": 0.0064,
+            "pnl": 221985.82,
+            "bias": "eviter rotations defensives sans conviction, renforcer stops obligatoires",
+            "eval": "Rotation defensive sans conviction claire, PnL negatif sur 3 derniers runs, absence de stops sur V, capital detruit",
+            "kind": "learning",
+            "run_id": "20260818-0959",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-18T14:30:19.250291+00:00",
+            "dd": 0.0064,
+            "pnl": 225984.76,
+            "bias": "eviter rotations sans stop, verifier liquidite avant execution",
+            "eval": "Rotation aggressive V sans stop loss clair, PnL negatif sur 3 derniers runs. Surconfiance sur volatilite, doublons ordre",
+            "kind": "learning",
+            "run_id": "20260818-1630",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-18T19:17:13.673059+00:00",
+            "dd": 0.0064,
+            "pnl": 230199.73,
+            "bias": "eviter doublons tech sans justification sectorielle, imposer stops 5% sur rotati",
+            "eval": "Rotation tech selective coherente mais conviction moyenne 7, manque de stops sur 2 positions, doublon NVDA/AMD non gere",
+            "kind": "learning",
+            "run_id": "20260818-2117",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T10:28:34.94964+00:00",
+            "dd": 0,
+            "pnl": 55360.26,
+            "bias": null,
+            "eval": "Rotation tech qualite coherente mais conviction faible 7, PnL negatif sur doublons NVDA et absence stop sur TSLA",
+            "kind": "mistake",
+            "run_id": "20260819-1228",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T10:28:34.94964+00:00",
+            "dd": 0,
+            "pnl": 55360.26,
+            "bias": "eviter doublons tech et appliquer stops stricts sur positions fortes",
+            "eval": "Rotation tech qualite coherente mais conviction faible 7, PnL negatif sur doublons NVDA et absence stop sur TSLA",
+            "kind": "learning",
+            "run_id": "20260819-1228",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T11:11:40.353918+00:00",
+            "dd": 0,
+            "pnl": 56112.15,
+            "bias": "eviter ventes sans stop en phase REDUCE",
+            "eval": "Vente V sans stop visible destruction capital sur rebond technique confiance trop faible pour phase REDUCE",
+            "kind": "learning",
+            "run_id": "20260819-1311",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T11:56:32.73678+00:00",
+            "dd": 0,
+            "pnl": 56739.24,
+            "bias": "eviter les shorts sans stop loss, renforcer la couverture",
+            "eval": "Rebalancement defensif sur GOOGL avec faible conviction 7, manque de stop loss sur les shorts, PnL negatif sur 3 dernier",
+            "kind": "learning",
+            "run_id": "20260819-1356",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T12:00:20.14108+00:00",
+            "dd": 0,
+            "pnl": 56872.2,
+            "bias": "eviter ventes defensives sans confirmation regime, renforcer stops sur tech",
+            "eval": "Vente GOOGL defensive mais sans justification claire sur regime volatile, PnL recent negatif sur tech, stop absent sur d",
+            "kind": "learning",
+            "run_id": "20260819-1400",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T13:48:10.394201+00:00",
+            "dd": 0,
+            "pnl": 56434.69,
+            "bias": "eviter rotations defensives sans confirmation de tendance",
+            "eval": "Rotation defensive sur GOOGL sans justification claire du timing, PnL negatif sur 3 derniers runs, absence de stop sur 2",
+            "kind": "learning",
+            "run_id": "20260819-1548",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T13:48:10.394201+00:00",
+            "dd": 0,
+            "pnl": 56434.69,
+            "bias": null,
+            "eval": "Rotation defensive sur GOOGL sans justification claire du timing, PnL negatif sur 3 derniers runs, absence de stop sur 2 positions",
+            "kind": "mistake",
+            "run_id": "20260819-1548",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T16:41:35.937978+00:00",
+            "dd": 0,
+            "pnl": 50733.08,
+            "bias": null,
+            "eval": "Defensive excessive, vend GOOGL sans justification de risque imminent, manque opportunites en volatile, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260819-1841",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T16:41:35.937978+00:00",
+            "dd": 0,
+            "pnl": 50733.08,
+            "bias": "eviter ventes defensives sans signal clair, renforcer stops sur positions courte",
+            "eval": "Defensive excessive, vend GOOGL sans justification de risque imminent, manque opportunites en volatile, PnL negatif sur ",
+            "kind": "learning",
+            "run_id": "20260819-1841",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T19:16:55.23168+00:00",
+            "dd": 0,
+            "pnl": 52216.99,
+            "bias": "eviter ventes sans stop loss, renforcer conviction sur signaux defensifs",
+            "eval": "Defensive coherente mais conviction faible 6, vente GOOGL sans stop clair, PnL negatif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260819-2116",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T20:03:32.514187+00:00",
+            "dd": 0,
+            "pnl": 50912.56,
+            "bias": null,
+            "eval": "Defensif coherent mais conviction faible 6, reduit GOOGL sans stop clair, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260819-2203",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T20:03:32.514187+00:00",
+            "dd": 0,
+            "pnl": 50912.56,
+            "bias": "eviter reduction sans stop loss, renforcer conviction sur signaux defensifs",
+            "eval": "Defensif coherent mais conviction faible 6, reduit GOOGL sans stop clair, PnL negatif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260819-2203",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T20:19:30.578921+00:00",
+            "dd": 0,
+            "pnl": 50457.15,
+            "bias": "eviter rotations defensives sans stop loss sur grandes caps",
+            "eval": "rotation GOOGL defensive sans stop loss visible destruction capital sur 3 derniers runs meme ticker",
+            "kind": "learning",
+            "run_id": "20260819-2219",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T20:19:30.578921+00:00",
+            "dd": 0,
+            "pnl": 50457.15,
+            "bias": null,
+            "eval": "rotation GOOGL defensive sans stop loss visible destruction capital sur 3 derniers runs meme ticker",
+            "kind": "mistake",
+            "run_id": "20260819-2219",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-19T21:23:15.27043+00:00",
+            "dd": 0,
+            "pnl": 50729.63,
+            "bias": "eviter ventes sans stop loss, renforcer gestion risque sur positions ouvertes",
+            "eval": "Vente GOOGL coherente mais conf faible 6, absence de stop sur autres positions, capital en risque",
+            "kind": "learning",
+            "run_id": "20260819-2323",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-20T07:05:24.452442+00:00",
+            "dd": 0,
+            "pnl": 49536.64,
+            "bias": "eviter ventes sans stop loss, reduire exposition aux grandes caps sans confirmat",
+            "eval": "Vente GOOGL coherente mais conviction faible 6, absence de stop loss sur positions ouvertes, capital detruit par inactio",
+            "kind": "learning",
+            "run_id": "20260820-0905",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-20T07:05:24.452442+00:00",
+            "dd": 0,
+            "pnl": 49536.64,
+            "bias": null,
+            "eval": "Vente GOOGL coherente mais conviction faible 6, absence de stop loss sur positions ouvertes, capital detruit par inaction sur corrections",
+            "kind": "mistake",
+            "run_id": "20260820-0905",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-20T13:48:09.827931+00:00",
+            "dd": 0.0036,
+            "pnl": 52464.8,
+            "bias": "eviter rotations defensives sans confirmation de tendance baissiere",
+            "eval": "Rotation defensive prematuree sur GOOGL sans stop loss clair, PnL negatif sur 3 derniers runs, biais conservateur excess",
+            "kind": "learning",
+            "run_id": "20260820-1548",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-20T16:32:55.995061+00:00",
+            "dd": 0.0036,
+            "pnl": 51089.78,
+            "bias": null,
+            "eval": "Decision coherente mais faible conviction 6, vente GOOGL sans stop clair, capital sous-utilise en phase defensive",
+            "kind": "mistake",
+            "run_id": "20260820-1832",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-20T16:32:55.995061+00:00",
+            "dd": 0.0036,
+            "pnl": 51089.78,
+            "bias": "eviter ventes sans stop en phase defensive, augmenter conviction minimale a 8",
+            "eval": "Decision coherente mais faible conviction 6, vente GOOGL sans stop clair, capital sous-utilise en phase defensive",
+            "kind": "learning",
+            "run_id": "20260820-1832",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-20T19:17:04.981128+00:00",
+            "dd": 0.0036,
+            "pnl": 49459.9,
+            "bias": null,
+            "eval": "Defensif coherent mais manque de conviction 6, vente GOOGL sans stop clair, PnL negatif sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260820-2117",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-20T19:17:04.981128+00:00",
+            "dd": 0.0036,
+            "pnl": 49459.9,
+            "bias": "eviter ventes sans stop loss, reduire exposition aux grandes caps sans catalyseu",
+            "eval": "Defensif coherent mais manque de conviction 6, vente GOOGL sans stop clair, PnL negatif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260820-2117",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-21T07:05:09.837277+00:00",
+            "dd": 0.0036,
+            "pnl": 45461.6,
+            "bias": "eviter ventes defensives sans declencheur technique clair",
+            "eval": "Defensive excessive, vend GOOGL sans justification de survente ou stop loss clair. PnL en baisse sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260821-0905",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-21T07:05:09.837277+00:00",
+            "dd": 0.0036,
+            "pnl": 45461.6,
+            "bias": null,
+            "eval": "Defensive excessive, vend GOOGL sans justification de survente ou stop loss clair. PnL en baisse sur 3 derniers runs",
+            "kind": "mistake",
+            "run_id": "20260821-0905",
+            "archimage": "JU"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 69354.18,
+            "bias": "maintenir reduction obligations en volatile, renforcer alignement JU sur signaux",
+            "eval": "reduction TLT en volatile pertinente +3.4%, alignement JU rare mais efficace, gestion risque exemplaire",
+            "kind": "learning",
+            "run_id": "20260811-1440",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 22503.83,
+            "bias": null,
+            "eval": "rebalancement GLD coherent avec volatilite mais conviction elevee (78) risque sur-exposition or, absence stop loss visible",
+            "kind": "mistake",
+            "run_id": "20260729-1306",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0414,
+            "pnl": 12979.12,
+            "bias": null,
+            "eval": "Reduction GLD en volatilite pertinente alignement JU mais 3 gains consecutifs sur or sans explication macro",
+            "kind": "mistake",
+            "run_id": "20260728-1629",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 59288.88,
+            "bias": null,
+            "eval": "Reduction TLT coherente avec hausse taux. Conviction elevee mais manque diversification. PnL stable",
+            "kind": "mistake",
+            "run_id": "20260811-1701",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 55538.11,
+            "bias": null,
+            "eval": "reduction TLT sur VOLATILE avec haute conviction 73 alignement AGREE mais absence de couverture sur reste portefeuille",
+            "kind": "mistake",
+            "run_id": "20260811-1920",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 59288.88,
+            "bias": "maintenir reduction obligations en contexte taux",
+            "eval": "Reduction TLT coherente avec hausse taux. Conviction elevee mais manque diversification. PnL stable",
+            "kind": "learning",
+            "run_id": "20260811-1701",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0414,
+            "pnl": 19203.7,
+            "bias": null,
+            "eval": "Reduction TLT en phase neutre coherente, mais manque opportunites offensives, alignement avec JU sans conviction forte",
+            "kind": "mistake",
+            "run_id": "20260728-1330",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 71567.88,
+            "bias": "verifier surpond\u00e9ration SYL, renforcer couverture en phase neutre",
+            "eval": "Reduction d exposition coherente avec phase neutre, mais maintien de SYL en portefeuille sans explication de la surpond\u00e9",
+            "kind": "learning",
+            "run_id": "20260810-1428",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0077,
+            "pnl": 61714.54,
+            "bias": null,
+            "eval": "Position defensive GLD coherente avec regime volatile, conf elevee 68, alignement strategique correct",
+            "kind": "mistake",
+            "run_id": "20260812-1343",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 55538.11,
+            "bias": "maintenir reduction exposition taux en VOLATILE",
+            "eval": "reduction TLT sur VOLATILE avec haute conviction 73 alignement AGREE mais absence de couverture sur reste portefeuille",
+            "kind": "learning",
+            "run_id": "20260811-1920",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0321,
+            "pnl": 32097.89,
+            "bias": null,
+            "eval": "Position SPY coherente mais confiance elevee en regime volatile, absence de stop visible, risque de drawdown",
+            "kind": "mistake",
+            "run_id": "20260727-1817",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0321,
+            "pnl": 33280.48,
+            "bias": null,
+            "eval": "Reduction GLD coherente avec neutralite, PnL stable mais manque d opportunites, alignement avec JU theorique",
+            "kind": "mistake",
+            "run_id": "20260727-1809",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 71189.13,
+            "bias": null,
+            "eval": "Reduction TLT en volatile coherente mais conviction excessive 66, PnL positif mais risque sur-exposition aux taux",
+            "kind": "mistake",
+            "run_id": "20260813-1204",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 62793.7,
+            "bias": "",
+            "eval": "reduction TLT coherente mais conviction disproportionnee, verifier alignement macro avant execution",
+            "kind": "learning",
+            "run_id": "20260811-2140",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0321,
+            "pnl": 55370,
+            "bias": null,
+            "eval": "Rebalance GLD pertinent en volatilite, PnL positif sur 4 derniers runs, conviction elevee mais doublon avec JPM sur dernier ordre",
+            "kind": "mistake",
+            "run_id": "20260725-1216",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 70654.3,
+            "bias": null,
+            "eval": "Rebalance TLT coherent avec regime volatile mais conviction trop elevee 72, PnL stable mais faible",
+            "kind": "mistake",
+            "run_id": "20260813-1206",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 69388.06,
+            "bias": null,
+            "eval": "Reduction TLT en phase volatile pertinente, conviction elevee 74, PnL positif mais exposition trop longue sur obligations en 2026",
+            "kind": "mistake",
+            "run_id": "20260813-1351",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0,
+            "pnl": 83602.82,
+            "bias": "maintenir focus volatilite sur actifs refuges, surveiller correlation GLD/BTC",
+            "eval": "GLD performe en volatil, execution precise, stops respectes. Conviction 78 justifiee par alignement regime. Pas d erreur",
+            "kind": "learning",
+            "run_id": "20260815-1237",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 84120.38,
+            "bias": "reduire conviction sur metaux en regime volatile, implementer stops obligatoires",
+            "eval": "Reduction GLD coherente avec regime volatile mais conviction excessive 71/100, manque de stop sur position residuelle",
+            "kind": "learning",
+            "run_id": "20260814-2016",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0077,
+            "pnl": 61714.54,
+            "bias": "maintenir defense sur actifs refuges en volatilite",
+            "eval": "Position defensive GLD coherente avec regime volatile, conf elevee 68, alignement strategique correct",
+            "kind": "learning",
+            "run_id": "20260812-1343",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 82281.78,
+            "bias": "reduire conviction GLD, diversifier actifs refuges",
+            "eval": "GLD performe en volatil mais sur-exposition or, absence de couverture, conviction trop elevee vs risque",
+            "kind": "learning",
+            "run_id": "20260814-1916",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 62760.21,
+            "bias": null,
+            "eval": "Reduction TLT en neutral avec forte conviction 62, alignement avec JU mais PnL stable, absence de diversification",
+            "kind": "mistake",
+            "run_id": "20260806-1327",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0077,
+            "pnl": 66244.11,
+            "bias": "maintenir reduction en volatil mais verifier liquidite GLD avant execution",
+            "eval": "Reduction GLD en phase volatile, alignement avec JU mais timing discutable, stop present",
+            "kind": "learning",
+            "run_id": "20260812-1606",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 81826.26,
+            "bias": "maintenir agressivite en volatil mais verifier liquidite GLD avant execution",
+            "eval": "Agressif sur GLD en volatil, +8.7% en 3 runs. Conviction elevee 78/100, alignement partiel mais execution precise",
+            "kind": "learning",
+            "run_id": "20260814-1816",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 71000.27,
+            "bias": null,
+            "eval": "PnL stable sur GLD en neutral, alignement correct avec regime volatile, mais conviction 62 excessive pour reduction",
+            "kind": "mistake",
+            "run_id": "20260813-1921",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 78986.01,
+            "bias": null,
+            "eval": "Achat GLD en volatil performant 2/3 derniers runs mais sur-exposition or 40% du portefeuille, risque de doublon avec autres ETF or",
+            "kind": "mistake",
+            "run_id": "20260814-1716",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0077,
+            "pnl": 68758.63,
+            "bias": "verifier alignement avec regime avant rebalance, augmenter reactivite aux tendan",
+            "eval": "Rebalance GLD avec forte conviction, alignement faible avec JU, PnL stable mais peu reactive aux mouvements courts terme",
+            "kind": "learning",
+            "run_id": "20260812-1823",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0077,
+            "pnl": 72811.24,
+            "bias": "maintenir reduction en volatile, surveiller sur-optimisation SPY",
+            "eval": "Reduction SPY adaptee regime volatile, PnL positif 4/5 derniers runs, stops respectes, alignement partiel coherent",
+            "kind": "learning",
+            "run_id": "20260812-2043",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 78986.01,
+            "bias": "limiter exposition or a 25% max du portefeuille",
+            "eval": "Achat GLD en volatil performant 2/3 derniers runs mais sur-exposition or 40% du portefeuille, risque de doublon avec aut",
+            "kind": "learning",
+            "run_id": "20260814-1716",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 81910.17,
+            "bias": null,
+            "eval": "Investissement sur GLD avec forte conviction 78, PnL positif mais decalage avec regime volatile",
+            "kind": "mistake",
+            "run_id": "20260814-2116",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 79361.98,
+            "bias": "reduire exposition or en regime volatile sans confirmation macro",
+            "eval": "Achat agressif GLD en phase volatile avec haute conviction 78, PnL positif mais risque de sur-exposition or, doublon ave",
+            "kind": "learning",
+            "run_id": "20260814-1712",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 76698.53,
+            "bias": "limiter exposition or a 20 max du portefeuille, verifier alignement regime avant",
+            "eval": "Rebalancement sur GLD performant en volatil, 4 gains consecutifs mais sur-exposition or detectee, risque de sur-ajusteme",
+            "kind": "learning",
+            "run_id": "20260814-1703",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 69863.49,
+            "bias": "augmenter conviction sur rebalance regime stable, reduire exposition TLT si BEAR",
+            "eval": "rebalance TLT coherente mais conviction faible, PnL stable mais sans eclat, alignement partiel utile",
+            "kind": "learning",
+            "run_id": "20260813-1541",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 71189.13,
+            "bias": "reduire conviction sur taux en volatile, verifier alignement avec JU avant execu",
+            "eval": "Reduction TLT en volatile coherente mais conviction excessive 66, PnL positif mais risque sur-exposition aux taux",
+            "kind": "learning",
+            "run_id": "20260813-1204",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 73681.65,
+            "bias": "reduire exposition or si surponderation depasse 20 du portefeuille",
+            "eval": "Rebalancement sur GLD avec confiance elevee 62, alignement partiel avec regime volatile, mais exposition or deja surpond",
+            "kind": "learning",
+            "run_id": "20260814-1239",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 69838.94,
+            "bias": "tester exposition selective sur actifs risqu\u00e9s avec stops serr\u00e9s",
+            "eval": "Reduction SHY trop timide, conviction elevee 64 mais manque de conviction sur actifs risqu\u00e9s, PnL stable mais peu ambiti",
+            "kind": "learning",
+            "run_id": "20260813-1733",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 70654.3,
+            "bias": "reduire conviction max 60 sur rebalances neutres, verifier liquidite TLT",
+            "eval": "Rebalance TLT coherent avec regime volatile mais conviction trop elevee 72, PnL stable mais faible",
+            "kind": "learning",
+            "run_id": "20260813-1206",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 72219.3,
+            "bias": "reduire exposition taux, verifier alignement regime avant execution",
+            "eval": "TLT surpondere avec confiance 62, alignement defensif correct mais exposition excessive aux taux, stop loss absent sur 2",
+            "kind": "learning",
+            "run_id": "20260813-2111",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 69388.06,
+            "bias": "reduire duree exposition obligations en regime volatile, verifier correlation av",
+            "eval": "Reduction TLT en phase volatile pertinente, conviction elevee 74, PnL positif mais exposition trop longue sur obligation",
+            "kind": "learning",
+            "run_id": "20260813-1351",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 71000.27,
+            "bias": "reduire conviction sur metaux en regime volatile, prioriser stops serres",
+            "eval": "PnL stable sur GLD en neutral, alignement correct avec regime volatile, mais conviction 62 excessive pour reduction",
+            "kind": "learning",
+            "run_id": "20260813-1921",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 71327.23,
+            "bias": "arreter reductions SPY sans confirmation de baisse, limiter confiance a 50 max s",
+            "eval": "Reduction SPY trop aggressive avec confiance 62, PnL en baisse sur 3 derniers runs, absence de stop sur SPY",
+            "kind": "learning",
+            "run_id": "20260813-1904",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0006,
+            "pnl": 69838.94,
+            "bias": null,
+            "eval": "Reduction SHY trop timide, conviction elevee 64 mais manque de conviction sur actifs risqu\u00e9s, PnL stable mais peu ambitieux",
+            "kind": "mistake",
+            "run_id": "20260813-1733",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0057,
+            "pnl": 63480.5,
+            "bias": "reduire conviction en phase volatile, aligner partiellement avec GIL sur crypto",
+            "eval": "Reduction GLD coherente mais conviction trop elevee 72, PnL stable mais manque opportunites en bullish",
+            "kind": "learning",
+            "run_id": "20260811-0348",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 65216.47,
+            "bias": null,
+            "eval": "Reduction TLT en phase volatile alignement partiel avec regime bonne gestion risque conviction elevee 78",
+            "kind": "mistake",
+            "run_id": "20260805-1959",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 53478.18,
+            "bias": null,
+            "eval": "Rebalance GLD coherent avec regime volatile mais conviction 78 excessive, PnL stable mais faible rendement, alignement partiel avec JU non e",
+            "kind": "mistake",
+            "run_id": "20260805-1401",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0019,
+            "pnl": 81910.17,
+            "bias": "verifier alignement avec regime avant investissement sur actifs refuges",
+            "eval": "Investissement sur GLD avec forte conviction 78, PnL positif mais decalage avec regime volatile",
+            "kind": "learning",
+            "run_id": "20260814-2116",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 71711.93,
+            "bias": null,
+            "eval": "Reduction TLT avec forte confiance: alignement partiel avec regime volatile mais biais defensif excessif. PnL stable mais croissance limitee",
+            "kind": "mistake",
+            "run_id": "20260810-1244",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 69421.04,
+            "bias": null,
+            "eval": "Defensive sur TLT en volatile avec forte conviction 78, PnL positif mais alignement partiel avec regime",
+            "kind": "mistake",
+            "run_id": "20260804-1747",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 70647.28,
+            "bias": null,
+            "eval": "Reduction TLT coherente avec phase neutre mais conviction extreme 64, PnL stable mais faible, absence de diversification",
+            "kind": "mistake",
+            "run_id": "20260810-1419",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0057,
+            "pnl": 64118.28,
+            "bias": "maintenir focus macro defensive sur regimes volatils renforcer conviction TLT",
+            "eval": "TLT position defensive coherente avec regime volatile PnL +2.8% sur 3 runs alignement avec macro correct",
+            "kind": "learning",
+            "run_id": "20260810-2108",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 68095.79,
+            "bias": null,
+            "eval": "Defensive GLD coherente avec regime volatile +1.8% sur 3 runs alignement partiel mais efficace",
+            "kind": "mistake",
+            "run_id": "20260803-2002",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0057,
+            "pnl": 64118.28,
+            "bias": null,
+            "eval": "TLT position defensive coherente avec regime volatile PnL +2.8% sur 3 runs alignement avec macro correct",
+            "kind": "mistake",
+            "run_id": "20260810-2108",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 69959.15,
+            "bias": "augmenter conviction sur reductions, verifier alignement fondamental avec JU",
+            "eval": "Reduction QQQ coherente avec phase neutre, PnL stable mais conviction faible, alignement avec JU superficiel",
+            "kind": "learning",
+            "run_id": "20260811-1028",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 66176.36,
+            "bias": null,
+            "eval": "Choix defensif TLT coherent avec volatilite mais conviction moyenne, absence de stop loss visible sur dernier ordre",
+            "kind": "mistake",
+            "run_id": "20260803-1942",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 63071.96,
+            "bias": null,
+            "eval": "Choix defensif coherent mais conviction moyenne, absence de diversification, stop loss absent sur GLD",
+            "kind": "mistake",
+            "run_id": "20260803-1820",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0057,
+            "pnl": 63480.5,
+            "bias": null,
+            "eval": "Reduction GLD coherente mais conviction trop elevee 72, PnL stable mais manque opportunites en bullish",
+            "kind": "mistake",
+            "run_id": "20260811-0348",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 69354.18,
+            "bias": null,
+            "eval": "reduction TLT en volatile pertinente +3.4%, alignement JU rare mais efficace, gestion risque exemplaire",
+            "kind": "mistake",
+            "run_id": "20260811-1440",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.009,
+            "pnl": 72399.8,
+            "bias": "maintenir neutralite mais surveiller alignement GLD/BTCUSD",
+            "eval": "Rebalance GLD coherent avec neutralite, conf 62 solide, PnL stable mais faible croissance, alignement partiel avec GIL",
+            "kind": "learning",
+            "run_id": "20260811-1220",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 19455.58,
+            "bias": null,
+            "eval": "Choix coherent TLT en volatile pour couverture, mais conviction elevee sans stop-loss visible, risque drawdown",
+            "kind": "mistake",
+            "run_id": "20260729-1538",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-15T12:20:14.241362+00:00",
+            "dd": 0.0504,
+            "pnl": 17838.45,
+            "bias": null,
+            "eval": "position defensive TLT coherente avec volatile mais manque de diversification stop loss absent",
+            "kind": "mistake",
+            "run_id": "20260729-1528",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T10:13:22.290148+00:00",
+            "dd": 0,
+            "pnl": 85484.72,
+            "bias": "limiter confiance >70 en volatil, ajouter couverture sur positions longues",
+            "eval": "PnL positif sur GLD en volatil mais surconfiance 78, absence de couverture sur position longue",
+            "kind": "learning",
+            "run_id": "20260817-1213",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T11:12:17.579589+00:00",
+            "dd": 0,
+            "pnl": 85419.55,
+            "bias": "limiter exposition or a 20%, diversifier sur 3 secteurs minimum",
+            "eval": "GLD +3.1% sur 5j, conviction elevee mais sur-exposition or, absence de diversification sectorielle",
+            "kind": "learning",
+            "run_id": "20260817-1312",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T11:12:17.579589+00:00",
+            "dd": 0,
+            "pnl": 85419.55,
+            "bias": null,
+            "eval": "GLD +3.1% sur 5j, conviction elevee mais sur-exposition or, absence de diversification sectorielle",
+            "kind": "mistake",
+            "run_id": "20260817-1312",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T12:12:09.996742+00:00",
+            "dd": 0,
+            "pnl": 86454.14,
+            "bias": "diversifier hors GLD, verifier alignement macro avant conviction elevee",
+            "eval": "Biais bullish excessif sur GLD, PnL positif mais sur-exposition or, absence de diversification sectorielle",
+            "kind": "learning",
+            "run_id": "20260817-1412",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T13:12:50.323527+00:00",
+            "dd": 0,
+            "pnl": 88647.01,
+            "bias": "maintenir focus macro or mais surveiller surchauffe sur GLD",
+            "eval": "Conviction elevee sur GLD justifiee par macro. Execution propre, stop loss respecte. PnL positif sur 3 derniers runs",
+            "kind": "learning",
+            "run_id": "20260817-1512",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T14:12:08.204366+00:00",
+            "dd": 0,
+            "pnl": 85593.1,
+            "bias": "ajouter stops sur positions volatiles, reduire taille positions matieres premier",
+            "eval": "Achat GLD en volatil justifie mais absence de stop, PnL positif court terme mais risque de drawdown",
+            "kind": "learning",
+            "run_id": "20260817-1612",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T14:12:08.204366+00:00",
+            "dd": 0,
+            "pnl": 85593.1,
+            "bias": null,
+            "eval": "Achat GLD en volatil justifie mais absence de stop, PnL positif court terme mais risque de drawdown",
+            "kind": "mistake",
+            "run_id": "20260817-1612",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T15:11:58.358517+00:00",
+            "dd": 0,
+            "pnl": 85717.62,
+            "bias": "surveiller exposition or si signal de hausse des taux Fed, renforcer stops",
+            "eval": "Position GLD alignee sur inflation persistante, PnL positif sur 5 derniers runs, conviction elevee 82. Risque de sur-exp",
+            "kind": "learning",
+            "run_id": "20260817-1711",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T16:11:58.523028+00:00",
+            "dd": 0,
+            "pnl": 86473.44,
+            "bias": "reduire exposition or si doublon avec ETF existant",
+            "eval": "Conviction elevee sur GLD en phase volatile, PnL positif mais risque de sur-exposition or, doublon avec ETF or dans port",
+            "kind": "learning",
+            "run_id": "20260817-1811",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T17:11:54.662447+00:00",
+            "dd": 0,
+            "pnl": 87441.16,
+            "bias": "maintenir focus sur actifs refuges en volatile",
+            "eval": "GLD en phase volatile avec haute conviction 82, PnL positif sur 5 derniers runs, alignement partiel mais efficace",
+            "kind": "learning",
+            "run_id": "20260817-1911",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T17:34:36.278319+00:00",
+            "dd": 0,
+            "pnl": 89897.5,
+            "bias": "maintenir exposition or en bull mais surveiller volatilite",
+            "eval": "long GLD en bull phase alignement partiel avec regime volatile mais conviction elevee execution propre",
+            "kind": "learning",
+            "run_id": "20260817-1934",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T18:00:00.390532+00:00",
+            "dd": 0,
+            "pnl": 91478.41,
+            "bias": "maintenir exposition volatile avec couverture or, surveiller sur-ponderation GLD",
+            "eval": "Achat GLD en phase volatile justifie, conviction elevee 82, alignement partiel avec regime, PnL positif sur 3 derniers r",
+            "kind": "learning",
+            "run_id": "20260817-1959",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T18:12:13.801505+00:00",
+            "dd": 0,
+            "pnl": 91021.2,
+            "bias": "maintenir focus sur actifs refuges en phase neutre volatile",
+            "eval": "Achat GLD coherent avec phase neutre et couverture inflation, execution propre, PnL positif si or en hausse, mais absenc",
+            "kind": "learning",
+            "run_id": "20260817-2012",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T18:12:13.801505+00:00",
+            "dd": 0,
+            "pnl": 91021.2,
+            "bias": null,
+            "eval": "Achat GLD coherent avec phase neutre et couverture inflation, execution propre, PnL positif si or en hausse, mais absence de diversification",
+            "kind": "mistake",
+            "run_id": "20260817-2012",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T19:28:41.625504+00:00",
+            "dd": 0,
+            "pnl": 90589.37,
+            "bias": null,
+            "eval": "82% conviction sur GLD payante, 4 gains consecutifs, stops respectes, alignement partiel avec regime volatile confirme",
+            "kind": "mistake",
+            "run_id": "20260817-2128",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T19:28:41.625504+00:00",
+            "dd": 0,
+            "pnl": 90589.37,
+            "bias": "maintenir exposition or en regime volatile, renforcer stops dynamiques sur actif",
+            "eval": "82% conviction sur GLD payante, 4 gains consecutifs, stops respectes, alignement partiel avec regime volatile confirme",
+            "kind": "learning",
+            "run_id": "20260817-2128",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T20:00:43.216511+00:00",
+            "dd": 0,
+            "pnl": 90770.57,
+            "bias": "reduire conviction sur GLD si regime volatile, verifier liquidite avant executio",
+            "eval": "Choix GLD coherent en neutre mais conviction excessive 78, PnL positif mais faible volume, alignement partiel avec JU",
+            "kind": "learning",
+            "run_id": "20260817-2200",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T20:55:58.559353+00:00",
+            "dd": 0,
+            "pnl": 90711.52,
+            "bias": "maintenir alignement regime volatile avec actifs refuges",
+            "eval": "Position GLD defensive bien placee +1.8% sur 3 runs alignement partiel avec regime volatile",
+            "kind": "learning",
+            "run_id": "20260817-2255",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-17T20:55:58.559353+00:00",
+            "dd": 0,
+            "pnl": 90711.52,
+            "bias": null,
+            "eval": "Position GLD defensive bien placee +1.8% sur 3 runs alignement partiel avec regime volatile",
+            "kind": "mistake",
+            "run_id": "20260817-2255",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-18T07:52:18.680723+00:00",
+            "dd": 0,
+            "pnl": 93484.59,
+            "bias": "augmenter exposition actions si GLD stagne, verifier alignement JU avant executi",
+            "eval": "GLD stable mais faible rendement, alignement partiel avec JU evite pire, stops respectes, conviction elevee mais prudenc",
+            "kind": "learning",
+            "run_id": "20260818-0952",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-18T07:59:12.240567+00:00",
+            "dd": 0,
+            "pnl": 93989.88,
+            "bias": "verifier correlation GLD avec regime actuel, reduire taille si sur-exposition",
+            "eval": "Conviction elevee sur GLD en phase bull, PnL positif mais alignment partiel, risque sur-exposition or si correction",
+            "kind": "learning",
+            "run_id": "20260818-0959",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-18T14:30:19.250291+00:00",
+            "dd": 0,
+            "pnl": 85716.73,
+            "bias": null,
+            "eval": "Choix GLD coherent regime volatile, PnL positif 5/7 derniers runs. Stops respectes, pas de doublons. Conviction elevee justifiee",
+            "kind": "mistake",
+            "run_id": "20260818-1630",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-18T14:30:19.250291+00:00",
+            "dd": 0,
+            "pnl": 85716.73,
+            "bias": "maintenir focus regime volatile, renforcer stops sur actifs cycliques",
+            "eval": "Choix GLD coherent regime volatile, PnL positif 5/7 derniers runs. Stops respectes, pas de doublons. Conviction elevee j",
+            "kind": "learning",
+            "run_id": "20260818-1630",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-18T19:17:13.673059+00:00",
+            "dd": 0,
+            "pnl": 82867.58,
+            "bias": "reduire conviction si absence de couverture sur actifs correles, verifier liquid",
+            "eval": "Choix GLD pertinent en volatil mais conviction excessive 78, absence de couverture sur crypto parallele, PnL +3.2%",
+            "kind": "learning",
+            "run_id": "20260818-2117",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-18T19:17:13.673059+00:00",
+            "dd": 0,
+            "pnl": 82867.58,
+            "bias": null,
+            "eval": "Choix GLD pertinent en volatil mais conviction excessive 78, absence de couverture sur crypto parallele, PnL +3.2%",
+            "kind": "mistake",
+            "run_id": "20260818-2117",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T10:28:34.94964+00:00",
+            "dd": 0.006,
+            "pnl": 81723.9,
+            "bias": "reduire exposition GLD si regime volatile persiste",
+            "eval": "Choix GLD pertinent en volatile mais sur-exposition or, PnL positif mais risque concentration eleve",
+            "kind": "learning",
+            "run_id": "20260819-1228",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T10:28:34.94964+00:00",
+            "dd": 0.006,
+            "pnl": 81723.9,
+            "bias": null,
+            "eval": "Choix GLD pertinent en volatile mais sur-exposition or, PnL positif mais risque concentration eleve",
+            "kind": "mistake",
+            "run_id": "20260819-1228",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T11:11:40.353918+00:00",
+            "dd": 0.006,
+            "pnl": 82758.54,
+            "bias": "diversifier actifs macro meme en conviction elevee",
+            "eval": "Achat GLD alignement partiel avec macro mais absence diversification sur actif unique conviction elevee mais risque conc",
+            "kind": "learning",
+            "run_id": "20260819-1311",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T11:56:32.73678+00:00",
+            "dd": 0.006,
+            "pnl": 80550.01,
+            "bias": null,
+            "eval": "Achat agressif GLD en phase volatile avec conviction 78, PnL positif mais exposition non couverte, risque de drawdown",
+            "kind": "mistake",
+            "run_id": "20260819-1356",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T11:56:32.73678+00:00",
+            "dd": 0.006,
+            "pnl": 80550.01,
+            "bias": "verifier la couverture en phase volatile, reduire la taille des positions",
+            "eval": "Achat agressif GLD en phase volatile avec conviction 78, PnL positif mais exposition non couverte, risque de drawdown",
+            "kind": "learning",
+            "run_id": "20260819-1356",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T12:00:20.14108+00:00",
+            "dd": 0.006,
+            "pnl": 79008.99,
+            "bias": "reduire exposition ETF passifs en volatile, privileger actifs plus reactifs",
+            "eval": "Rebalance SCHD coherent avec regime volatile mais ETF peu reactif, PnL stable mais faible alpha, conviction elevee mais ",
+            "kind": "learning",
+            "run_id": "20260819-1400",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T12:00:20.14108+00:00",
+            "dd": 0.006,
+            "pnl": 79008.99,
+            "bias": null,
+            "eval": "Rebalance SCHD coherent avec regime volatile mais ETF peu reactif, PnL stable mais faible alpha, conviction elevee mais alignement partiel",
+            "kind": "mistake",
+            "run_id": "20260819-1400",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T13:48:10.394201+00:00",
+            "dd": 0.006,
+            "pnl": 56941.36,
+            "bias": "reduire doublons ETF or et verifier liquidite GLD",
+            "eval": "Conviction elevee sur GLD en phase volatile, PnL positif mais risque de sur-exposition or, doublon avec ETF similaire da",
+            "kind": "learning",
+            "run_id": "20260819-1548",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T13:48:10.394201+00:00",
+            "dd": 0.006,
+            "pnl": 56941.36,
+            "bias": null,
+            "eval": "Conviction elevee sur GLD en phase volatile, PnL positif mais risque de sur-exposition or, doublon avec ETF similaire dans portfolio",
+            "kind": "mistake",
+            "run_id": "20260819-1548",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T16:41:35.937978+00:00",
+            "dd": 0.006,
+            "pnl": 58576.46,
+            "bias": "diversifier hors GLD en volatile, implementer stops obligatoires sur convictions",
+            "eval": "Conviction elevee sur GLD en regime volatile, PnL positif mais exposition or trop concentree, absence de stop sur dernie",
+            "kind": "learning",
+            "run_id": "20260819-1841",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T19:16:55.23168+00:00",
+            "dd": 0.006,
+            "pnl": 53810.88,
+            "bias": "reduire doublons sur actifs correles, verifier liquidite GLD en regime volatile",
+            "eval": "Defensive adaptee au regime volatile, achat GLD avec forte conviction 78, PnL positif mais doublons sur metaux",
+            "kind": "learning",
+            "run_id": "20260819-2116",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T19:16:55.23168+00:00",
+            "dd": 0.006,
+            "pnl": 53810.88,
+            "bias": null,
+            "eval": "Defensive adaptee au regime volatile, achat GLD avec forte conviction 78, PnL positif mais doublons sur metaux",
+            "kind": "mistake",
+            "run_id": "20260819-2116",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T20:03:32.514187+00:00",
+            "dd": 0.006,
+            "pnl": 49950.68,
+            "bias": null,
+            "eval": "Bullish mais prudent avec GLD, conviction elevee 78, PnL positif mais alignement partiel avec JU penalise",
+            "kind": "mistake",
+            "run_id": "20260819-2203",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T20:03:32.514187+00:00",
+            "dd": 0.006,
+            "pnl": 49950.68,
+            "bias": "verifier alignement avec JU avant position, reduire exposition or si regime vola",
+            "eval": "Bullish mais prudent avec GLD, conviction elevee 78, PnL positif mais alignement partiel avec JU penalise",
+            "kind": "learning",
+            "run_id": "20260819-2203",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T20:19:30.578921+00:00",
+            "dd": 0.006,
+            "pnl": 50002.01,
+            "bias": "reduire conviction sur ETF complexes et verifier doublons SMH",
+            "eval": "reduction SMH coherente mais conviction 66 excessive pour ETF complexe surcompense JU",
+            "kind": "learning",
+            "run_id": "20260819-2219",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-19T21:23:15.27043+00:00",
+            "dd": 0.006,
+            "pnl": 53660.57,
+            "bias": "moderation conviction sur regimes extremes, verifier couverture actifs",
+            "eval": "Achat GLD sur volatile justifie mais conviction extreme 78, pas de couverture sur autres actifs",
+            "kind": "learning",
+            "run_id": "20260819-2323",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-20T07:05:24.452442+00:00",
+            "dd": 0.006,
+            "pnl": 51747.73,
+            "bias": null,
+            "eval": "Achat GLD en phase volatile justifie mais conviction excessive 78, doublon avec autres actifs refuges, PnL positif mais risque de sur-exposi",
+            "kind": "mistake",
+            "run_id": "20260820-0905",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-20T07:05:24.452442+00:00",
+            "dd": 0.006,
+            "pnl": 51747.73,
+            "bias": "limiter conviction >70 en regime volatile, verifier doublons actifs refuges",
+            "eval": "Achat GLD en phase volatile justifie mais conviction excessive 78, doublon avec autres actifs refuges, PnL positif mais ",
+            "kind": "learning",
+            "run_id": "20260820-0905",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-20T13:48:09.827931+00:00",
+            "dd": 0.038,
+            "pnl": 67235.87,
+            "bias": "reduire exposition GLD si volatilite persiste au dela de 7 jours",
+            "eval": "Conviction elevee sur GLD en phase volatile, PnL positif mais risque de surconcentration sur actif non productif",
+            "kind": "learning",
+            "run_id": "20260820-1548",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-20T16:32:55.995061+00:00",
+            "dd": 0.038,
+            "pnl": 68476.78,
+            "bias": "reduire confiance maximale a 70 en regime volatile, diversifier au dela de GLD",
+            "eval": "Achat GLD en volatilite justifie mais confiance excessive 78, absence de diversification, risque de sur-exposition or",
+            "kind": "learning",
+            "run_id": "20260820-1832",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-20T19:17:04.981128+00:00",
+            "dd": 0.038,
+            "pnl": 63549.51,
+            "bias": null,
+            "eval": "Biais bullish agressif sur GLD avec conf 78, PnL positif mais risque de sur-exposition or, absence de diversification",
+            "kind": "mistake",
+            "run_id": "20260820-2117",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-20T19:17:04.981128+00:00",
+            "dd": 0.038,
+            "pnl": 63549.51,
+            "bias": "diversifier hors GLD, verifier alignement macro avant achats bullish",
+            "eval": "Biais bullish agressif sur GLD avec conf 78, PnL positif mais risque de sur-exposition or, absence de diversification",
+            "kind": "learning",
+            "run_id": "20260820-2117",
+            "archimage": "SYL"
+        },
+        {
+            "at": "2026-08-21T07:05:09.837277+00:00",
+            "dd": 0.038,
+            "pnl": 67412.09,
+            "bias": "maintenir exposition or mais verifier correlation avec volatilite",
+            "eval": "Achat GLD coherent avec phase volatile, PnL positif sur 5 derniers runs. Conviction elevee mais risque sur-exposition or",
+            "kind": "learning",
+            "run_id": "20260821-0905",
+            "archimage": "SYL"
+        }
+    ],
+    "doctrines": {
+        "JU": {
+            "win_rate": 0.49,
+            "current_bias": "Run 269 rotation V +6-8% all\u00e9g\u00e9e $28k valid\u00e9e confirme efficacit\u00e9 faire tourner portefeuille reproduire all\u00e8gements tactiques positions r\u00e9alis\u00e9es lib\u00e8re capital red\u00e9ployable strat\u00e9gie \u00e9prouv\u00e9e. GOOGL faiblesse persistante ouvre short $22k stop -4% strict chasser baisse appliqu\u00e9e ex\u00e9cuter position vendeuse strictement prot\u00e9g\u00e9e asym\u00e9trie claire exploit\u00e9e ratio 1.5:1. Momentum tech 24h non confirm\u00e9 NVDA MSFT impose discipline attente pas d'achat tech avant signal clair valid\u00e9 \u00e9viter faux d\u00e9parts co\u00fbteux. WR 49% (135W/141L) sur 277 runs exige rigueur stops syst\u00e9matiques calibr\u00e9s chaque position Kelly 0.005 impose sizing r\u00e9duit par conviction respecter strictement. Prochaine action concr\u00e8te : ex\u00e9cuter short GOOGL $22k stop -4% strict TP +6%, all\u00e9ger positions tech longues sans momentum confirm\u00e9 lib\u00e9rer $15-20k capital, faire tourner portefeuille, surveiller NVDA MSFT 24h signal clair avant r\u00e9engagement, maintenir poudre s\u00e8che 15-20% permanent, viser WR >50% sur 10 prochains runs discipline stricte stops syst\u00e9matiques chaque position calibrer pr\u00e9cision sizing stops TP reproduire all\u00e8gements tactiques positions r\u00e9alis\u00e9es."
+        },
+        "GIL": {
+            "win_rate": 0.5,
+            "current_bias": "Corriger biais crypto: taille max 5%, couvrir avec cash et shorts tactiques"
+        },
+        "SYL": {
+            "win_rate": 0.54,
+            "current_bias": "Win rate solide mais m\u00e9moire exige \u00e9viter surexposition GLD et g\u00e9rer TLT pour la duration"
+        }
+    },
+    "snapshot_at": "2026-08-24T21:45:44.826332+00:00",
+    "lecons_epinglees": null
+}
