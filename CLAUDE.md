@@ -155,3 +155,42 @@ vraiment.
   extraites du blueprint en direct et vérifiées contre une version qui tourne.
 - Ne jamais armer/désarmer le kill_switch ni passer dry_run=false sans accord explicite de Chachou.
 - 100 % Supabase pour la logique data ; ne pas committer de secrets (webhooks → Vault).
+
+## RÈGLE ABSOLUE — Maia casse la clé du module qu'elle réécrit (28/08/2026)
+
+Le module 211 a renvoyé `401 PGRST301 — None of the keys was able to decode the JWT` pendant
+trois runs. J'ai cherché la cause dans le corps : troisième argument omis, caractères de
+contrôle, antislashs. **Trois hypothèses, trois fausses.** Le corps était bon depuis le début.
+C'était l'en-tête `Authorization`, altéré sur 6 caractères au milieu du jeton.
+
+Preuve établie sur le module 10032, dont j'ai l'historique complet :
+
+| Moment | Corps | `Authorization` |
+|---|---|---|
+| avant intervention | 409 | intact |
+| trois retouches **manuelles** de Chachou | 412 → 413 | **intact** |
+| **un passage de Maia** | 409 | **60 caractères modifiés** |
+
+**À chaque fois que Maia réécrit un module qui appelle Supabase, elle en réécrit la clé et la
+casse** — malgré la consigne « ne touche à aucun en-tête » écrite en tête du prompt. Les
+retouches manuelles de Chachou, elles, n'abîment jamais les clés (elles abîment parfois
+l'expression, ce qui se voit tout de suite au compteur de caractères).
+
+Conséquences :
+1. **Après chaque passage de Maia sur un module Supabase, vérifier l'`Authorization` AVANT tout
+   le reste.** `docs/outils/controle-blueprint-complet.mjs` le fait : il compare les en-têtes
+   des 26 modules Supabase entre eux et signale celui qui diverge.
+2. **Ne pas faire passer Maia sur ces modules quand une retouche manuelle suffit.**
+3. Repère de réparation, vérifié sur les 26 modules :
+   **`Authorization` = le mot `Bearer`, une espace, puis exactement la valeur d'`apikey`.**
+   208 caractères d'un côté, 215 de l'autre.
+
+**Et la leçon de méthode, qui est la vraie faute :** pendant quatre jours mon contrôle après
+chaque intervention n'a porté que sur `jsonStringBodyContent` — taille, JSON, accolades. Je
+n'ai jamais regardé les en-têtes. C'est la règle du 20/08 re-violée : un contrôle étroit ne
+prouve pas une affirmation large. Le contrôle porte désormais sur le module entier.
+
+**Et dans Make il faut DEUX validations** : `OK` sur le module, puis la disquette sur le
+scénario. Tant que la disquette n'est pas cliquée, le blueprint ne bouge pas — Maia peut
+annoncer un travail fait et le blueprint rester identique. Toujours vérifier le blueprint, pas
+la réponse de Maia.
