@@ -436,6 +436,12 @@ svg{max-width:100%}
       <div class="chart-sub" style="margin-bottom:10px">Rendement composé (%) de chaque combinaison Take-Profit × Stop-Loss, recalculé toutes les 6 h. La case dorée est le réglage en production, lu dans <b>ju_crypte_config</b> : <span id="btProd">—</span>.</div>
       <div class="scroll"><div id="heatmap" style="display:grid;grid-template-columns:auto repeat(5,1fr);gap:3px;min-width:420px"></div></div>
     </div>
+    <div class="card pad" style="margin-top:14px">
+      <div class="chart-title">Positions ouvertes — à reproduire sur Revolut X</div>
+      <div class="chart-sub" style="margin-bottom:10px">Ce que l'Alchimiste tient en ce moment dans son portefeuille de validation, avec son prix d'entrée et ses deux bornes de sortie. <b>Écart</b> = ce que tu paies de plus (ou de moins) que lui si tu entres maintenant.</div>
+      <div class="scroll"><table class="tbl" id="alcPositions"></table></div>
+      <div class="note" style="margin-top:12px">Les montants sont symboliques : ce portefeuille ne détient pas d'argent. Ce qui compte pour toi, ce sont la <b>paire</b>, le <b>sens</b> et les deux <b>prix de sortie</b> — la taille, c'est ton arbitrage.</div>
+    </div>
   </div>
 
   <div class="sect"><div class="sect-h">Comptes — départ, valeur, gain</div><div class="card pad scroll"><table class="tbl" id="comptes"></table></div></div>
@@ -1449,7 +1455,31 @@ function rPf(){const {trader,metric,period}=pfSel;const raw=slicePer(eqPts(trade
    [rf!=null?pct2(rf):'—','Rendement (fenêtre)'+(chaine?' · apports déduits':'')],
    [ddMin.toFixed(2)+' %','Drawdown max (fenêtre)']]
    .map(t=>'<div class="tile"><div class="n">'+t[0]+'</div><div class="k">'+t[1]+'</div></div>').join(''):'';}
-function rAlc(){const jours=D.suivi?.alc_virtuel?.jours||[];const box=$('alcChart');
+// Les positions ouvertes de l'Alchimiste virtuel n'etaient affichees NULLE PART : oracle-inbox
+// les transmettait depuis toujours dans alc_virtuel.positions, aucune ligne de code ne les
+// lisait. Chachou veut pouvoir les reproduire a la main sur Revolut X ; sans le prix d'entree
+// et les deux bornes de sortie, c'est impossible. Rien n'est calcule ici : la vue
+// v_alc_virtuel_positions fournit deja les prix cibles.
+function rAlcPositions(){
+ const p=Array.isArray(D.suivi?.alc_virtuel?.positions)?D.suivi.alc_virtuel.positions:[];
+ const px=v=>{const n=num(v); if(n==null||!isFinite(n))return '—';
+   return n>=1000?n.toLocaleString('fr-FR',{maximumFractionDigits:2}):(n>=1?n.toFixed(4):n.toFixed(6));};
+ T('alcPositions',["Paire","Sens","Entrée","Cours","Écart","Vendre à (TP)","Couper à (SL)","Latent","Âge"],
+  p.map(t=>{const sens=String(t.side||'').toLowerCase()==='sell';
+    const tp=num(t.tp_pct), sl=num(t.sl_pct);
+    return ['<b>'+esc(t.paire||'—')+'</b>',
+      '<span class="tag '+(sens?'sell':'buy')+'">'+(sens?'VENTE':'ACHAT')+'</span>',
+      '<span class="mono">'+px(t.prix_entree)+'</span>',
+      '<span class="mono">'+px(t.prix_actuel)+'</span>',
+      '<span class="mono">'+sgn(num(t.ecart_entree_pct))+'</span>',
+      '<span class="mono" style="color:var(--grn)">'+px(t.prix_tp)+'</span>'
+        +'<span style="color:var(--mute);font-size:11px"> '+(tp==null?'':'+'+tp+' %')+'</span>',
+      '<span class="mono" style="color:var(--red)">'+px(t.prix_sl)+'</span>'
+        +'<span style="color:var(--mute);font-size:11px"> '+(sl==null?'':'−'+sl+' %')+'</span>',
+      '<span class="mono">'+sgn(num(t.unreal_pct))+'</span>',
+      '<span class="mono" style="color:var(--dim)">'+(t.age_h==null?'—':num(t.age_h).toFixed(1)+' h')+'</span>'];}),
+  'Aucune position ouverte — l\'Alchimiste est entièrement en cash.');}
+function rAlc(){safe('alcpos',rAlcPositions);const jours=D.suivi?.alc_virtuel?.jours||[];const box=$('alcChart');
  const fee=Math.max(0,Number($('alcFee').value)||0);
  if(!jours.length){box.innerHTML='<div style="color:var(--mute);font-size:13px;padding:20px 0">Pas encore de données virtuelles.</div>';$('alcLegend').innerHTML='';return;}
  let idx=100;const gross=jours.map(d=>({x:d.jour,y:num(d.cumul_pct)||0}));

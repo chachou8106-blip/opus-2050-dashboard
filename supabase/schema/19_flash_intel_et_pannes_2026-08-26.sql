@@ -242,3 +242,59 @@ begin
 
   execute d;
 end $$;
+
+-- =============================================================================
+-- 28/08/2026 — Les trades de l'Alchimiste virtuel, reproductibles a la main
+-- =============================================================================
+-- Chachou reproduit a la main, sur Revolut X, les trades du portefeuille de validation.
+-- Trois trous, tous du meme genre : la donnee existait, elle n'arrivait nulle part.
+--   1. v_alc_virtuel_positions donnait paire, sens, prix d'entree, montant et prix actuel,
+--      mais NI le TP NI le SL — pourtant stockes dans alchimiste_virtual_trades depuis
+--      toujours. On savait quoi acheter, jamais quand sortir.
+--   2. oracle-inbox transmettait bien alc_virtuel.positions ; AUCUNE ligne de aether.html
+--      ne les lisait. Les positions n'ont jamais ete affichees.
+--   3. Le message de 8h / 14h / 20h donnait le bilan chiffre du portefeuille et le nombre
+--      de positions ouvertes, jamais leur detail.
+-- La vue est ETENDUE (memes colonnes qu'avant, dans le meme ordre, plus ce qui manquait) :
+-- rien de ce qui la lisait ne casse.
+-- Aucune recommandation n'est ajoutee : la paire, le sens, les prix, l'ecart et l'age.
+-- Ce que Chachou en fait le regarde.
+--
+-- PIEGE rencontre : apres un create or replace view qui ajoute des colonnes, PostgREST sert
+-- encore son schema en cache et renvoie un tableau VIDE sur un select qui les nomme.
+-- Il faut un  notify pgrst, 'reload schema';  sinon on croit la vue cassee.
+
+create or replace view public.v_alc_virtuel_positions as
+select t.paire,
+       t.side,
+       round(t.prix_entree::numeric, 6)                      as prix_entree,
+       round(t.montant::numeric, 2)                          as montant,
+       (t.opened_at at time zone 'UTC')                      as opened_at,
+       round(p.prix, 6)                                      as prix_actuel,
+       case when p.prix is not null and t.prix_entree > 0::double precision
+            then round((case when t.side = 'sell' then t.prix_entree - p.prix::double precision
+                             else p.prix::double precision - t.prix_entree end
+                        / t.prix_entree * 100::double precision)::numeric, 2)
+       end                                                   as unreal_pct,
+       round(t.tp_pct::numeric, 2)                           as tp_pct,
+       round(t.sl_pct::numeric, 2)                           as sl_pct,
+       round((case when t.side = 'sell' then t.prix_entree * (1 - t.tp_pct/100.0)
+                   else t.prix_entree * (1 + t.tp_pct/100.0) end)::numeric, 6) as prix_tp,
+       round((case when t.side = 'sell' then t.prix_entree * (1 + t.sl_pct/100.0)
+                   else t.prix_entree * (1 - t.sl_pct/100.0) end)::numeric, 6) as prix_sl,
+       round(extract(epoch from now() - t.opened_at)::numeric / 3600.0, 1)     as age_h,
+       case when p.prix is not null and t.prix_entree > 0::double precision
+            then round(((p.prix::double precision - t.prix_entree) / t.prix_entree * 100)::numeric, 2)
+       end                                                   as ecart_entree_pct
+  from alchimiste_virtual_trades t
+  left join v_dernier_prix p
+    on p.base = upper(replace(replace(t.paire, '-USD', ''), '/USD', ''))
+ where t.is_open;
+
+grant select on public.v_alc_virtuel_positions to anon, authenticated, service_role;
+notify pgrst, 'reload schema';
+
+-- generate_daily_journal : section 4 enrichie du detail des positions ouvertes.
+-- Modification par remplacement de chaine sur la definition existante (6828 caracteres),
+-- avec garde-fou sur l'unicite des trois ancrages. Voir la migration
+-- journal_positions_alchimiste_a_reproduire.

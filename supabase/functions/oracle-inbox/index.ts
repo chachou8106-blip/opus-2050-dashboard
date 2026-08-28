@@ -1,3 +1,9 @@
+// oracle-inbox v27 — LES TRADES DE L'ALCHIMISTE VIRTUEL, REPRODUCTIBLES A LA MAIN.
+// Le bloc alc_virtuel.positions transportait paire, sens, prix d'entree, montant et prix
+// actuel — mais ni le TP ni le SL, pourtant stockes dans alchimiste_virtual_trades depuis
+// toujours. On savait quoi acheter, pas quand sortir. La vue v_alc_virtuel_positions expose
+// desormais tp_pct, sl_pct, les PRIX cibles correspondants, l'age et l'ecart entre le prix
+// d'entree de l'Alchimiste et le prix du moment ; le bloc les transmet.
 // oracle-inbox v26 — L'HISTORIQUE DERRIERE LA VIGIE. vigie_status est effacee et reecrite a
 // chaque scan : elle dit ce qui va mal MAINTENANT, jamais ce qui est alle mal. Le Sage Memoire
 // est reste muet du 21 au 26/08 ; chaque scan le voyait, aucun ne gardait la trace. Le bloc
@@ -121,7 +127,9 @@ Deno.serve(async (req) => {
       // Portefeuille virtuel de l'Alchimiste
       const avr = await sb('v_alc_virtuel_resume?select=*')
       const avj = await sb('v_alc_virtuel_jour?select=jour,n_trades,gagnants,wr_pct,ret_pct,cumul_pct&order=jour.asc')
-      const avp = await sb('v_alc_virtuel_positions?select=paire,side,prix_entree,montant,prix_actuel,unreal_pct&order=montant.desc')
+      // Les positions de l'Alchimiste virtuel servent à être REPRODUITES à la main sur Revolut X.
+      // Sans tp_pct/sl_pct et leurs prix cibles, on sait quoi acheter mais pas quand sortir.
+      const avp = await sb('v_alc_virtuel_positions?select=paire,side,prix_entree,montant,prix_actuel,unreal_pct,tp_pct,sl_pct,prix_tp,prix_sl,age_h,ecart_entree_pct,opened_at&order=opened_at.desc')
       const alc_virtuel = { resume: (arr(avr.body)[0] || null), jours: arr(avj.body), positions: arr(avp.body) }
       // Marées — DEUX choses distinctes, qu'il ne faut pas confondre :
       //  · livre_cible = ce que l'Archimage déclare tenir maintenant (marees_propositions non
