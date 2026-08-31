@@ -1,0 +1,102 @@
+PROMPT MAIA — 31/08/2026
+Deux modules, deux corrections. Rien d'autre.
+
+============================================================
+AVANT TOUTE CHOSE — CE QUE TU NE DOIS PAS FAIRE
+============================================================
+
+1. Tu interviens UNIQUEMENT dans le scenario 7051944, et UNIQUEMENT sur les
+   modules 301 et 10012. Aucun autre module, aucun autre scenario.
+
+2. Tu ne touches A AUCUN EN-TETE. Ni "x-api-key", ni "Authorization", ni
+   "apikey", ni "anthropic-version", ni "Content-Type". Tu ne les relis pas, tu
+   ne les recopies pas, tu ne les reecris pas. C'est le point le plus important
+   de ce message : lors de precedentes interventions, des cles ont ete alterees
+   en plein milieu de leur valeur alors que la consigne etait de ne pas y
+   toucher. Si une modification d'en-tete est necessaire pour appliquer ce qui
+   suit, alors la demande est mauvaise : n'applique rien et dis-le.
+
+3. Tu ne touches pas a l'URL, ni a la methode, ni au parsing de la reponse.
+
+4. Tu ne reformules RIEN. Tu ne corriges ni l'orthographe, ni les accents, ni la
+   ponctuation, ni la casse. Les textes ci-dessous sont volontairement sans
+   accents par endroits : laisse-les tels quels.
+
+5. Tu fais UNIQUEMENT des remplacements de chaine, caractere pour caractere.
+   Chacune des chaines "AVANT" ci-dessous apparait EXACTEMENT UNE FOIS dans le
+   champ concerne : c'est verifie. Si tu en trouves zero ou plusieurs, tu
+   N'APPLIQUES RIEN sur ce module et tu le signales.
+
+6. Les guillemets a l'interieur d'une expression {{ ... }} restent NUS. Tu
+   n'ajoutes aucun antislash dans une expression {{ ... }}. Apres ton
+   intervention, aucune expression {{ ... }} ne doit contenir d'antislash.
+   En revanche, les antislashs deja presents AILLEURS dans le champ (comme dans
+   \"raison\" ci-dessous) font partie du texte : tu les gardes a l'identique.
+
+============================================================
+MODULE 301 — L'ARCHIMAGE SOUVERAIN JU (appel Anthropic)
+============================================================
+
+Champ concerne : le corps de la requete (body).
+Longueur actuelle du champ : 7013 caracteres.
+
+UN SEUL remplacement.
+
+AVANT (a chercher exactement, une seule occurrence) :
+confidence n'est JAMAIS 0 quand des donnees existent : plancher a 4, calibre entre 4 et 8.
+
+APRES (a mettre a la place) :
+confidence est un entier de 0 a 100, meme echelle que SYL et GIL. Elle n'est JAMAIS 0 quand des donnees existent : plancher a 40, calibre entre 40 et 80.
+
+Longueur attendue apres modification : 7076 caracteres (soit +63).
+
+============================================================
+MODULE 10012 — L'ALCHIMISTE DE LA CRYPTE (appel Perplexity)
+============================================================
+
+Champ concerne : le corps de la requete (body).
+Longueur actuelle du champ : 7593 caracteres.
+
+TROIS remplacements, dans cet ordre.
+
+--- Remplacement 1 sur 3 ---
+
+AVANT (une seule occurrence) :
+|CTX_B64={{base64(CTX)}}|SAGES_B64={{base64(SAGES)}}|
+
+APRES :
+|CTX_B64={{base64(110.value)}}|SAGES_B64={{base64(215.value)}}|
+
+--- Remplacement 2 sur 3 ---
+
+AVANT (une seule occurrence — attention, les antislashs font partie du texte et
+doivent etre presents a l'identique) :
+\"raison\":\"une phrase courte sans guillemets\"}],\"destake_recommande\"
+
+APRES :
+\"raison\":\"une phrase courte sans guillemets\",\"prix_ref\":115200.5}],\"destake_recommande\"
+
+--- Remplacement 3 sur 3 ---
+
+AVANT (une seule occurrence) :
+Chaque element de propositions DOIT porter les cinq cles ci-dessus.
+
+APRES :
+Chaque element de propositions DOIT porter les six cles ci-dessus. prix_ref est le cours que tu LIS dans PRIX_REVOLUTX_B64 pour cette paire : si la paire ne s'y trouve pas, elle n'est pas negociable et tu ne la proposes pas.
+
+Longueur attendue apres les trois remplacements : 7782 caracteres (soit +189).
+
+============================================================
+POUR FINIR — LES DEUX VALIDATIONS
+============================================================
+
+Une seule validation ne suffit pas dans Make :
+1. "OK" sur chaque module modifie ;
+2. PUIS la disquette (enregistrer) sur le scenario lui-meme.
+Sans la deuxieme, le blueprint ne bouge pas.
+
+Puis reponds en donnant, pour chaque module :
+- le nombre de caracteres du champ APRES modification ;
+- la confirmation que tu n'as touche a aucun en-tete.
+
+Ne fais rien d'autre. Ne propose pas d'amelioration.
