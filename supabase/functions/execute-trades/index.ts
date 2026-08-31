@@ -1,5 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v44 : PLUS AUCUN SEUIL DE SORTIE EN DUR — voir le bloc des constantes. Une position ne sort
+//       automatiquement que sur le seuil fixe par son Archimage. Aucune valeur de repli.
 // v43 : LES SORTIES REVIENNENT AUX ARCHIMAGES. Les prompts 301/303/305 demandent depuis toujours
 //       un stop_loss_pct et un take_profit_pct par trade, et les modules Make 10000/10001/10002
 //       les envoient bien dans le payload (trade_1_stop_loss_pct, trade_1_take_profit_pct, et les
@@ -83,10 +85,13 @@ const DELEVERAGE_TARGET_CASH = 3000
 const DELEVERAGE_MAX_SELLS = 12
 const BUY_CASH_FRACTION = 0.9
 const MAX_ORDER_PCT = 0.15
-// Seuils de REPLI, appliques a toute position pour laquelle aucun seuil d'agent n'est enregistre.
-// Ils restent la regle par defaut : ce sont eux qui ont pilote toutes les sorties jusqu'au 31/08/2026.
-const TAKE_PROFIT_PCT = 0.35
-const STOP_LOSS_PCT = 0.15
+// v44 — IL N'Y A PLUS DE SEUIL DE SORTIE EN DUR. TAKE_PROFIT_PCT = 0.35 et STOP_LOSS_PCT = 0.15
+// vivaient ici depuis le debut et fermaient les positions des trois archimages, tous tickers
+// confondus. Ce n'etait pas un garde-fou d'execution mais une DECISION DE TRADING, prise par le
+// code a la place du trader. Elles sont supprimees. Une position ne sort automatiquement que si
+// l'Archimage a fixe son seuil ; sinon elle ne sort pas toute seule, c'est lui qui la vend.
+// Les vrais garde-fous d'execution restent : plafond de levier, plafond de notionnel par ordre,
+// blocage d'ouverture sous coupe-circuit, desendettement sur marge, nettoyage des poussieres.
 // v43 — Un seuil d'agent n'est retenu qu'a partir de cette date. Les 1 618 lignes anterieures de
 // oracle_college_orders portent 5 et 10 sans que l'agent les ait demandes : ce sont les DEFAULT de
 // la table. Les relire comme des consignes fermerait 23 positions d'un coup. La borne est posee
@@ -133,7 +138,8 @@ function normSym(s: string): string { return String(s || '').toUpperCase().repla
 // v43 : un seuil venu d'un modele n'est retenu que s'il est vraisemblable. Le FORMAT DE SORTIE des
 // prompts 303 et 305 montre `"stop_loss_pct":0,"take_profit_pct":0` dans trades_extended : un
 // modele qui recopie l'exemple renvoie donc 0, qui ne veut pas dire « sortir tout de suite » mais
-// « je ne me prononce pas ». Zero, vide et hors bornes retournent null, et null vaut repli.
+// « je ne me prononce pas ». Zero, vide et hors bornes retournent null, et null veut dire
+// AUCUNE sortie automatique sur cette position : depuis la v44 il n'y a plus de valeur de repli.
 function seuilAgent(v: any, min: number, max: number): number | null {
   if (v === null || v === undefined || v === '') return null
   const n = Number(v)
@@ -205,7 +211,8 @@ async function getCoupeCircuit(archimage: string): Promise<{ drawdown: number | 
 
 // v43 : seuils de sortie propres a chaque symbole, lus dans les ordres deja enregistres.
 // On prend, par symbole, le seuil de l'ordre le plus recent de cet archimage — celui qui a ouvert
-// ou renforce la position en dernier. Un symbole absent de la table garde les constantes de repli.
+// ou renforce la position en dernier. Un symbole absent de la table n'a AUCUNE sortie automatique :
+// depuis la v44, seul un seuil venu de l'Archimage peut fermer une position.
 async function getSeuilsParSymbole(archimage: string): Promise<Record<string, { tp: number | null, sl: number | null }>> {
   const out: Record<string, { tp: number | null, sl: number | null }> = {}
   if (!SUPABASE_KEY || !archimage) return out
@@ -422,14 +429,16 @@ serve(async (req) => {
         const isShortP = q < 0
         const isCryptoP = (pos.asset_class === 'crypto')
         const mv = Math.abs(Number(pos.market_value) || 0)
-        // v43 — le seuil de CETTE position, s'il a ete enregistre, sinon la constante de repli.
+        // v44 — le seuil de CETTE position, tel que l'Archimage l'a fixe. Pas de valeur de repli :
+        // sans seuil de l'agent, AUCUNE sortie automatique. C'est le trader qui decide sa sortie,
+        // en vendant lui-meme au run suivant s'il le juge bon.
         const _s = seuilsSortie[sym]
-        const _tpSeuil = (_s && _s.tp !== null) ? _s.tp / 100 : TAKE_PROFIT_PCT
-        const _slSeuil = (_s && _s.sl !== null) ? _s.sl / 100 : STOP_LOSS_PCT
+        const _tpSeuil = (_s && _s.tp !== null) ? _s.tp / 100 : null
+        const _slSeuil = (_s && _s.sl !== null) ? _s.sl / 100 : null
         let reason: string | null = null
         if (mv > 0 && mv < POUSSIERE_SEUIL_USD) reason = 'poussiere'
-        else if (plpc >= _tpSeuil) reason = 'take_profit'
-        else if (plpc <= -_slSeuil) reason = 'stop_loss'
+        else if (_tpSeuil !== null && plpc >= _tpSeuil) reason = 'take_profit'
+        else if (_slSeuil !== null && plpc <= -_slSeuil) reason = 'stop_loss'
         if (reason === 'poussiere' && (mv < DUST_USD_MIN || Math.abs(q) < DUST_QTY_MIN)) {
           skipped.push({ ticker: pos.symbol, side: isShortP ? 'buy' : 'sell', reason: 'dust_unsellable', qty: String(q), mv })
           continue
@@ -439,9 +448,9 @@ serve(async (req) => {
           autoExits.push({ ticker: pos.symbol, side: isShortP ? 'buy' : 'sell', qty: qtyStr(_qClose), notional: Math.max(1, Math.floor(mv)), asset_type: isCryptoP ? 'crypto' : 'etf', archimage_prefix: prefix, _auto: reason, _plpc: Math.round(plpc*10000)/10000,
             // trace : quel seuil a ferme la position, et d'ou il vient. Sans ca on ne peut pas
             // relire une sortie six semaines plus tard.
-            _seuil_pct: reason === 'take_profit' ? Math.round(_tpSeuil*10000)/100 : (reason === 'stop_loss' ? Math.round(_slSeuil*10000)/100 : null),
-            _seuil_source: (reason === 'take_profit' || reason === 'stop_loss')
-              ? ((reason === 'take_profit' ? (_s && _s.tp !== null) : (_s && _s.sl !== null)) ? 'agent' : 'repli') : null })
+            _seuil_pct: reason === 'take_profit' ? Math.round((_tpSeuil as number)*10000)/100 : (reason === 'stop_loss' ? Math.round((_slSeuil as number)*10000)/100 : null),
+            // v44 : plus qu'une seule provenance possible, l'agent. Sans seuil, on n'arrive pas ici.
+            _seuil_source: (reason === 'take_profit' || reason === 'stop_loss') ? 'agent' : null })
           selling.add(sym)
         }
       }
@@ -712,7 +721,8 @@ serve(async (req) => {
         if (e.tp_pct !== null && e.tp_pct !== undefined) o.take_profit_pct = e.tp_pct
         if (e.rationale) o.rationale = e.rationale
         // Une sortie automatique n'est pas une decision d'ordre : on note son motif reel plutot
-        // que de laisser la ligne muette. _seuil_source dit si c'est l'agent ou le repli.
+        // que de laisser la ligne muette. Depuis la v44, _seuil_source vaut toujours 'agent' :
+        // sans seuil d'Archimage, la sortie automatique n'a pas lieu.
         if (e.auto) o.rationale = `sortie auto ${e.auto}` + (e._seuil_pct != null ? ` a ${e._seuil_pct} % (${e._seuil_source})` : '')
         return o
       })

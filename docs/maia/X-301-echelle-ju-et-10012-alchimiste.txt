@@ -46,9 +46,9 @@ AVANT (a chercher exactement, une seule occurrence) :
 confidence n'est JAMAIS 0 quand des donnees existent : plancher a 4, calibre entre 4 et 8.
 
 APRES (a mettre a la place) :
-confidence est un entier de 0 a 100, meme echelle que SYL et GIL. Elle n'est JAMAIS 0 quand des donnees existent : plancher a 40, calibre entre 40 et 80.
+confidence est un entier de 0 a 100, meme echelle que SYL et GIL. Tu la calcules toi-meme a partir de tes donnees : aucune valeur, aucun plancher et aucune fourchette ne te sont imposes.
 
-Longueur attendue apres modification : 7076 caracteres (soit +63).
+Longueur attendue apres modification : 7109 caracteres (soit +96).
 
 ============================================================
 MODULE 10012 — L'ALCHIMISTE DE LA CRYPTE (appel Perplexity)
