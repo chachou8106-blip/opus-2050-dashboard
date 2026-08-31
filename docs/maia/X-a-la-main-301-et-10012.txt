@@ -1,0 +1,94 @@
+A FAIRE A LA MAIN — 31/08/2026 — modules 301 et 10012, scenario 7051944
+
+POURQUOI PAS MAIA
+-----------------
+Maia a essaye et a echoue cinq fois. Son journal montre deux defauts, et les deux
+sont ceux que notre memoire projet documente deja :
+
+1. Sa PREMIERE tentative a altere la cle du module 301 : 109 caracteres au lieu
+   de 108, divergence au caractere 42. Elle s'est corrigee seule a la deuxieme
+   tentative, mais si elle avait reussi a enregistrer du premier coup, la cle
+   partait cassee. C'est la regle du 28/08, re-verifiee en direct.
+
+2. Son outil reenregistre le module entier et REESCAPE le corps : elle a envoye
+   \"bias\" la ou le champ contient "bias" tout nu. Make l'a refusee avec
+   « backslash-escaped quote inside an IML expression ». Le validateur a raison :
+   c'est exactement le crash du 27/08 (Bad escaped character in JSON) qu'il vient
+   d'empecher.
+
+Verifie sur le blueprint reel avant d'ecrire cette note : les modules 301, 303 et
+305 contiennent chacun deux expressions avec des guillemets, et ZERO antislash :
+   map(105.data.brain_states.JU.learnings; "bias"); " ## ")
+   map(105.data.brain_states.JU.mistakes_history; "erreur"); " ## ")
+C'est l'etat sain. Il ne doit pas changer.
+
+Une retouche manuelle n'a aucun de ces deux risques : tu ouvres le champ « Body
+content », tu remplaces un bout de texte, tu fermes. Les en-tetes ne sont jamais
+touches, et rien n'est re-serialise.
+
+
+MODULE 301 — L'ARCHIMAGE SOUVERAIN JU
+-------------------------------------
+Ouvre le module, champ « Body content ». Compteur actuel : 7013 caracteres.
+
+DEUX remplacements. La consigne « entre 4 et 8 » figure a DEUX endroits du champ :
+n'en corriger qu'un laisserait JU avec deux consignes contradictoires.
+
+--- 1 sur 2 ---
+CHERCHE (une seule occurrence) :
+confidence n'est JAMAIS 0 quand des donnees existent : plancher a 4, calibre entre 4 et 8.
+
+REMPLACE PAR :
+confidence est un entier de 0 a 100, meme echelle que SYL et GIL. Tu la calcules toi-meme a partir de tes donnees : aucune valeur, aucun plancher et aucune fourchette ne te sont imposes.
+
+--- 2 sur 2 ---
+CHERCHE (une seule occurrence, plus bas dans le meme champ) :
+Confiance calibree entre 4 et 8 sur un setup clair ; ne jamais renvoyer confidence 0 quand des donnees existent.
+
+REMPLACE PAR :
+Confiance exprimee de 0 a 100, que tu calcules toi-meme ; ne jamais renvoyer confidence 0 quand des donnees existent.
+
+Compteur attendu apres les deux : 7114 caracteres (+101).
+Controle : la suite de caracteres « 4 et 8 » ne doit plus exister nulle part dans
+le champ. Verifie avec la recherche.
+
+
+MODULE 10012 — L'ALCHIMISTE DE LA CRYPTE
+----------------------------------------
+Meme champ « Body content ». Compteur actuel : 7593 caracteres.
+Trois remplacements, chacun unique dans le champ.
+
+--- 1 sur 3 ---
+CHERCHE :
+|CTX_B64={{base64(CTX)}}|SAGES_B64={{base64(SAGES)}}|
+
+REMPLACE PAR :
+|CTX_B64={{base64(110.value)}}|SAGES_B64={{base64(215.value)}}|
+
+(110 est le module CTX, 215 le module SAGES. Ce n'est pas une formule inventee :
+c'est exactement la forme que 301, 303 et 305 utilisent deja pour lire ces deux
+modules. CTX et SAGES tout court ne resolvent rien et rendent du vide.)
+
+--- 2 sur 3 ---
+CHERCHE (les antislashs font partie du texte, tape-les) :
+\"raison\":\"une phrase courte sans guillemets\"}],\"destake_recommande\"
+
+REMPLACE PAR :
+\"raison\":\"une phrase courte sans guillemets\",\"prix_ref\":115200.5}],\"destake_recommande\"
+
+--- 3 sur 3 ---
+CHERCHE :
+Chaque element de propositions DOIT porter les cinq cles ci-dessus.
+
+REMPLACE PAR :
+Chaque element de propositions DOIT porter les six cles ci-dessus. prix_ref est le cours que tu LIS dans PRIX_REVOLUTX_B64 pour cette paire : si la paire ne s'y trouve pas, elle n'est pas negociable et tu ne la proposes pas.
+
+Compteur attendu apres les trois : 7782 caracteres (+189).
+
+
+POUR FINIR
+----------
+1. « OK » sur chaque module modifie ;
+2. PUIS la disquette sur le scenario. Sans la deuxieme, le blueprint ne bouge pas.
+
+Puis dis-moi les deux compteurs (7114 et 7782) et je verifie le blueprint moi-meme.
