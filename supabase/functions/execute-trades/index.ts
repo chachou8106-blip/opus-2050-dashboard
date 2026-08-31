@@ -1,5 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v45 : L'ENREGISTREMENT DES ORDRES ETAIT MUET, ET IL ECHOUAIT. Au run du 31/08 19:46, 12 ordres
+//       ont ete acceptes chez Alpaca et 2 seulement sont arrives dans oracle_college_orders : les
+//       6 de JU et les 4 de SYL ont disparu sans laisser de trace. Cause : la v43 ajoutait
+//       stop_loss_pct, take_profit_pct et rationale de facon CONDITIONNELLE, donc les objets d'un
+//       meme envoi n'avaient pas le meme jeu de cles — et PostgREST refuse un insert groupe
+//       heterogene. Le seul lot homogene, celui de GIL, est passe. Desormais les trois cles sont
+//       TOUJOURS presentes, a null quand l'Archimage ne s'est pas prononce. Consequence voulue :
+//       la colonne ne retombe plus sur son DEFAULT 5/10, elle vaut NULL, ce qui est la verite.
+//       Et l'echec n'est plus silencieux : `.catch(() => {})` n'attrapait que les erreurs reseau,
+//       jamais un code HTTP. On journalise le code et la reponse.
 // v44 : PLUS AUCUN SEUIL DE SORTIE EN DUR — voir le bloc des constantes. Une position ne sort
 //       automatiquement que sur le seuil fixe par son Archimage. Aucune valeur de repli.
 // v43 : LES SORTIES REVIENNENT AUX ARCHIMAGES. Les prompts 301/303/305 demandent depuis toujours
@@ -716,18 +726,37 @@ serve(async (req) => {
       // sur son DEFAULT, et getSeuilsParSymbole n'y verra pas une consigne puisqu'elle borne a
       // SEUILS_AGENT_DEPUIS et rejette tout ce qui sort des bornes de vraisemblance.
       const ordersToSave = executed.filter(e => e.status === 'accepted').map(e => {
-        const o: any = { run_id, archimage: archimage || 'ND', symbol: e.ticker, side: e.side, asset_class: e.asset_type || 'etf', notional: e.notional, broker: 'alpaca', broker_order_id: e.alpaca_id || null, broker_status: e.alpaca_status || 'accepted', validated: true }
-        if (e.sl_pct !== null && e.sl_pct !== undefined) o.stop_loss_pct = e.sl_pct
-        if (e.tp_pct !== null && e.tp_pct !== undefined) o.take_profit_pct = e.tp_pct
-        if (e.rationale) o.rationale = e.rationale
         // Une sortie automatique n'est pas une decision d'ordre : on note son motif reel plutot
         // que de laisser la ligne muette. Depuis la v44, _seuil_source vaut toujours 'agent' :
         // sans seuil d'Archimage, la sortie automatique n'a pas lieu.
-        if (e.auto) o.rationale = `sortie auto ${e.auto}` + (e._seuil_pct != null ? ` a ${e._seuil_pct} % (${e._seuil_source})` : '')
-        return o
+        const motif = e.auto
+          ? `sortie auto ${e.auto}` + (e._seuil_pct != null ? ` a ${e._seuil_pct} % (${e._seuil_source})` : '')
+          : (e.rationale || null)
+        return {
+          run_id, archimage: archimage || 'ND', symbol: e.ticker, side: e.side,
+          asset_class: e.asset_type || 'etf', notional: e.notional, broker: 'alpaca',
+          broker_order_id: e.alpaca_id || null, broker_status: e.alpaca_status || 'accepted',
+          validated: true,
+          stop_loss_pct: (e.sl_pct === undefined ? null : e.sl_pct),
+          take_profit_pct: (e.tp_pct === undefined ? null : e.tp_pct),
+          rationale: motif
+        }
       })
       if (ordersToSave.length > 0) {
-        await fetch(`${SUPABASE_URL}/rest/v1/oracle_college_orders`, { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify(ordersToSave) }).catch(() => {})
+        // v45 : cet enregistrement etait muet. Le 31/08 19:46, 12 ordres ont ete acceptes chez
+        // le courtier et 2 seulement sont arrives ici ; le refus de PostgREST est passe inapercu
+        // parce que `.catch(() => {})` n'attrape que les erreurs reseau, jamais un code HTTP.
+        // On journalise desormais l'echec, avec le code et le message.
+        try {
+          const rSave = await fetch(`${SUPABASE_URL}/rest/v1/oracle_college_orders`, { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify(ordersToSave) })
+          if (!rSave.ok) {
+            const txt = await rSave.text().catch(() => '')
+            console.log('ORDERS_SAVE_FAIL ' + JSON.stringify({ archimage, run_id, lignes: ordersToSave.length, code: rSave.status, reponse: txt.slice(0, 400) }))
+            await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: ordersToSave.length, accepted: 0, rejected: ordersToSave.length, skipped: 0, payload: { erreur_enregistrement: { code: rSave.status, reponse: txt.slice(0, 400) } } })
+          }
+        } catch (eSave) {
+          console.log('ORDERS_SAVE_FAIL ' + JSON.stringify({ archimage, run_id, lignes: ordersToSave.length, erreur: String(eSave) }))
+        }
       }
     }
 
