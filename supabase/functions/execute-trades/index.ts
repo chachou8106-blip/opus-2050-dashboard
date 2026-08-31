@@ -1,5 +1,24 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+// v43 : LES SORTIES REVIENNENT AUX ARCHIMAGES. Les prompts 301/303/305 demandent depuis toujours
+//       un stop_loss_pct et un take_profit_pct par trade, et les modules Make 10000/10001/10002
+//       les envoient bien dans le payload (trade_1_stop_loss_pct, trade_1_take_profit_pct, et les
+//       memes cles dans chaque element de trades_extended). Cette fonction ne les lisait NULLE
+//       PART : ni dans le destructuring du payload, ni dans allTrades, ni dans ordersToSave. Les
+//       sorties suivaient deux constantes du fichier, +35 % / -15 %, identiques pour les trois
+//       archimages et pour tous les tickers ; et les 1 618 lignes de oracle_college_orders ecrites
+//       depuis le 5 juin portaient 5 et 10, qui sont les DEFAULT de la table. La console affichait
+//       donc un seuil qui n'etait ni celui demande par l'agent, ni celui applique.
+//       Deux changements, dans cet ordre :
+//       1. ON ENREGISTRE ce qui etait deja transmis : stop_loss_pct, take_profit_pct, rationale et
+//          size_pct_portfolio rejoignent ordersToSave. Journalisation pure, aucun effet sur les
+//          ordres envoyes au courtier.
+//       2. ON APPLIQUE le seuil de l'ordre qui a ouvert la position, au lieu des constantes.
+//       GARDE-FOU, et c'est le coeur du correctif : tant qu'aucun seuil n'a ete enregistre pour un
+//       symbole, on garde les constantes. Mesure du 31/08/2026 16:00 : basculer d'un coup sur des
+//       seuils typiques (TP 10 %, SL 5 %) fermait 23 positions pour 582 425 $ au run suivant, dont
+//       504 161 $ sur GIL. C'est l'accident de la v39 refait. Avec le repli, la bascule ne touche
+//       que les positions ouvertes APRES ce deploiement, une par une, a leur propre seuil.
 // v42 : COUPE-CIRCUIT DRAWDOWN BRANCHE A L'EXECUTION. Les coupe-circuits existaient et se
 //       declenchaient (check_circuit_breakers, toutes les 2 h), mais RIEN ne les lisait au moment
 //       de passer les ordres : sur les 7 jours precedents, 116 ordres, 116 executes, 0 refuse,
@@ -62,8 +81,20 @@ const DELEVERAGE_TARGET_CASH = 3000
 const DELEVERAGE_MAX_SELLS = 12
 const BUY_CASH_FRACTION = 0.9
 const MAX_ORDER_PCT = 0.15
+// Seuils de REPLI, appliques a toute position pour laquelle aucun seuil d'agent n'est enregistre.
+// Ils restent la regle par defaut : ce sont eux qui ont pilote toutes les sorties jusqu'au 31/08/2026.
 const TAKE_PROFIT_PCT = 0.35
 const STOP_LOSS_PCT = 0.15
+// v43 — Un seuil d'agent n'est retenu qu'a partir de cette date. Les 1 618 lignes anterieures de
+// oracle_college_orders portent 5 et 10 sans que l'agent les ait demandes : ce sont les DEFAULT de
+// la table. Les relire comme des consignes fermerait 23 positions d'un coup. La borne est posee
+// APRES le run du 31/08 13:45 UTC, qui a lui aussi ecrit 11 lignes a 5/10.
+const SEUILS_AGENT_DEPUIS = '2026-08-31T14:30:00Z'
+// Bornes de vraisemblance sur un seuil venu d'un modele. Hors de ces bornes, on ignore la valeur et
+// on retombe sur les constantes : un modele qui repond 0, 1 000 ou une absurdite ne doit pas pouvoir
+// solder un portefeuille. Meme esprit que la borne de notionnel de la v41.
+const TP_AGENT_MIN = 1, TP_AGENT_MAX = 200
+const SL_AGENT_MIN = 1, SL_AGENT_MAX = 60
 const MOM_LOOKBACK_DAYS = 90
 const MOM_BUY_MIN = -0.10
 const MOM_SHORT_MAX = 0
@@ -96,6 +127,16 @@ const ETF_REF = ['SPY','QQQ','IWM','DIA','VOO','VTI','XLK','XLF','XLV','XLU','XL
   'SPXS','VXX','UVXY','ARKK','XBI','KRE','XRT','ITB']
 
 function normSym(s: string): string { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '') }
+
+// v43 : un seuil venu d'un modele n'est retenu que s'il est vraisemblable. Le FORMAT DE SORTIE des
+// prompts 303 et 305 montre `"stop_loss_pct":0,"take_profit_pct":0` dans trades_extended : un
+// modele qui recopie l'exemple renvoie donc 0, qui ne veut pas dire « sortir tout de suite » mais
+// « je ne me prononce pas ». Zero, vide et hors bornes retournent null, et null vaut repli.
+function seuilAgent(v: any, min: number, max: number): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return (isFinite(n) && n >= min && n <= max) ? Math.round(n * 100) / 100 : null
+}
 
 function parisRunId(): string {
   const s = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Paris' })
@@ -158,6 +199,33 @@ async function getCoupeCircuit(archimage: string): Promise<{ drawdown: number | 
     if (dd !== null && dd >= DRAWDOWN_DEFENSIF) return { drawdown: dd, defensif: true, motif: `drawdown_${(dd * 100).toFixed(2)}pct_superieur_a_8pct` }
     return { drawdown: dd, defensif: false, motif: null }
   } catch { return vide }
+}
+
+// v43 : seuils de sortie propres a chaque symbole, lus dans les ordres deja enregistres.
+// On prend, par symbole, le seuil de l'ordre le plus recent de cet archimage — celui qui a ouvert
+// ou renforce la position en dernier. Un symbole absent de la table garde les constantes de repli.
+async function getSeuilsParSymbole(archimage: string): Promise<Record<string, { tp: number | null, sl: number | null }>> {
+  const out: Record<string, { tp: number | null, sl: number | null }> = {}
+  if (!SUPABASE_KEY || !archimage) return out
+  try {
+    const u = `${SUPABASE_URL}/rest/v1/oracle_college_orders?archimage=eq.${encodeURIComponent(archimage)}`
+      + `&created_at=gte.${encodeURIComponent(SEUILS_AGENT_DEPUIS)}`
+      + `&select=symbol,stop_loss_pct,take_profit_pct,created_at&order=created_at.desc&limit=600`
+    const r = await fetch(u, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }, signal: AbortSignal.timeout(6000) })
+    if (!r.ok) return out
+    const rows = await r.json()
+    if (!Array.isArray(rows)) return out
+    const borne = (v: any, min: number, max: number): number | null => {
+      const n = Number(v)
+      return (isFinite(n) && n >= min && n <= max) ? n : null
+    }
+    for (const row of rows) {
+      const s = normSym(row.symbol)
+      if (!s || out[s]) continue   // deja vu : la liste est triee du plus recent au plus ancien
+      out[s] = { tp: borne(row.take_profit_pct, TP_AGENT_MIN, TP_AGENT_MAX), sl: borne(row.stop_loss_pct, SL_AGENT_MIN, SL_AGENT_MAX) }
+    }
+  } catch {}
+  return out
 }
 
 async function getConcentrationCroisee(tickers: string[], archimageActuel: string): Promise<Record<string, { long: number, short: number }>> {
@@ -264,7 +332,12 @@ serve(async (req) => {
     const payload = await req.json()
     const { archimage, alpaca_key, alpaca_secret, market_phase,
       trade_1_ticker, trade_1_side, trade_1_notional, trade_1_asset_type, trade_1_time_in_force, trade_1_conviction,
-      trade_1_qty, trades_extended } = payload
+      trade_1_qty, trades_extended,
+      // v43 : ces deux cles arrivaient depuis toujours et n'etaient lues nulle part.
+      // Il n'y a volontairement pas de trade_1_rationale : les modules Make 10000/10001/10002 ne
+      // construisent pas cette cle. Le motif n'est donc enregistre que pour les trades_extended,
+      // qui transportent l'objet complet du modele. Verifie dans le blueprint le 31/08/2026.
+      trade_1_stop_loss_pct, trade_1_take_profit_pct } = payload
     const run_id = (payload.run_id && payload.run_id !== 'ND') ? payload.run_id : parisRunId()
 
     if (!alpaca_key || !alpaca_secret) return new Response(JSON.stringify({ error: 'Missing Alpaca credentials' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
@@ -272,14 +345,17 @@ serve(async (req) => {
     const allTrades: any[] = []
     const prefix = (archimage || 'XX').toUpperCase().substring(0, 3)
     if (trade_1_ticker && trade_1_ticker !== 'ND' && trade_1_ticker !== '') {
-      allTrades.push({ ticker: trade_1_ticker, side: trade_1_side || 'buy', notional: Number(trade_1_notional) || 300, asset_type: trade_1_asset_type || 'etf', time_in_force: trade_1_time_in_force || 'day', conviction: Number(trade_1_conviction) || 5, archimage_prefix: prefix, qty: trade_1_qty || null })
+      allTrades.push({ ticker: trade_1_ticker, side: trade_1_side || 'buy', notional: Number(trade_1_notional) || 300, asset_type: trade_1_asset_type || 'etf', time_in_force: trade_1_time_in_force || 'day', conviction: Number(trade_1_conviction) || 5, archimage_prefix: prefix, qty: trade_1_qty || null,
+        sl_pct: seuilAgent(trade_1_stop_loss_pct, SL_AGENT_MIN, SL_AGENT_MAX), tp_pct: seuilAgent(trade_1_take_profit_pct, TP_AGENT_MIN, TP_AGENT_MAX), rationale: null })
     }
     let extended = trades_extended
     if (typeof extended === 'string') { try { extended = JSON.parse(extended) } catch { extended = [] } }
     if (Array.isArray(extended)) {
       for (const t of extended.slice(0, 49)) {
         if (t.ticker && t.ticker !== 'ND' && t.ticker !== '' && t.side && ['buy','sell'].includes(t.side.toLowerCase()) && Number(t.notional) >= 1) {
-          allTrades.push({ ticker: t.ticker, side: t.side.toLowerCase(), notional: Number(t.notional), asset_type: t.asset_type || 'etf', time_in_force: t.asset_type === 'crypto' ? 'gtc' : (t.time_in_force || 'day'), conviction: Number(t.conviction) || 5, archimage_prefix: prefix, qty: t.qty || null, intent: t.intent || null })
+          allTrades.push({ ticker: t.ticker, side: t.side.toLowerCase(), notional: Number(t.notional), asset_type: t.asset_type || 'etf', time_in_force: t.asset_type === 'crypto' ? 'gtc' : (t.time_in_force || 'day'), conviction: Number(t.conviction) || 5, archimage_prefix: prefix, qty: t.qty || null, intent: t.intent || null,
+            sl_pct: seuilAgent(t.stop_loss_pct, SL_AGENT_MIN, SL_AGENT_MAX), tp_pct: seuilAgent(t.take_profit_pct, TP_AGENT_MIN, TP_AGENT_MAX),
+            rationale: (typeof t.rationale === 'string' && t.rationale.trim()) ? t.rationale.trim().slice(0, 300) : null })
         }
       }
     }
@@ -326,6 +402,7 @@ serve(async (req) => {
     const momMap = await getMomentum(alpaca_key, alpaca_secret, _stockSyms, _cryptoSyms)
     const concentration = await getConcentrationCroisee(allTrades.map(t => t.ticker), archimage || '')
     const coupeCircuit = await getCoupeCircuit(archimage || '')
+    const seuilsSortie = await getSeuilsParSymbole(archimage || '')
 
     const toExec: any[] = []
     const skipped: any[] = []
@@ -343,17 +420,26 @@ serve(async (req) => {
         const isShortP = q < 0
         const isCryptoP = (pos.asset_class === 'crypto')
         const mv = Math.abs(Number(pos.market_value) || 0)
+        // v43 — le seuil de CETTE position, s'il a ete enregistre, sinon la constante de repli.
+        const _s = seuilsSortie[sym]
+        const _tpSeuil = (_s && _s.tp !== null) ? _s.tp / 100 : TAKE_PROFIT_PCT
+        const _slSeuil = (_s && _s.sl !== null) ? _s.sl / 100 : STOP_LOSS_PCT
         let reason: string | null = null
         if (mv > 0 && mv < POUSSIERE_SEUIL_USD) reason = 'poussiere'
-        else if (plpc >= TAKE_PROFIT_PCT) reason = 'take_profit'
-        else if (plpc <= -STOP_LOSS_PCT) reason = 'stop_loss'
+        else if (plpc >= _tpSeuil) reason = 'take_profit'
+        else if (plpc <= -_slSeuil) reason = 'stop_loss'
         if (reason === 'poussiere' && (mv < DUST_USD_MIN || Math.abs(q) < DUST_QTY_MIN)) {
           skipped.push({ ticker: pos.symbol, side: isShortP ? 'buy' : 'sell', reason: 'dust_unsellable', qty: String(q), mv })
           continue
         }
         if (reason) {
           const _qClose = reason === 'poussiere' ? Math.abs(q) : Math.abs(q) * (isCryptoP ? SELL_SAFETY_CRYPTO : SELL_SAFETY_STOCK)
-          autoExits.push({ ticker: pos.symbol, side: isShortP ? 'buy' : 'sell', qty: qtyStr(_qClose), notional: Math.max(1, Math.floor(mv)), asset_type: isCryptoP ? 'crypto' : 'etf', archimage_prefix: prefix, _auto: reason, _plpc: Math.round(plpc*10000)/10000 })
+          autoExits.push({ ticker: pos.symbol, side: isShortP ? 'buy' : 'sell', qty: qtyStr(_qClose), notional: Math.max(1, Math.floor(mv)), asset_type: isCryptoP ? 'crypto' : 'etf', archimage_prefix: prefix, _auto: reason, _plpc: Math.round(plpc*10000)/10000,
+            // trace : quel seuil a ferme la position, et d'ou il vient. Sans ca on ne peut pas
+            // relire une sortie six semaines plus tard.
+            _seuil_pct: reason === 'take_profit' ? Math.round(_tpSeuil*10000)/100 : (reason === 'stop_loss' ? Math.round(_slSeuil*10000)/100 : null),
+            _seuil_source: (reason === 'take_profit' || reason === 'stop_loss')
+              ? ((reason === 'take_profit' ? (_s && _s.tp !== null) : (_s && _s.sl !== null)) ? 'agent' : 'repli') : null })
           selling.add(sym)
         }
       }
@@ -614,7 +700,20 @@ serve(async (req) => {
     await dbg({ archimage: archimage || 'ND', run_id, market_open: marketOpen, total: allTrades.length, accepted, rejected, skipped: skipped.length, payload: { skipped_detail: skipped, results: executed.map(e => ({ t:e.ticker, side:e.side, raw_qty: (e.raw_qty_in != null ? e.raw_qty_in : null), qty:e.qty, notional:e.notional, type:e.order_type, status:e.status, alpaca:e.alpaca_status, err:e.error, clamped_from: (e._clamped_from != null ? e._clamped_from : null), short: (e.short || null), cover: (e.cover || null), mom: (e._mom != null ? e._mom : null), chunk: (e.chunk || null) })) } })
 
     if (SUPABASE_KEY) {
-      const ordersToSave = executed.filter(e => e.status === 'accepted').map(e => ({ run_id, archimage: archimage || 'ND', symbol: e.ticker, side: e.side, asset_class: e.asset_type || 'etf', notional: e.notional, broker: 'alpaca', broker_order_id: e.alpaca_id || null, broker_status: e.alpaca_status || 'accepted', validated: true }))
+      // v43 — on enregistre ce que l'ARCHIMAGE a demande, pas un defaut de table. stop_loss_pct et
+      // take_profit_pct restent omis quand l'agent ne s'est pas prononce : la colonne retombe alors
+      // sur son DEFAULT, et getSeuilsParSymbole n'y verra pas une consigne puisqu'elle borne a
+      // SEUILS_AGENT_DEPUIS et rejette tout ce qui sort des bornes de vraisemblance.
+      const ordersToSave = executed.filter(e => e.status === 'accepted').map(e => {
+        const o: any = { run_id, archimage: archimage || 'ND', symbol: e.ticker, side: e.side, asset_class: e.asset_type || 'etf', notional: e.notional, broker: 'alpaca', broker_order_id: e.alpaca_id || null, broker_status: e.alpaca_status || 'accepted', validated: true }
+        if (e.sl_pct !== null && e.sl_pct !== undefined) o.stop_loss_pct = e.sl_pct
+        if (e.tp_pct !== null && e.tp_pct !== undefined) o.take_profit_pct = e.tp_pct
+        if (e.rationale) o.rationale = e.rationale
+        // Une sortie automatique n'est pas une decision d'ordre : on note son motif reel plutot
+        // que de laisser la ligne muette. _seuil_source dit si c'est l'agent ou le repli.
+        if (e.auto) o.rationale = `sortie auto ${e.auto}` + (e._seuil_pct != null ? ` a ${e._seuil_pct} % (${e._seuil_source})` : '')
+        return o
+      })
       if (ordersToSave.length > 0) {
         await fetch(`${SUPABASE_URL}/rest/v1/oracle_college_orders`, { method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, body: JSON.stringify(ordersToSave) }).catch(() => {})
       }
