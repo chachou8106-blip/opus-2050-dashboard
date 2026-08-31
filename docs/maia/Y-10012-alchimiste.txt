@@ -1,0 +1,108 @@
+PROMPT MAIA — 31/08/2026 — UN SEUL MODULE : 10012
+Scenario 7051944. Trois remplacements de chaine dans le corps de la requete.
+
+============================================================
+CE QUI A ECHOUE LA DERNIERE FOIS, POUR QUE CA NE SE REPETE PAS
+============================================================
+
+Tu as tente le module 301 et tu as echoue cinq fois. Deux causes, verifiees dans
+le blueprint :
+
+A) Ta PREMIERE tentative a altere la cle. Tu as renvoye une "x-api-key" de 109
+   caracteres au lieu de 108, la divergence tombant au caractere 42, avec un
+   debut et une fin corrects. Invisible a l'oeil. Tu t'es corrigee toute seule a
+   la deuxieme tentative, mais un enregistrement reussi du premier coup partait
+   avec une cle cassee.
+
+B) Tu as REESCAPE le corps : tu as envoye des guillemets precedes d'un antislash
+   la ou le champ contient des guillemets nus a l'interieur des expressions
+   {{ ... }}. Make a refuse, a juste titre.
+
+BONNE NOUVELLE POUR CE MODULE-CI : le 10012 ne contient AUCUN guillemet et AUCUN
+antislash a l'interieur de ses 15 expressions {{ ... }}. C'est verifie. La cause
+(B) ne peut donc pas se produire ici, a condition que tu n'ajoutes rien.
+
+============================================================
+LES REGLES
+============================================================
+
+1. UNIQUEMENT le scenario 7051944, UNIQUEMENT le module 10012.
+
+2. LES EN-TETES. Ton outil reenregistre le module entier : tu dois donc bien
+   renvoyer les en-tetes, c'est normal. Ce qui est interdit, c'est de les
+   MODIFIER. Recopie chaque valeur exactement telle que tu l'as lue. Ne la
+   retape pas de memoire, ne la tronque pas, ne la reformate pas.
+
+   CONTROLE OBLIGATOIRE apres enregistrement, a me rapporter :
+     Authorization = 60 caracteres
+     Content-Type  = 16 caracteres
+   Si l'un des deux differe, dis-le et n'enregistre pas le scenario.
+   Ne me redonne JAMAIS la valeur d'une cle : sa longueur suffit.
+
+3. TU N'AJOUTES AUCUN ECHAPPEMENT. Le corps contient aujourd'hui 84 antislashs,
+   tous dans le TEXTE du prompt (jamais dans une expression). Ils font partie du
+   texte : tu les gardes tels quels, tu n'en ajoutes pas, tu n'en enleves pas.
+   Apres tes trois remplacements le corps doit en contenir exactement 86 : les
+   deux nouveaux viennent de prix_ref au remplacement 2, et de nulle part
+   ailleurs. Et aucune expression {{ ... }} ne doit contenir d'antislash.
+
+4. Tu ne modifies ni l'URL, ni la methode, ni le parsing, ni stopOnHttpError, ni
+   aucun autre reglage. Les renvoyer inchanges est normal ; les changer ne l'est
+   pas.
+
+5. Tu ne reformules RIEN : ni orthographe, ni accents, ni ponctuation, ni casse.
+   Les textes ci-dessous sont volontairement sans accents par endroits.
+
+6. Chacune des trois chaines "AVANT" apparait EXACTEMENT UNE FOIS : c'est
+   verifie ce soir sur le blueprint. Si tu en trouves zero ou plusieurs, tu
+   n'appliques rien et tu le signales.
+
+============================================================
+MODULE 10012 — L'ALCHIMISTE DE LA CRYPTE
+============================================================
+Champ « Body content ». Longueur actuelle : 7593 caracteres.
+
+--- REMPLACEMENT 1 sur 3 ---
+
+AVANT :
+|CTX_B64={{base64(CTX)}}|SAGES_B64={{base64(SAGES)}}|
+
+APRES :
+|CTX_B64={{base64(110.value)}}|SAGES_B64={{base64(215.value)}}|
+
+Pourquoi : dans Make, une variable ne se lit pas par son nom. {{base64(CTX)}} ne
+resout rien et envoie du vide. 110 est le module CTX, 215 le module SAGES. Ce
+n'est pas une formule inventee : c'est exactement ce que les modules 301, 303 et
+305 utilisent deja pour lire ces deux memes modules.
+
+--- REMPLACEMENT 2 sur 3 ---
+
+AVANT (les antislashs font partie du texte, ils sont a taper) :
+\"raison\":\"une phrase courte sans guillemets\"}],\"destake_recommande\"
+
+APRES :
+\"raison\":\"une phrase courte sans guillemets\",\"prix_ref\":115200.5}],\"destake_recommande\"
+
+--- REMPLACEMENT 3 sur 3 ---
+
+AVANT :
+Chaque element de propositions DOIT porter les cinq cles ci-dessus.
+
+APRES :
+Chaque element de propositions DOIT porter les six cles ci-dessus. prix_ref est le cours que tu LIS dans PRIX_REVOLUTX_B64 pour cette paire : si la paire ne s'y trouve pas, elle n'est pas negociable et tu ne la proposes pas.
+
+============================================================
+CONTROLES A ME RAPPORTER
+============================================================
+
+1. Longueur du corps : doit valoir exactement 7782 caracteres (7593 + 189).
+2. Nombre d'antislashs dans le corps : doit valoir exactement 86.
+3. Aucune expression {{ ... }} ne contient d'antislash.
+4. Longueur des en-tetes : Authorization 60, Content-Type 16.
+5. La chaine base64(CTX) et la chaine base64(SAGES) ne doivent plus exister.
+
+Puis les DEUX validations :
+  a. « OK » sur le module ;
+  b. PUIS la disquette sur le scenario. Sans la deuxieme, le blueprint ne bouge pas.
+
+Ne fais rien d'autre. Ne propose pas d'amelioration.
