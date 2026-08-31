@@ -1,0 +1,59 @@
+-- 31/08/2026 — batch_write_college_run_v2 : le coupe-circuit et le drawdown reels
+--
+-- CONSTAT. Au run COLLEGE-20260831-1543, trois achats de GIL ont ete refuses par le coupe-circuit
+-- a 11,49 % de drawdown (traces dans oracle_exec_debug, motif coupe_circuit_defensif). La ligne du
+-- college, elle, disait circuit_breaker_fired = false et drawdown_at_run = 0. La console affichait
+-- donc l'inverse du terrain.
+--
+-- CAUSE. Dans la fonction, circuit_breaker_fired etait ecrit EN DUR a `false`, et drawdown_at_run
+-- n'etait pas dans l'INSERT du tout : la colonne restait a son defaut sur les 278 runs.
+--
+-- CORRECTIF. Aucun objet nouveau : on lit oracle_circuit_breakers et oracle_brain_state, qui
+-- existent et portent deja l'information. La modification a ete faite par remplacement de chaine
+-- sur la definition de la fonction (7 608 -> 8 044 caracteres), avec un garde-fou qui refuse
+-- d'agir si l'une des deux ancres n'est pas trouvee une fois et une seule.
+-- Sauvegarde de l'ancienne definition : table bak_20260831_batch_write.
+--
+-- TESTE avec un run factice `TESTV43-BATCH-NE-PAS-UTILISER` (identifiant volontairement
+-- impossible a confondre avec un vrai run, lecon du 28/08 ou un appel de test avec un run_id reel
+-- avait ecrase syl_web_catalysts). Resultat :
+--   circuit_breaker_fired  = true
+--   circuit_breaker_reason = 'GIL drawdown_8pct, GIL drawdown_5pct, MAREES win_rate_faible'
+--   drawdown_at_run        = 0.1261   (les 12,61 % que la console montre deja pour GIL)
+-- Ligne de test supprimee.
+--
+-- Les deux remplacements appliques, pour memoire :
+--
+--   '    overlap_score, circuit_breaker_fired,'
+-- → '    overlap_score, circuit_breaker_fired, circuit_breaker_reason, drawdown_at_run,'
+--
+--   '    v_overlap_score,\n    false,'
+-- → '    v_overlap_score,
+--      (select exists (select 1 from oracle_circuit_breakers cb where cb.resolved_at is null)),
+--      (select string_agg(cb.archimage||'' ''||cb.breaker_type, '', '' order by cb.archimage)
+--         from oracle_circuit_breakers cb where cb.resolved_at is null),
+--      (select round(max(greatest(coalesce(bs.current_drawdown,0),
+--                                 coalesce(bs.alpaca_drawdown_from_peak,0)))::numeric, 4)
+--         from oracle_brain_state bs),'
+--
+--
+-- RESTE A FAIRE COTE MAKE — consensus_level, retouche MANUELLE (pas Maia)
+--
+-- Le module 982 envoie bien consensus_level, et la fonction fait
+-- COALESCE(p_payload->>'consensus_level', 'SPLIT'). Pourtant la colonne vaut '' sur TOUS les runs.
+-- COALESCE ne rattrape que NULL, pas la chaine vide : le payload envoie donc du vide.
+-- La cause est dans l'expression, ou les deux libelles sont NUS :
+--
+--   {{if(ifempty(302.market_phase; A) = ifempty(304.market_phase; B); FULL; SPLIT)}}
+--
+-- Make lit FULL et SPLIT comme des noms de variable, qui n'existent pas : les deux branches
+-- rendent du vide. Meme famille de defaut que {{CTX}} et {{SAGES}}.
+--
+-- Correction (1815 -> 1819 caracteres, quatre guillemets ajoutes) :
+--
+--   {{if(ifempty(302.market_phase; A) = ifempty(304.market_phase; B); "FULL"; "SPLIT")}}
+--
+-- A FAIRE A LA MAIN, PAS PAR MAIA. Le module 982 appelle Supabase, et la regle du 28/08 est
+-- explicite : Maia reecrit et casse la cle des modules Supabase qu'elle touche, alors que les
+-- retouches manuelles de Chachou n'ont jamais abime une cle. Quatre guillemets ne justifient pas
+-- ce risque.
