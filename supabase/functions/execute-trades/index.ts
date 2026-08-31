@@ -10,9 +10,11 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 //       depuis le 5 juin portaient 5 et 10, qui sont les DEFAULT de la table. La console affichait
 //       donc un seuil qui n'etait ni celui demande par l'agent, ni celui applique.
 //       Deux changements, dans cet ordre :
-//       1. ON ENREGISTRE ce qui etait deja transmis : stop_loss_pct, take_profit_pct, rationale et
-//          size_pct_portfolio rejoignent ordersToSave. Journalisation pure, aucun effet sur les
-//          ordres envoyes au courtier.
+//       1. ON ENREGISTRE ce qui etait deja transmis : stop_loss_pct, take_profit_pct et rationale
+//          rejoignent ordersToSave. Journalisation pure, aucun effet sur les ordres envoyes au
+//          courtier. PAS size_pct_portfolio ni web_catalyst : verifie dans le blueprint le
+//          31/08/2026, les modules 10000/10001/10002 ne construisent pas ces deux cles, elles
+//          n'arrivent donc jamais ici. Les enregistrer demanderait d'abord de les faire envoyer.
 //       2. ON APPLIQUE le seuil de l'ordre qui a ouvert la position, au lieu des constantes.
 //       GARDE-FOU, et c'est le coeur du correctif : tant qu'aucun seuil n'a ete enregistre pour un
 //       symbole, on garde les constantes. Mesure du 31/08/2026 16:00 : basculer d'un coup sur des
