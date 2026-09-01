@@ -1,0 +1,65 @@
+MODULE 982 — LA SOLUTION DEFINITIVE — 01/09/2026
+Scenario 7051944, champ « Body content ». Deux remplacements. 1823 -> 1715.
+
+OU ON EN EST
+------------
+Tes deux corrections d'il y a cinq minutes ont pris :
+- le « + » a disparu des deux formatDate ;
+- consensus_level est de nouveau entoure de ses guillemets, et FULL/SPLIT sont
+  restes nus a l'interieur de l'expression, ce qui est l'etat voulu.
+
+Mais l'editeur de Make a casse les deux formatDate une TROISIEME fois, autrement :
+il a transforme  \"  en  "\""  . D'ou 1823 au lieu de 1819.
+
+En trois ouvertures du module, trois manglings differents sur les MEMES deux
+expressions. Ce n'est pas toi : c'est que  \"  n'est pas de l'IML valide. Make
+l'executait par tolerance, mais son editeur ne sait pas le reserialiser. Tant
+que ces deux expressions existent, chaque ouverture du module les recassera.
+
+DONC ON LES SUPPRIME. Elles sont redondantes : verifie dans la fonction
+Supabase batch_write_college_run_v2, qui a deja ses propres replis —
+  run_id vide ou 'ND'  ->  elle fabrique 'COLLEGE-' || to_char(now(), ...)
+  run_at absent        ->  COALESCE(..., now())
+Make n'a donc rien a calculer ici. Et 101.value resout a chaque run : c'est
+prouve, les six tables portent le meme COLLEGE-... depuis le 28/08.
+
+
+LES DEUX REMPLACEMENTS
+----------------------
+
+--- 1 sur 2 ---
+CHERCHE (tout, y compris les guillemets aux deux bouts) :
+"run_id": "{{ifempty(101.value; formatDate(now; "\""YYYYMMDD-HHmm\"))}}"
+
+REMPLACE PAR :
+"run_id": "{{101.value}}"
+
+--- 2 sur 2 ---
+CHERCHE (commence par une virgule et un espace, et on SUPPRIME tout) :
+, "run_at": "{{formatDate(now; "\""YYYY-MM-DDTHH:mm:ssZ\")}}"
+
+REMPLACE PAR : rien du tout. On efface, virgule comprise.
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 1715 caracteres exactement.
+2. Recherche « \ » (antislash) : ne doit plus rien trouver DANS TOUT LE CHAMP.
+   C'est le controle qui compte : plus aucun antislash, donc plus rien que
+   l'editeur puisse abimer a la prochaine ouverture.
+3. Le champ doit commencer exactement par :
+   {"p_payload": {"run_id": "{{101.value}}", "status": "success", "market_phase":
+4. La ligne consensus_level ne bouge pas et reste :
+   "consensus_level": "{{if(ifempty(302.market_phase; A) = ifempty(304.market_phase; B); "FULL"; "SPLIT")}}"
+   (c'est la seule expression du module qui garde des guillemets, et ils sont
+   nus : c'est de l'IML valide, l'editeur sait la relire sans l'abimer)
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Reverifie le compteur apres la disquette : il doit toujours afficher 1715.
+
+
+CE QUE CA CHANGE DANS LES DONNEES
+---------------------------------
+run_at sera l'heure d'ecriture en base au lieu de l'heure Make : quelques
+secondes d'ecart, sans effet sur la fenetre de +/- 5 minutes de v_sages_pannes
+ni sur la console.
