@@ -1,0 +1,64 @@
+URGENT — MODULE 982 A REPARER AVANT LE RUN — 01/09/2026
+Scenario 7051944. Trois remplacements dans le champ « Body content ».
+
+CE QUI S'EST PASSE
+------------------
+Ton ajout des quatre guillemets sur consensus_level est bien la et il est bon.
+Mais en rouvrant le module, DEUX autres choses ont bouge sans que tu les touches :
+
+1. L'editeur d'expression de Make a reinsere « + » dans les deux formatDate.
+   C'est le defaut deja constate le 28/08 sur le module 10032.
+2. Le guillemet ouvrant de la valeur de consensus_level a saute : le champ
+   contient "consensus_level":{{if(...  au lieu de  "consensus_level": "{{if(...
+
+Consequence mesuree : le corps du 982 passait JSON.parse hier, il ECHOUE
+maintenant avec « Bad escaped character in JSON at position 64 » — le message
+exact du crash du 27/08. Le module 982 ecrit la ligne du college : le run
+s'arretera dessus.
+
+NE LANCE PAS LE RUN AVANT D'AVOIR FAIT CECI.
+
+
+LES TROIS REMPLACEMENTS
+-----------------------
+Longueur actuelle du champ : 1823 caracteres. Attendue apres : 1819.
+
+--- 1 sur 3 ---
+CHERCHE :
+formatDate(now; \ + "YYYYMMDD-HHmm\")
+
+REMPLACE PAR :
+formatDate(now; \"YYYYMMDD-HHmm\")
+
+--- 2 sur 3 ---
+CHERCHE :
+formatDate(now; \ + "YYYY-MM-DDTHH:mm:ssZ\")
+
+REMPLACE PAR :
+formatDate(now; \"YYYY-MM-DDTHH:mm:ssZ\")
+
+--- 3 sur 3 ---
+CHERCHE :
+"consensus_level":{{if(
+
+REMPLACE PAR :
+"consensus_level": "{{if(
+
+(un espace et un guillemet apres les deux-points, avant les doubles accolades)
+
+
+TES CONTROLES AVANT DE FERMER
+-----------------------------
+1. Compteur du champ : 1819 caracteres exactement.
+2. Recherche « + " » : ne doit plus rien trouver dans le champ.
+3. La ligne consensus_level doit se lire, en entier :
+   "consensus_level": "{{if(ifempty(302.market_phase; A) = ifempty(304.market_phase; B); "FULL"; "SPLIT")}}",
+   Les guillemets autour de FULL et SPLIT restent NUS : c'est normal et voulu.
+
+Puis les DEUX validations : « OK » sur le module, PUIS la disquette sur le scenario.
+
+Verifie une SECONDE fois le compteur apres avoir clique la disquette : l'editeur
+peut remettre le « + » a la fermeture. S'il est revenu, refais le remplacement 1
+et 2 et reenregistre.
+
+Donne-moi le compteur et je relis le blueprint avant que tu lances.
