@@ -1,106 +1,142 @@
-# « Ma console ne fonctionne plus » — 02/09/2026
+# La console — 02/09/2026
 
-Ce n'était pas une panne : c'était une attente trop longue pour un navigateur.
+Deux parties : ce que j'ai cassé et remis, puis la vraie cause, trouvée après.
 
-## Ce que la console demande au démarrage
+---
 
-`aether.html` → `boot()` lance dix appels en parallèle, dont
-`INBOX({action:'suivi'})`. Tant que celui-là n'a pas répondu, la page reste sur
-« Chargement des données réelles… », puis affiche
-« ⚠️ oracle-inbox injoignable » si la requête échoue.
+## 1. Ce que j'ai fait, et pourquoi je l'ai annulé
 
-## Ce qui a été mesuré (et non supposé)
+J'ai déployé deux changements ce soir :
 
-**Tous les points d'entrée répondent 200.** Testés un par un avec la clé `anon`
-exacte du fichier, celle que le navigateur envoie :
+- une réécriture de la vue `v_dernier_prix` (parcours d'index par sauts) ;
+- `oracle-inbox` v28, qui lançait les 25 lectures du bloc `suivi` ensemble.
 
-| Appel | Résultat |
-|---|---|
-| `oracle-inbox` action `suivi` | 200, 126 287 caractères |
-| `oracle-inbox` action `journal` | 200, 199 678 caractères |
-| `rpc/dashboard_snapshot` | 200, 52 698 caractères |
-| `v_exposition_traders` | 200, 842 caractères |
-| les 14 actions de `oracle-tests` | 200, toutes avec des données réelles |
+Chachou a chargé la console pendant que ces changements étaient en place et
+pendant que mon propre trafic de test tournait. Résultat mesuré à ce
+moment-là :
 
-Donc ni la clé, ni les droits, ni le RLS, ni le fichier HTML (inchangé depuis le
-commit `d78172b`, déjà sur `main`).
+- `rpc/dashboard_snapshot` → **500**, `57014 canceling statement due to statement timeout` ;
+- le bloc `suivi` → **36 844 caractères au lieu de 126 312**, donc à moitié vide,
+  **et pourtant `ok:true`**. Une panne muette : exactement le défaut qu'on s'était
+  juré d'éliminer le 31/08 avec le `.catch` vide d'`execute-trades`.
 
-**Le temps d'exécution, lui, était hors de portée d'un navigateur.** Relevé dans
-les logs edge (`function_edge_logs`, champ `execution_time_ms`) pour `oracle-inbox`
-action `suivi`, le 02/09 :
+La panne muette vient de la parallélisation : dans le bloc `suivi`, chaque lecture
+ratée retombe sur `arr(body)` qui rend `[]`. En séquentiel ça n'arrivait jamais ;
+en lançant 25 requêtes d'un coup, plusieurs peuvent échouer et les blocs
+correspondants repartent vides, sans rien signaler.
+
+**Tout est remis dans l'état d'avant.** `v_dernier_prix` a retrouvé sa définition
+`DISTINCT ON` d'origine ; `oracle-inbox` a été redéployé avec le code v27 à
+l'identique (version 29 côté Supabase, même contenu que la 27).
+
+**Et une explication que j'ai donnée était fausse :** j'ai écrit que ma vue avait
+ralenti `dashboard_snapshot`. Vérification faite ensuite, `dashboard_snapshot` ne
+référence **pas** `v_dernier_prix` — il lit `price_history` en direct. Ma vue ne
+pouvait pas le ralentir par cette voie. Je l'ai retirée.
+
+---
+
+## 2. La vraie cause, et elle est antérieure à ce soir
+
+Une fois tout remis à l'état initial, `rpc/dashboard_snapshot` appelé **seul**,
+sans aucun autre trafic, avec la clé `anon` du fichier :
 
 ```
-16:41:26   47 216 ms
-16:54:35   64 562 ms
-16:57:12   20 936 ms
-17:29:27   24 857 ms
-17:30:40   18 913 ms
+500 — {"code":"57014","message":"canceling statement due to statement timeout"}
 ```
 
-À côté, l'action `journal` du même fichier : 1 658 ms. Le problème était donc
-circonscrit au bloc `suivi`.
-
-## Les deux causes, séparées et mesurées
-
-### 1. La base — `v_dernier_prix` relisait 575 000 lignes pour en rendre 331
+### Le plafond
 
 ```sql
-SELECT DISTINCT ON (symbol) ... FROM price_history ORDER BY symbol, ts DESC
+select rolname, rolconfig from pg_roles;
+  anon           statement_timeout=3s
+  authenticated  statement_timeout=8s
+  service_role   (aucun)
 ```
 
-Le plan le confirmait : `Index Scan ... rows=575525`, **371 081 buffers touchés**
-pour 331 lignes en sortie. La table grossit toutes les 5 minutes : la vue
-ralentissait un peu plus chaque jour. Deux vues de la console en dépendent
-(`v_alc_virtuel_positions`, `v_alc_reel_live_positions`, et donc
-`v_alc_reel_live_resume`).
+La console appelle `dashboard_snapshot` **directement depuis le navigateur**, donc
+en rôle `anon` : elle a **3 secondes**, pas une de plus.
 
-Réécrite en parcours d'index par sauts (*loose index scan*) : la liste des 331
-symboles est construite par descentes successives dans l'index
-`idx_price_history_sym_ts_desc` — **qui existait déjà**, rien n'a été ajouté —
-puis un `ORDER BY ts DESC LIMIT 1` par symbole. C'est exactement le motif que
-`v_live_crypto_positions` utilisait déjà et qui la maintenait à 1 ms.
-
-Contrôle d'équivalence avant remplacement, dans les deux sens :
+### Le temps réel de la fonction
 
 ```
-n_ancien 331 | n_nouveau 331 | dans_ancien_seulement 0 | dans_nouveau_seulement 0
+passage 1 (cache froid) : 3 127,6 ms
+passage 2               :   101,6 ms
+passage 3               :   100,3 ms
+passage 4               :   100,1 ms
 ```
 
-| Vue | Avant | Après |
+**3 127 ms à froid contre un plafond de 3 000 ms.** À chaud, 100 ms. C'est
+exactement pour ça que la console marche une fois sur deux : dès que les pages
+concernées sortent du cache — et elles en sortent en permanence, `price_history`
+grossit toutes les 5 minutes — l'appel dépasse et le serveur coupe.
+
+Côté page, `SNAPF()` fait `.then(r => r.ok ? r.json() : null)` : un 500 devient
+`null`, `D.snap` est vide, et les panneaux qui en dépendent restent blancs. Sans
+message d'erreur.
+
+C'est aussi ce qui explique mes mesures de l'après-midi : j'avais lu 1 285 ms puis
+353 ms puis 106 ms, toutes à chaud, et j'en avais conclu que la fonction allait
+bien. **Une mesure à chaud ne dit rien du cas qui casse.**
+
+### Ce qui coûte les 3 secondes
+
+Les treize relations lues par la fonction, chronométrées une par une :
+
+| Relation | Lignes | Temps |
 |---|---|---|
-| `v_dernier_prix` | 5 827 ms | **19 ms** |
-| `v_alc_virtuel_positions` | 8 284 ms | **18 ms** |
-| `v_alc_reel_live_positions` | 933 ms | **24 ms** |
-| `v_alc_reel_live_resume` | 920 ms | **15 ms** |
-| `v_perf_avancee` | 6 110 ms | **166 ms** |
-| **les 22 vues du bloc suivi** | **~17 600 ms** | **1 305 ms** |
+| **`price_history`** | **575 898** | **423,6 ms** |
+| `evaluate_sages()` | — | 45,8 ms |
+| `oracle_exec_debug` | 752 | 9,6 ms |
+| `revolut_portfolio_daily` | 62 | 8,4 ms |
+| `oracle_performance` | 864 | 4,8 ms |
+| `oracle_positions_live` | 72 | 4,2 ms |
+| `oracle_college_orders` | 1 636 | 2,6 ms |
+| `oracle_college_runs` | 285 | 1,8 ms |
+| `alchimiste_crypte_propositions` | 68 | 0,7 ms |
+| `oracle_sages_report` | 1 045 | 0,7 ms |
 
-### 2. La fonction — 25 lectures indépendantes, mises à la queue leu leu
+Une seule pèse. Et voici à quoi elle sert, dans le bloc `stats` de la fonction :
 
-`oracle-inbox` v27 enchaînait ses 25 `await` l'un après l'autre alors qu'aucune
-lecture ne dépend d'une autre. v28 les lance ensemble (`Promise.all`). Aucune
-requête n'a changé : même URL, mêmes colonnes, même JSON en sortie — seul
-l'ordonnancement change. Vérifié après déploiement : 200, 21 clés de premier
-niveau, toutes peuplées (5 traders, 6 lignes de perf, 427 rendements, 24 séries
-de comparaison, 20 positions Alchimiste réel, 5 sages), et l'action `journal`
-inchangée à 199 678 caractères.
-
-## Résultat
-
-```
-avant : 18,9 / 20,9 / 24,9 / 47,2 / 64,6 s
-après : 11,7 / 11,7 s
+```sql
+'bougies', (select count(*) from public.price_history),
 ```
 
-Le pire cas passe de 65 s à 12 s, et la dispersion disparaît.
+**Un compteur d'affichage.** Un `count(*)` complet sur 575 898 lignes — 424 ms à
+chaud, bien davantage à froid — pour écrire un nombre de bougies à l'écran. C'est
+lui qui fait passer la fonction au-dessus des 3 secondes du rôle `anon`.
 
-## Ce qui reste, et que je n'ai pas fait
+Les deux autres fonctions du même bloc sont `STABLE` et n'écrivent rien
+(vérifié : `provolatile = 's'`, zéro `insert`, zéro `update`) — le chemin de
+lecture de la console n'écrit pas en base, c'est propre de ce côté-là.
 
-La base ne pèse plus que 1,3 s sur les 11,7. Le reste, ~10 s, ce sont les
-**26 allers-retours HTTP** entre la fonction edge et PostgREST, qui passent par
-l'adresse publique du projet. Les lancer ensemble ne les rend pas gratuits.
+---
 
-La suite logique serait une fonction SQL unique (sur le modèle de
-`dashboard_snapshot`, qui rend 52 ko en 1,3 s en un seul appel) qui renverrait
-tout le bloc `suivi` d'un coup : 26 appels deviendraient 1. Je ne l'ai pas fait —
-c'est un chantier à part, et il ne se décide pas pendant qu'un run est cassé.
+## 3. Ce que je propose — et que je n'ai pas fait
+
+Remplacer ce `count(*)` exact par l'estimation que Postgres tient déjà à jour :
+
+```sql
+'bougies', (select reltuples::bigint from pg_class where relname = 'price_history'),
+```
+
+Coût : quelques microsecondes au lieu de 424 ms à chaud. Sur un compteur
+d'affichage, l'estimation vaut le compte exact.
+
+Je ne l'applique pas. J'ai déjà déployé deux choses ce soir sans les avoir
+éprouvées à froid, et c'est ce qui a cassé sa console. Cette fois je montre
+d'abord.
+
+---
+
+## 4. La leçon, pour moi
+
+Tout mon diagnostic de l'après-midi reposait sur des mesures **à chaud**, prises
+juste après un appel identique. Le cas qui casse est le cas **à froid**, et il ne
+se voit qu'à froid. Un chiffre pris dans de bonnes conditions ne prouve rien sur
+les mauvaises — c'est la règle du 20/08 (« un contrôle étroit ne prouve pas une
+affirmation large ») sous une autre forme, et je l'ai reviolée.
+
+Et j'ai mesuré pendant que je générais moi-même du trafic. Tous mes écarts de la
+soirée sont pollués par mes propres rafales de test. On ne mesure pas une machine
+en tapant dessus.
