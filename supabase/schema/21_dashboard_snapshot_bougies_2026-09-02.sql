@@ -1,0 +1,65 @@
+-- dashboard_snapshot — le compteur de bougies faisait tomber la console. 02/09/2026.
+--
+-- CE QUI SE PASSAIT
+-- La console (aether.html) appelle rpc/dashboard_snapshot DIRECTEMENT depuis le navigateur,
+-- donc en role `anon`. Or :
+--     select rolname, rolconfig from pg_roles;
+--       anon           statement_timeout=3s
+--       authenticated  statement_timeout=8s
+--       service_role   (aucun)
+-- La fonction avait 3 SECONDES, pas une de plus. Mesure du 02/09 :
+--       passage 1 (cache froid) : 3 127,6 ms   <-- au-dessus du plafond
+--       passages 2 a 4          :   100,x ms
+-- A froid elle depassait, PostgREST coupait avec 57014 « canceling statement due to statement
+-- timeout », la page recevait 500, SNAPF() rendait null, et D.snap restait vide.
+--
+-- CE QUE D.snap ALIMENTE DANS LA PAGE (verifie ligne par ligne dans aether.html) :
+--   rTotaux()      valeur totale, gain cumule, positions ouvertes, runs executes
+--   rFlux()        le flux des ordres recents
+--   rGardeFous()   kill-switch, poids du Meta-Cerveau
+--   rArchi()       les trois cartes Archimages, la doctrine, les poids
+--   rTables()      le tableau des comptes
+--   rEtatCollege() « College actif » / « Dernier run il y a … » dans le bandeau
+--   rOps()         audit, debug d'execution
+--   rapportHTML()  le rapport investisseurs
+--   le copilote    reponses sur le drawdown et sur JU/SYL/GIL
+-- Un seul 500 et tout ca reste blanc, sans message. C'est « ma console ne fonctionne plus ».
+--
+-- LA CAUSE, SUR LES TREIZE ACCES DE LA FONCTION
+--   price_history                    576 200 lignes   423,6 ms   <-- seul poste qui pese
+--   evaluate_sages()                                    45,8 ms
+--   oracle_exec_debug                    752 lignes      9,6 ms
+--   revolut_portfolio_daily               62 lignes      8,4 ms
+--   oracle_performance                   864 lignes      4,8 ms
+--   oracle_positions_live                 72 lignes      4,2 ms
+--   oracle_college_orders              1 636 lignes      2,6 ms
+--   oracle_college_runs                  285 lignes      1,8 ms
+--   alchimiste_crypte_propositions        68 lignes      0,7 ms
+--   oracle_sages_report                1 045 lignes      0,7 ms
+-- et l'acces en question etait :
+--     'bougies',(select count(*) from public.price_history),
+-- un compteur d'AFFICHAGE. Un count(*) complet balaie les 194 Mo de la table.
+--
+-- POURQUOI MAINTENANT ET PAS AVANT
+-- price_history grossit de 7 547 lignes par jour (mesure sur 24 h). Le cout du balayage a froid
+-- grandit avec elle. Il a fini par franchir les 3 secondes du role anon — et ce jour-la la
+-- console a commence a tomber, sans qu'une seule ligne de code ait change.
+--
+-- LE CORRECTIF
+-- reltuples, l'estimation que Postgres tient deja a jour, au lieu du compte exact :
+--     575 828 estime contre 576 200 exact, soit 0,06 % d'ecart. Sur un compteur d'affichage,
+--     l'estimation vaut le compte.
+--
+-- APRES (cinq passages consecutifs, dont le premier a froid) :
+--     62,4 / 51,7 / 52,0 / 51,1 / 50,9 ms   -- plus aucune pointe a froid
+--     52 696 caracteres rendus, identique a avant
+--     rpc/dashboard_snapshot en anon : 200
+-- La marge passe de 1,04x le plafond a 58x.
+--
+-- Applique par remplacement de chaine sur pg_get_functiondef, avec garde-fou d'unicite de
+-- l'ancre (exception si elle n'apparait pas exactement une fois). SECURITY DEFINER et STABLE
+-- verifies inchanges apres coup.
+
+-- AVANT : 'bougies',(select count(*) from public.price_history),
+-- APRES :
+--   'bougies',(select reltuples::bigint from pg_class where relname='price_history'),

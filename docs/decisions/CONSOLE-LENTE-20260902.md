@@ -112,31 +112,64 @@ lecture de la console n'écrit pas en base, c'est propre de ce côté-là.
 
 ---
 
-## 3. Ce que je propose — et que je n'ai pas fait
+## 3. Le correctif — appliqué et vérifié
 
-Remplacer ce `count(*)` exact par l'estimation que Postgres tient déjà à jour :
+`count(*)` remplacé par l'estimation que Postgres tient déjà à jour :
 
 ```sql
-'bougies', (select reltuples::bigint from pg_class where relname = 'price_history'),
+-- avant
+'bougies',(select count(*) from public.price_history),
+-- après
+'bougies',(select reltuples::bigint from pg_class where relname='price_history'),
 ```
 
-Coût : quelques microsecondes au lieu de 424 ms à chaud. Sur un compteur
-d'affichage, l'estimation vaut le compte exact.
+575 828 estimé contre 576 200 exact : **0,06 % d'écart**, sur un compteur d'affichage.
 
-Je ne l'applique pas. J'ai déjà déployé deux choses ce soir sans les avoir
-éprouvées à froid, et c'est ce qui a cassé sa console. Cette fois je montre
-d'abord.
+Appliqué par remplacement de chaîne sur `pg_get_functiondef`, avec garde-fou d'unicité de
+l'ancre (exception levée si elle n'apparaît pas exactement une fois — elle apparaissait
+bien une seule fois). `SECURITY DEFINER` et `STABLE` vérifiés inchangés après coup.
+
+**Après, cinq passages consécutifs dont le premier à froid :**
+
+```
+62,4 / 51,7 / 52,0 / 51,1 / 50,9 ms
+```
+
+Plus aucune pointe à froid. 52 696 caractères rendus, identique à avant. La marge passe de
+**1,04× le plafond à 58×**.
+
+### Test d'acceptation
+
+Les dix appels exacts que `boot()` lance au chargement, tirés ensemble comme le fait le
+navigateur, avec la clé `anon` du fichier :
+
+| Appel | Code | Taille |
+|---|---|---|
+| `oracle-inbox` suivi | 200 | 125 693 |
+| `oracle-tests` hero | 200 | 1 115 |
+| `oracle-tests` sages | 200 | 669 |
+| `oracle-tests` runs | 200 | 5 477 |
+| `oracle-tests` positions | 200 | 12 392 |
+| `oracle-tests` bt_alchimiste | 200 | 6 958 |
+| `oracle-tests` equity | 200 | 7 571 |
+| `oracle-tests` alchimiste | 200 | 657 |
+| `rpc/dashboard_snapshot` | **200** | 52 696 |
+| `v_exposition_traders` | 200 | 842 |
+
+Dix sur dix.
 
 ---
 
 ## 4. La leçon, pour moi
 
-Tout mon diagnostic de l'après-midi reposait sur des mesures **à chaud**, prises
-juste après un appel identique. Le cas qui casse est le cas **à froid**, et il ne
-se voit qu'à froid. Un chiffre pris dans de bonnes conditions ne prouve rien sur
-les mauvaises — c'est la règle du 20/08 (« un contrôle étroit ne prouve pas une
-affirmation large ») sous une autre forme, et je l'ai reviolée.
+Tout mon diagnostic de l'après-midi reposait sur des mesures **à chaud**, prises juste après
+un appel identique — 1 285 ms, puis 353, puis 106. J'en ai conclu que la fonction allait bien.
+Le cas qui casse est le cas **à froid**, et il ne se voit qu'à froid. C'est la règle du 20/08
+(« un contrôle étroit ne prouve pas une affirmation large ») sous une autre forme.
 
-Et j'ai mesuré pendant que je générais moi-même du trafic. Tous mes écarts de la
-soirée sont pollués par mes propres rafales de test. On ne mesure pas une machine
-en tapant dessus.
+Et j'ai mesuré pendant que je générais moi-même des rafales de test. On ne mesure pas une
+machine en tapant dessus.
+
+Enfin : j'ai cherché la cause dans ce que j'avais sous la main — une vue, une fonction edge —
+au lieu de **lire la console en entier** et de suivre `D.snap` jusqu'à ses neuf points d'usage.
+La réponse était dans le fichier depuis le début.
