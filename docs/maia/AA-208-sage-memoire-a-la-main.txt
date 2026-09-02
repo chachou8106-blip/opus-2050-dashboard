@@ -1,97 +1,98 @@
-MODULE 208 — POURQUOI LE RUN DE 20h02 S'EST ARRETE, ET CE QU'ON FAIT
-Scenario 7051944. 02/09/2026.
-
-CE QUI S'EST PASSE
-------------------
-Le run lance a 20:02 (heure de Cannes) s'est arrete au 21e module sur 76.
-Make dit, mot pour mot :
-
-  DataError — "Source is not valid JSON." — module ParseJSON
-
-Le 21e module dans l'ordre d'execution est le 208 « DISTILLATION MEMOIRE »,
-celui qui lit la reponse du 207 « DEEP MEMORY », le Sage Memoire.
-
-Les quatre premiers Sages ont repondu. Le cinquieme a renvoye quelque chose qui
-n'est pas du JSON, et TOUT s'est arrete la : pas d'Archimages, pas d'ordres, pas
-de Registre. La derniere ligne en base reste celle du run de 12:22.
-
-Ce n'est PAS une consequence de ta modification de midi : tu as modifie a
-12:19:29, le run de 12:19:50 a reussi avec ses 76 operations. Aucune modification
-entre celui-la et celui de 20:02. Le scenario n'a pas bouge — c'est la reponse du
-Sage Memoire qui a change.
+MODULE 208 — LE RUN DE 20h02, ET CE QU'ON FAIT MAINTENANT
+Scenario 7051944. 02/09/2026. Version corrigee apres lecture du panneau INPUT.
 
 
-AVANT TOUTE CHOSE : REGARDE L'OUTPUT DU 207
---------------------------------------------
-Je n'ai pas acces aux entrees/sorties des modules : l'API Make ne les donne pas.
-Toi si. Ouvre l'historique d'execution du run de 20:02, clique sur le module 207
-« DEEP MEMORY », panneau OUTPUT, et cherche :
+CE QUI S'EST PASSE — MAINTENANT ON LE SAIT EXACTEMENT
+------------------------------------------------------
+Le run lance a 20:02 s'est arrete au 21e module sur 76, sur le 208
+« DISTILLATION MEMOIRE », qui lit la reponse du 207 « DEEP MEMORY ».
 
-  finishReason
+Le panneau INPUT du 208 montre trois morceaux colles bout a bout :
 
-- Si tu lis  finishReason: "MAX_TOKENS"  -> la reponse a ete coupee en cours de
-  route, le JSON arrive tronque, et c'est exactement le message d'erreur qu'on a.
-  C'est mon hypothese, et la reparation est au point A ci-dessous.
-- Si tu lis autre chose (SAFETY, RECITATION, ou du texte en clair au lieu de
-  JSON), dis-le-moi : la reparation ne sera pas la meme.
+  1. l'objet JSON COMPLET et valide   ...,"correction_cible":"MAREES"}
+  2. un fragment de 21 caracteres     ESPR_cible":"MAREES"}
+  3. LE MEME OBJET COMPLET, a l'identique
 
-Ne repare rien avant d'avoir regarde. Je ne veux pas te faire modifier un module
-sur une supposition.
+Rien n'est tronque. Les deux copies sont entieres. Le Sage Memoire s'est REPETE.
+Colles ensemble, ces trois morceaux ne sont evidemment pas du JSON valide, et
+ParseJSON s'arrete — a juste titre.
 
+J'AVAIS SUPPOSE UNE TRONCATURE A maxOutputTokens. C'ETAIT FAUX.
+Ne touche pas a maxOutputTokens : ca n'aurait rien repare, et ca aurait fait
+croire que c'etait regle. La version precedente de cette fiche est annulee.
 
-A) SI C'EST MAX_TOKENS — UN SEUL CHIFFRE A CHANGER, A LA MAIN
---------------------------------------------------------------
-Module 207, champ « Body content ». Une seule occurrence, a la fin du corps :
-
-CHERCHE :
-"maxOutputTokens":2000
-
-REMPLACE PAR :
-"maxOutputTokens":4000
-
-Rien d'autre. C'est un chiffre, pas une expression : aucun risque d'echappement.
-
-TES CONTROLES
-  1. Le compteur du champ gagne exactement 0 caractere (2000 et 4000 font
-     4 caracteres tous les deux). Il doit afficher 4442 avant ET apres.
-  2. Recherche "maxOutputTokens" : une seule occurrence, et elle dit 4000.
-  3. Le reste du bloc generationConfig ne bouge pas :
-     "temperature":0.01 ... "responseMimeType":"application/json"
-     ... "thinkingConfig":{"thinkingBudget":0}
-
-Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Ce n'est pas non plus une consequence de ta modification de midi : tu as modifie
+a 12:19:29, le run de 12:19:50 a reussi avec ses 76 operations, et rien n'a bouge
+entre celui-la et celui de 20:02.
 
 
-B) LA VRAIE REPARATION — QU'UN SAGE MUET NE TUE PLUS LE RUN
-------------------------------------------------------------
-Le point A regle le cas d'aujourd'hui. Il ne regle pas le fond.
+1. TOUT DE SUITE : RELANCE LE RUN
+----------------------------------
+Il n'y a rien de casse dans le scenario. Un modele qui se repete, c'est un alea.
+La reponse suivante sera tres probablement lisible. Relance, et regarde si tu
+arrives aux 76 operations.
 
-Le fond, c'est ceci, et je l'ai verifie sur ton blueprint :
 
-  · Le garde-fou du 208 est  ifempty(...; "{}")  . Il protege du VIDE, pas d'une
-    reponse presente mais malformee. Une reponse vide -> "{}" -> le run continue.
-    Une reponse tronquee -> elle passe telle quelle -> ParseJSON casse.
-  · Les cinq Sages ont exactement le meme montage (202, 204, 206, 208, 210).
-    La meme panne peut venir de n'importe lequel.
-  · Il y a 14 modules ParseJSON dans le scenario (202, 204, 206, 208, 210, 302,
-    304, 306, 402, 9998, 9997, 10010, 10014, 20016).
-  · Et AUCUN des 80 modules n'a de gestionnaire d'erreur. Zero. Verifie.
+2. LE BOUTON QUE MAKE TE PROPOSE — N'Y TOUCHE PAS
+---------------------------------------------------
+Make t'affiche « Automatic error handler / Ignore all errors ». NE CLIQUE PAS.
 
-Sur 14 jours, v_sages_pannes compte 2 runs muets pour le Sage Memoire et 5 pour
-le Sage Macro, sur 19 runs. Ce n'est pas une panne installee, c'est un alea —
-mais un alea qui coute le run entier a chaque fois qu'il tombe.
+Dans Make, « Ignore » ne veut pas dire « continue ». Ca veut dire : l'erreur est
+avalee et le paquet de donnees est JETE. La suite du scenario ne s'execute pas
+davantage — tu aurais toujours zero Archimage, zero ordre, zero Registre, mais
+SANS le voyant rouge pour te le dire. C'est exactement le piege du .catch vide
+qu'on a paye le 31/08 sur execute-trades : 12 ordres acceptes, 2 enregistres, et
+aucune erreur affichee.
 
-CE QUE JE PROPOSE, ET C'EST TOI QUI DECIDES :
-mettre un gestionnaire d'erreur « Resume » sur les cinq ParseJSON des Sages
-(202, 204, 206, 208, 210), qui renvoie un objet vide quand la reponse n'est pas
-lisible. Le Sage concerne est alors compte comme muet — ce que v_sages_pannes
-sait deja mesurer et afficher — et les quatre autres, les trois Archimages,
-l'Alchimiste et le Registre font leur travail.
+Le bon reglage n'est pas « Ignore », c'est « RESUME » : on fournit une sortie de
+remplacement et le flux continue avec elle.
 
-Dans Make ca se fait au clic droit sur le module -> « Add error handler » ->
-« Resume », avec `{}` comme sortie de repli. Ce n'est pas une modification de
-texte : je ne peux pas te la livrer en chercher/remplacer, et c'est le genre de
-manipulation ou Maia reecrit le module entier — donc ou elle casse les cles.
 
-Dis-moi si tu veux qu'on le fasse, et sur quels modules. Je ne touche a rien
-sans ton accord.
+3. LA REPARATION QUE JE PROPOSE — ET C'EST TOI QUI DECIDES
+-----------------------------------------------------------
+Mettre un gestionnaire d'erreur RESUME sur les cinq ParseJSON des Sages
+(202, 204, 206, 208, 210), renvoyant un objet vide {}.
+
+Ce que ca donne quand un Sage deraille : ce Sage-la est compte comme muet — ce
+que v_sages_pannes sait deja mesurer et afficher, elle compte deja 2 runs muets
+sur 19 pour le Memoire et 5 sur 19 pour le Macro — et les quatre autres Sages,
+les trois Archimages, l'Alchimiste et le Registre font leur travail.
+
+Pourquoi les cinq et pas seulement le 208 : les cinq ont exactement le meme
+montage. Leur garde-fou est ifempty(...; "{}"), qui protege du VIDE et pas d'une
+reponse presente mais malformee. Ce qui est arrive au Memoire ce soir peut
+arriver a n'importe lequel des quatre autres demain.
+
+Et pour information, verifie sur le blueprint : il y a 14 modules ParseJSON dans
+le scenario (202, 204, 206, 208, 210, 302, 304, 306, 402, 9998, 9997, 10010,
+10014, 20016), et AUCUN des 80 modules n'a de gestionnaire d'erreur. Zero.
+
+Dans Make : clic droit sur le module -> « Add error handler » -> « Resume ».
+Ce n'est pas une modification de texte : je ne peux pas te la livrer en
+chercher/remplacer. Et c'est le genre de manipulation ou Maia reenregistre le
+module entier, donc ou elle casse les cles — a faire a la main, comme le 301.
+
+Dis-moi si tu le veux, et sur quels modules. Je ne touche a rien sans ton accord.
+
+
+4. UNE AUTRE PISTE, PLUS ETROITE — A NE FAIRE QUE SI TU LA VEUX
+-----------------------------------------------------------------
+On peut aussi apprendre au 208 a ne garder que le PREMIER objet, et a ignorer ce
+qui suit. Sur la reponse de ce soir ca marcherait : le premier objet est complet
+et valide, et le schema du Sage Memoire est plat — il n'a aucun objet imbrique,
+donc la premiere accolade fermante est bien la fin de l'objet.
+
+L'idee : couper la chaine sur la premiere accolade fermante et la remettre.
+Ca s'ecrit avec split() et get(), deux fonctions deja utilisees dans ton
+blueprint (split 10 fois, get 153 fois) — donc rien d'exotique.
+
+MAIS je ne te donne pas la formule exacte ici, pour deux raisons :
+  · la concatenation du « } » final se fait differemment selon les cas dans Make,
+    et je ne veux pas te faire taper une expression que je n'ai pas pu executer ;
+  · ca ne protege QUE de la repetition. Une vraie troncature, une reponse en
+    prose, une panne d'API : rien de tout ca n'est couvert. Le RESUME du point 3
+    couvre tout.
+
+Si tu veux quand meme cette piste, c'est un travail pour Maia, avec la consigne
+de valider la formule dans l'editeur avant d'enregistrer. Le point 3 reste le
+bon reglage.
