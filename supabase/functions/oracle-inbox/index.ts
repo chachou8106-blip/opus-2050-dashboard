@@ -1,3 +1,11 @@
+// oracle-inbox v28 — LA CONSOLE N'ATTENDAIT PAS QUE LES DONNEES : ELLE ATTENDAIT LA FILE.
+// Le bloc suivi enchainait ses 25 lectures l'une APRES l'autre alors qu'aucune ne depend
+// d'une autre. Mesure du 02/09 dans les logs edge : 18,9 s / 20,9 s / 24,9 s / 47,2 s /
+// 64,6 s pour un meme appel — le navigateur abandonnait avant la reponse et la page restait
+// sur « Chargement des donnees reelles… ». Les 25 lectures partent desormais ensemble
+// (Promise.all) : la duree devient celle de la plus lente, pas leur somme. Aucune requete
+// n'a change — meme URL, memes colonnes, meme JSON en sortie ; seul l'ordonnancement change.
+// (L'autre moitie du probleme etait cote base : voir v_dernier_prix, refaite le meme jour.)
 // oracle-inbox v27 — LES TRADES DE L'ALCHIMISTE VIRTUEL, REPRODUCTIBLES A LA MAIN.
 // Le bloc alc_virtuel.positions transportait paire, sens, prix d'entree, montant et prix
 // actuel — mais ni le TP ni le SL, pourtant stockes dans alchimiste_virtual_trades depuis
@@ -82,21 +90,67 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'suivi') {
-      const dash = await sb('oracle_dashboard?select=snapshot_at,archimages&order=snapshot_at.desc&limit=1')
+      // v28 : ces 25 lectures sont independantes les unes des autres — elles partent ensemble.
+      // L'ordre du tableau ci-dessous est celui de la destructuration : ne pas en deplacer une
+      // sans deplacer son nom.
+      const R: any[] = await Promise.all([
+        sb('oracle_dashboard?select=snapshot_at,archimages&order=snapshot_at.desc&limit=1'),
+        sb('v_perf_resume?select=trader,rendement_pct,drawdown_max_pct,reussite_pct,statut,periode,depuis,jours,nature'),
+        sb('v_perf_avancee?select=serie,volatilite,sortino,calmar,drawdown_max,meilleur_mois,pire_mois,pct_mois_positifs'),
+        sb('v_stats_indice?select=serie,correlation,beta,alpha_annualise'),
+        sb('v_rendements_mensuels?select=serie,mois,rendement_pct&order=serie.asc,mois.asc&limit=1000'),
+        sbAll('v_rendements_periodes?select=serie,granularite,periode,rendement_pct&serie=in.(OPUS,SYL,JU,GIL,ALC_VIRT,ALC_REEL,MAREES)&order=serie.asc,periode.asc'),
+        // v21 : v_equity_points melangeait trois unites dans sa colonne equity (un GAIN en $ pour
+        // les archimages, une VALEUR en $ pour l'Alchimiste, un nombre sans unite pour Marees) et
+        // la console l'affichait partout comme « Valeur $ ». La vue declare desormais son unite ;
+        // on la transmet telle quelle pour que la page trace chaque agent dans la sienne au lieu
+        // de pretendre que Marees « n'a pas encore de courbe » alors qu'il a 39 points.
+        sbAll('v_equity_points?select=trader,ts,equity,unite,rendement_pct&order=trader.asc,ts.asc'),
+        sbAll('v_comparaison?select=serie,jour,ret&order=serie.asc,jour.asc'),
+        sb('v_sharpe?select=serie,sharpe'),
+        sb('oracle_contexte?select=section,cle,valeur&order=section.asc,id.asc'),
+        // Taux de change live (pour afficher les gains en euros)
+        sb('price_history?symbol=in.(EUR-USD,GBP-USD)&interval=eq.1h&select=symbol,close,ts&order=ts.desc&limit=60'),
+        // Gains par trader (jour/semaine/mois/annee) en % + USD + EUR
+        sb('v_gains_traders?select=serie,label,ordre,horizon,gain_pct,gain_usd,gain_eur,mesure&order=ordre.asc'),
+        // Portefeuille virtuel de l'Alchimiste
+        sb('v_alc_virtuel_resume?select=*'),
+        sb('v_alc_virtuel_jour?select=jour,n_trades,gagnants,wr_pct,ret_pct,cumul_pct&order=jour.asc'),
+        // Les positions de l'Alchimiste virtuel servent à être REPRODUITES à la main sur Revolut X.
+        // Sans tp_pct/sl_pct et leurs prix cibles, on sait quoi acheter mais pas quand sortir.
+        sb('v_alc_virtuel_positions?select=paire,side,prix_entree,montant,prix_actuel,unreal_pct,tp_pct,sl_pct,prix_tp,prix_sl,age_h,ecart_entree_pct,opened_at&order=opened_at.desc'),
+        // Marées — DEUX choses distinctes, qu'il ne faut pas confondre :
+        //  · livre_cible = ce que l'Archimage déclare tenir maintenant (marees_propositions non
+        //    clôturées, valorisé au dernier cours). C'est le portefeuille réel du robot.
+        //  · resume/positions = le SIMULATEUR d'évaluation (marees_virtual_trades), qui ferme
+        //    d'office au bout de 96 h pour pouvoir noter chaque proposition. Il sert au win rate,
+        //    pas à décrire les positions tenues. Le 25/08 il disait 0 position alors que le livre
+        //    cible en portait 3 — d'où l'ajout de la vue v_marees_livre_cible.
+        sb('v_marees_virtuel_resume?select=*'),
+        sb('v_marees_virtuel_positions?select=paire,side,prix_entree,prix_actuel,unreal_pct,montant,tp_pct,sl_pct,age_h&order=unreal_pct.desc'),
+        sb('v_marees_livre_cible?select=paire,side,poids_pct,confidence,prix_entree,prix_actuel,unreal_pct,tp_pct,sl_pct,age_h,run_id,proposed_at'),
+        // Valorisation crypto EN DIRECT (24/7, week-end compris) — recalculée à la lecture depuis price_history.
+        // Seule la crypto bouge quand le scénario Make est éteint ; actions/ETF/forex restent au dernier close.
+        sb('v_live_crypto_resume?select=archimage,n_crypto,tout_live,dernier_cours,valo_crypto_usd,valo_crypto_eur,pnl_latent_usd&order=valo_crypto_usd.desc'),
+        sb('v_live_crypto_positions?select=archimage,ticker,qty,prix_entree,prix_actuel,valo_usd,unreal_pct,unreal_usd,live_ts&order=valo_usd.desc'),
+        // Alchimiste RÉEL (Revolut X, argent réel) valorisé EN DIRECT au dernier cours — même principe que
+        // le virtuel. On revalorise le dernier snapshot revolut_portfolio_daily coin par coin (47/49 + cash).
+        sb('v_alc_reel_live_resume?select=*'),
+        sb('v_alc_reel_live_positions?select=devise,qty,en_stake,valeur_snapshot_usd,prix_live,est_live,valeur_live_usd&order=valeur_live_usd.desc&limit=20'),
+        // 🔭 LA VIGIE — santé du Collège : détecte un composant en PANNE (ne produit plus) ou FIGÉ
+        // (même valeur en boucle). Recalculé toutes les 15 min par pg_cron (fonction vigie_scan).
+        sb('v_vigie_resume?select=*'),
+        sb('v_vigie_detail?select=composant,categorie,etat,detail,derniere_sortie,run_auditee'),
+        // Historique derrière l'instantané de la Vigie : vigie_status est effacée et réécrite à
+        // chaque scan, elle ne garde donc aucune trace. Cette vue dit, sur 14 jours, combien de
+        // runs chaque sage a manqués et depuis combien de runs il se tait.
+        sb('v_sages_pannes?select=sage_name,runs_14j,runs_muets_14j,runs_muets_consecutifs,derniere_reponse,age_derniere_reponse_h,seuil_panne_runs,statut')
+      ])
+      const [dash, perf, av, si, men, rpRows, eqRows, cmpRows, shr, ctx, fxr, gns,
+             avr, avj, avp, mvr, mvp, mlc, lcr, lcp, alr, alrp, vgr, vgd, sgp] = R
       const row = Array.isArray(dash.body) ? dash.body[0] : null
       let traders: any[] = []
       if (row && row.archimages && typeof row.archimages === 'object') traders = Object.entries(row.archimages).map(([nom, v]: any) => ({ nom, ...(v || {}) }))
-      const perf = await sb('v_perf_resume?select=trader,rendement_pct,drawdown_max_pct,reussite_pct,statut,periode,depuis,jours,nature')
-      const av = await sb('v_perf_avancee?select=serie,volatilite,sortino,calmar,drawdown_max,meilleur_mois,pire_mois,pct_mois_positifs')
-      const si = await sb('v_stats_indice?select=serie,correlation,beta,alpha_annualise')
-      const men = await sb('v_rendements_mensuels?select=serie,mois,rendement_pct&order=serie.asc,mois.asc&limit=1000')
-      const rpRows = await sbAll('v_rendements_periodes?select=serie,granularite,periode,rendement_pct&serie=in.(OPUS,SYL,JU,GIL,ALC_VIRT,ALC_REEL,MAREES)&order=serie.asc,periode.asc')
-      // v21 : v_equity_points melangeait trois unites dans sa colonne equity (un GAIN en $ pour
-      // les archimages, une VALEUR en $ pour l'Alchimiste, un nombre sans unite pour Marees) et
-      // la console l'affichait partout comme « Valeur $ ». La vue declare desormais son unite ;
-      // on la transmet telle quelle pour que la page trace chaque agent dans la sienne au lieu
-      // de pretendre que Marees « n'a pas encore de courbe » alors qu'il a 39 points.
-      const eqRows = await sbAll('v_equity_points?select=trader,ts,equity,unite,rendement_pct&order=trader.asc,ts.asc')
       const equity: Record<string, any[]> = {}
       const equityUnite: Record<string, string> = {}
       for (const p of eqRows) {
@@ -104,10 +158,8 @@ Deno.serve(async (req) => {
         ;(equity[p.trader] = equity[p.trader] || []).push({ t: p.ts, v: Number(p.equity), pct: p.rendement_pct == null ? null : Number(p.rendement_pct) })
       }
       for (const k of Object.keys(equity)) { if (equity[k].length > 90) equity[k] = equity[k].slice(-90) }
-      const cmpRows = await sbAll('v_comparaison?select=serie,jour,ret&order=serie.asc,jour.asc')
       const comparaison: Record<string, any[]> = {}
       for (const p of cmpRows) { (comparaison[p.serie] = comparaison[p.serie] || []).push({ j: p.jour, r: Number(p.ret) }) }
-      const shr = await sb('v_sharpe?select=serie,sharpe')
       // v_sharpe renvoie NULL quand la serie est trop courte pour qu'un Sharpe ait un sens
       // (ALCHIMISTE 6 observations, MAREES 5 ; le seuil est de 20). Number(null) vaut 0 :
       // la console affichait donc « 0 », un chiffre qui a l'air d'une mesure. On garde null,
@@ -117,50 +169,13 @@ Deno.serve(async (req) => {
       const avance: Record<string, any> = {}; for (const p of arr(av.body)) avance[p.serie] = p
       const stats: Record<string, any> = {}; for (const p of arr(si.body)) stats[p.serie] = p
       const mensuel: Record<string, any[]> = {}; for (const p of arr(men.body)) { (mensuel[p.serie] = mensuel[p.serie] || []).push({ mois: p.mois, r: Number(p.rendement_pct) }) }
-      const ctx = await sb('oracle_contexte?select=section,cle,valeur&order=section.asc,id.asc')
-      // Taux de change live (pour afficher les gains en euros)
-      const fxr = await sb('price_history?symbol=in.(EUR-USD,GBP-USD)&interval=eq.1h&select=symbol,close,ts&order=ts.desc&limit=60')
       const fx: Record<string, number> = {}
       for (const p of arr(fxr.body)) { const k = p.symbol === 'EUR-USD' ? 'EURUSD' : p.symbol === 'GBP-USD' ? 'GBPUSD' : null; if (k && !(k in fx)) fx[k] = Number(p.close) }
-      // Gains par trader (jour/semaine/mois/annee) en % + USD + EUR
-      const gns = await sb('v_gains_traders?select=serie,label,ordre,horizon,gain_pct,gain_usd,gain_eur,mesure&order=ordre.asc')
-      // Portefeuille virtuel de l'Alchimiste
-      const avr = await sb('v_alc_virtuel_resume?select=*')
-      const avj = await sb('v_alc_virtuel_jour?select=jour,n_trades,gagnants,wr_pct,ret_pct,cumul_pct&order=jour.asc')
-      // Les positions de l'Alchimiste virtuel servent à être REPRODUITES à la main sur Revolut X.
-      // Sans tp_pct/sl_pct et leurs prix cibles, on sait quoi acheter mais pas quand sortir.
-      const avp = await sb('v_alc_virtuel_positions?select=paire,side,prix_entree,montant,prix_actuel,unreal_pct,tp_pct,sl_pct,prix_tp,prix_sl,age_h,ecart_entree_pct,opened_at&order=opened_at.desc')
       const alc_virtuel = { resume: (arr(avr.body)[0] || null), jours: arr(avj.body), positions: arr(avp.body) }
-      // Marées — DEUX choses distinctes, qu'il ne faut pas confondre :
-      //  · livre_cible = ce que l'Archimage déclare tenir maintenant (marees_propositions non
-      //    clôturées, valorisé au dernier cours). C'est le portefeuille réel du robot.
-      //  · resume/positions = le SIMULATEUR d'évaluation (marees_virtual_trades), qui ferme
-      //    d'office au bout de 96 h pour pouvoir noter chaque proposition. Il sert au win rate,
-      //    pas à décrire les positions tenues. Le 25/08 il disait 0 position alors que le livre
-      //    cible en portait 3 — d'où l'ajout de la vue v_marees_livre_cible.
-      const mvr = await sb('v_marees_virtuel_resume?select=*')
-      const mvp = await sb('v_marees_virtuel_positions?select=paire,side,prix_entree,prix_actuel,unreal_pct,montant,tp_pct,sl_pct,age_h&order=unreal_pct.desc')
-      const mlc = await sb('v_marees_livre_cible?select=paire,side,poids_pct,confidence,prix_entree,prix_actuel,unreal_pct,tp_pct,sl_pct,age_h,run_id,proposed_at')
       const marees_virtuel = { resume: (arr(mvr.body)[0] || null), positions: arr(mvp.body), livre_cible: arr(mlc.body) }
-      // Valorisation crypto EN DIRECT (24/7, week-end compris) — recalculée à la lecture depuis price_history.
-      // Seule la crypto bouge quand le scénario Make est éteint ; actions/ETF/forex restent au dernier close.
-      const lcr = await sb('v_live_crypto_resume?select=archimage,n_crypto,tout_live,dernier_cours,valo_crypto_usd,valo_crypto_eur,pnl_latent_usd&order=valo_crypto_usd.desc')
-      const lcp = await sb('v_live_crypto_positions?select=archimage,ticker,qty,prix_entree,prix_actuel,valo_usd,unreal_pct,unreal_usd,live_ts&order=valo_usd.desc')
       const live_crypto = { resume: arr(lcr.body), positions: arr(lcp.body) }
-      // Alchimiste RÉEL (Revolut X, argent réel) valorisé EN DIRECT au dernier cours — même principe que
-      // le virtuel. On revalorise le dernier snapshot revolut_portfolio_daily coin par coin (47/49 + cash).
-      const alr = await sb('v_alc_reel_live_resume?select=*')
-      const alrp = await sb('v_alc_reel_live_positions?select=devise,qty,en_stake,valeur_snapshot_usd,prix_live,est_live,valeur_live_usd&order=valeur_live_usd.desc&limit=20')
       const alc_reel_live = { resume: (arr(alr.body)[0] || null), positions: arr(alrp.body) }
-      // 🔭 LA VIGIE — santé du Collège : détecte un composant en PANNE (ne produit plus) ou FIGÉ
-      // (même valeur en boucle). Recalculé toutes les 15 min par pg_cron (fonction vigie_scan).
-      const vgr = await sb('v_vigie_resume?select=*')
-      const vgd = await sb('v_vigie_detail?select=composant,categorie,etat,detail,derniere_sortie,run_auditee')
       const vigie = { resume: (arr(vgr.body)[0] || null), detail: arr(vgd.body) }
-      // Historique derrière l'instantané de la Vigie : vigie_status est effacée et réécrite à
-      // chaque scan, elle ne garde donc aucune trace. Cette vue dit, sur 14 jours, combien de
-      // runs chaque sage a manqués et depuis combien de runs il se tait.
-      const sgp = await sb('v_sages_pannes?select=sage_name,runs_14j,runs_muets_14j,runs_muets_consecutifs,derniere_reponse,age_derniere_reponse_h,seuil_panne_runs,statut')
       const sages_pannes = arr(sgp.body)
       return json({ ok: true, snapshot_at: row?.snapshot_at || null, traders, perf: arr(perf.body), avance, stats, mensuel, rendements: rpRows, equity, equityUnite, comparaison, sharpe, contexte: arr(ctx.body), fx, gains: arr(gns.body), alc_virtuel, marees_virtuel, live_crypto, alc_reel_live, vigie, sages_pannes })
     }
