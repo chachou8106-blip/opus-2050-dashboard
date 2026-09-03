@@ -54,6 +54,40 @@ alter table public.alchimiste_crypte_propositions
 -- ni prix_exec. Le carnet virtuel ne peut pas etre affecte par ces ecritures.
 
 -- ---------------------------------------------------------------------------
+-- 2 bis. LA QUANTITE, DONNEE PAR CHACHOU DEPUIS L'APP REVOLUT X (03/09 au soir)
+-- ---------------------------------------------------------------------------
+-- L'ordre de 15:49 a donne 0,00003173 BTC pour 2,50 $.
+--
+--   prix paye     = 2,50 / 0,00003173 = 78 789,79 $/BTC
+--   prix_ref vise =                     78 806,06 $/BTC
+--   ecart         =                        -0,0206 %
+--
+-- La quantite est affichee a 8 decimales, donc arrondie. Encadrement honnete :
+-- quantite reelle entre 0,000031725 et 0,000031735 -> prix entre 78 777,38 et
+-- 78 802,21, soit un ecart entre -0,036 % et -0,005 %. Dans tous les cas : NEGATIF.
+--
+-- CE QUE CA DIT, ET CE QUE CA NE DIT PAS.
+-- Ca dit que sur cet ordre-la le cout d'entree n'a rien coute : le prix paye est
+-- LEGEREMENT SOUS le prix vise. Coherent avec le spread aller-retour de BTC-USD
+-- mesure au 07/07 (0,021 %, soit ~0,010 % par cote) : sur BTC le spread est
+-- negligeable, et le prix a simplement bouge d'un cheveu entre la cotation et le fill.
+-- Ca NE dit PAS que le spread moyen de la strategie est nul : c'est UN fill, sur la
+-- paire la plus liquide de l'univers. TRU-USD reste a 3,299 % aller-retour.
+-- Ca ne dit rien non plus d'une eventuelle commission prelevee en USD par-dessus :
+-- elle ne serait pas visible dans la quantite recue.
+--
+-- PROVENANCE TRACEE. La colonne prix_source dit d'ou vient le chiffre :
+--   'saisie_manuelle_chachou_app_revolut' ici. Les lignes futures auront prix_source
+--   a NULL et reponse renseignee -> valeur extraite de l'API. Un prix saisi a la main
+--   ne doit jamais pouvoir passer pour une mesure automatique.
+alter table public.ju_crypte_orders
+  add column if not exists prix_source text;
+
+-- update ju_crypte_orders set qty_exec = 0.00003173, prix_exec = 78789.79,
+--        prix_source = 'saisie_manuelle_chachou_app_revolut' where order_id = '5b757821-...';
+-- update alchimiste_crypte_propositions set prix_exec = 78789.79 where id = 75;
+
+-- ---------------------------------------------------------------------------
 -- 3. LA SURVEILLANCE DES POSITIONS REELLES (trou c, partie outillage)
 -- ---------------------------------------------------------------------------
 -- Ce que la vue dit, et qui n'existait nulle part : pour chaque achat reellement execute,
@@ -116,12 +150,10 @@ order by a.oui_at desc;
 -- La vente automatique sur franchissement de seuil N'EST PAS ARMEE. Deux faits me
 -- manquent, et aucun ne se devine :
 --
---   1. LA QUANTITE ACHETEE. prix_exec est NULL sur le seul ordre reel existant, donc on
---      ne sait pas combien de BTC les 2,50 $ ont achete. Une vente calculee sur une
---      quantite ESTIMEE (2,50 / prix_ref) porterait sur une quantite fausse. C'est la
---      faute du 20/08 exactement : deployer ce que je n'ai pas pu exercer.
---      -> revolut-x-trade v9 enregistre desormais qty_exec et la reponse brute. Le
---         PROCHAIN ordre reel donne la mesure.
+--   1. LA QUANTITE ACHETEE -> LEVE le 03/09 au soir : 0,00003173 BTC (cf 2 bis).
+--      La vente pourrait donc etre calculee sur une quantite REELLE et non estimee.
+--      Il reste la derive entre le calcul et le fill : une vente doit viser une marge
+--      (vendre 99 % de la valeur detenue) pour ne pas mordre sur le reste du BTC.
 --
 --   2. LA FORME D'UNE VENTE PARTIELLE. revolut-x-trade envoie un quote_size en dollars.
 --      Si le SL est franchi, la position vaut MOINS que ce qu'on a paye : demander a
@@ -129,5 +161,7 @@ order by a.oui_at desc;
 --      portefeuille BTC. Il faudrait vendre en quantite de base (base_size), et je n'ai
 --      aucun moyen de verifier depuis ici que l'API l'accepte.
 --
--- Tant que ces deux points ne sont pas MESURES, la surveillance ci-dessus signale, et
--- c'est Chachou qui coupe a la main. C'est la seule version honnete aujourd'hui.
+-- Le point 1 est leve. Le point 2 ne l'est pas, et il suffit a bloquer : je ne peux
+-- pas exercer une vente sans vendre du vrai BTC. La surveillance signale, Chachou coupe
+-- a la main, et l'armement de la vente automatique attend son accord explicite en
+-- connaissance du risque (regle du 20/08).
