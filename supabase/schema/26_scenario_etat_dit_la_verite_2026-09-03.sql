@@ -69,3 +69,44 @@
 --
 -- La case doree de la heatmap du backtest ne suit plus « t===5 && s===4 » : elle est
 -- calculee par btMeilleur() depuis la grille elle-meme. Deja corrige, verifie ce soir.
+
+-- ---------------------------------------------------------------------------
+-- COMPLEMENT DU MEME SOIR : la console pilotait le MAUVAIS SCENARIO
+-- ---------------------------------------------------------------------------
+-- scenario_control.scenario_id valait '6183820' = « ZCT — Oracle L'Alchimiste Financier v5
+-- VISIONNAIRE », isActive=false, derniere edition le 22/08, nextExec null. Il ne tourne pas.
+-- Le scenario qui tourne est 7051944 = « ZCT — Aether l'Oracle Financier », isActive=true,
+-- 4 creneaux lun-ven 09:00 / 15:45 / 18:30 / 21:15, prochain run 04/09 09:00.
+--
+-- CONSEQUENCE, ET ELLE TOUCHE A LA SECURITE : le bouton « ⏸ Couper » de la console envoyait
+-- /stop a 6183820, deja inactif. Il ne coupait PAS le robot qui passe des ordres reels.
+-- Chachou pouvait croire avoir arrete le robot alors qu'il continuait, kill_switch arme.
+--   update scenario_control set scenario_id = '7051944' where id = 1;
+--
+-- CE QUI RESTE UN PIEGE, ET QUE JE N'AI PAS TOUCHE : le job cron 30 `scenario_fire_5min`
+-- tourne toutes les 5 minutes. Aujourd'hui il ne fait rien (actif=false, pending_stop_at
+-- null). Mais si on appuie sur « ▶ Activer », scenario_fire declencherait /start aux 4
+-- creneaux EN PLUS du planificateur Make, puis /stop 3 minutes apres chaque run — ce qui
+-- desactiverait le scenario que Make vient de lancer. Les deux planificateurs se
+-- marcheraient dessus. NE PAS APPUYER SUR « Activer » avant d'avoir tranche lequel des deux
+-- planifie. Ce n'est pas a moi de le decider seul.
+
+-- ---------------------------------------------------------------------------
+-- L'ETAT REEL DE MAKE, MESURE TOUTES LES 5 MINUTES
+-- ---------------------------------------------------------------------------
+-- Demande de Chachou : « il faut que cela soit l'activation de mon scenario Make ».
+-- Le jeton Make est dans le Vault et ne doit pas en sortir : c'est donc une fonction SQL qui
+-- interroge l'API, et le jeton ne quitte jamais la base.
+--   scenario_make_etat        table : is_active, is_paused, next_exec, nom, mesure_at
+--   scenario_make_sync()      GET https://<zone>.make.com/api/v2/scenarios/<id>
+--                             LECTURE SEULE : un GET ne peut ni demarrer ni arreter.
+--                             net.http_get etant asynchrone, la fonction recolte la reponse
+--                             de l'appel precedent puis lance le suivant.
+--   cron job 'scenario_make_sync_5min', toutes les 5 minutes.
+--
+-- Premiere mesure : ZCT — Aether l'Oracle Financier · is_active true · is_paused false
+--                   prochain run 04/09 09:00.
+--
+-- La vue expose make_scenario_id, make_nom, make_actif, make_en_pause, make_prochain_run,
+-- make_mesure_at, make_erreur. La console affiche desormais « ● Scénario Make ACTIVÉ » et
+-- « Prochain run prévu », au lieu de deduire l'etat de l'interrupteur Supabase.

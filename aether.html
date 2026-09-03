@@ -1920,7 +1920,10 @@ const AUTO=[
 // que le planificateur est passe dans Make : il est a false depuis le 22/08 alors que le
 // college tourne 4 fois par jour. college_actif est la MESURE (au moins un run en 24 h),
 // ajoutee a v_scenario_etat le meme jour. Repli sur maitre_on si la vue est plus ancienne.
-const scenActif=s=>!s?null:(s.college_actif!=null?!!s.college_actif:!!s.maitre_on);
+// Priorite a make_actif : c'est l'ACTIVATION REELLE du scenario Make, mesuree toutes les
+// 5 min par scenario_make_sync(). Replis successifs : college_actif (des runs ont eu lieu),
+// puis maitre_on (l'interrupteur Supabase), si la vue est plus ancienne.
+const scenActif=s=>!s?null:(s.make_actif!=null?!!s.make_actif:(s.college_actif!=null?!!s.college_actif:!!s.maitre_on));
 function autoNiveau(){
  if(D.ks)return 3;
  if(D.scen&&scenActif(D.scen)===false)return 0;
@@ -1974,7 +1977,9 @@ function rOps(){
  $('audit').innerHTML=[[(sf.data_completeness??sf.completude??sf.score)!=null?(sf.data_completeness??sf.completude??sf.score)+'/100':'—','Complétude des données',''],
   [(()=>{const cb=sf.circuit_breaker_fired??sf.circuit_breaker;return cb!=null?(cb?'DÉCLENCHÉ':'silencieux'):'—';})(),'Circuit breaker',(sf.circuit_breaker_fired??sf.circuit_breaker)?'':'ok'],
   [D.ks!=null?(D.ks?'ARMÉ':'ARRÊTÉ'):'—','Kill-switch réel',D.ks?'':'ok'],
-  [D.scen?(scenActif(D.scen)?'ACTIF':'aucun run 24h'):'—','Collège — runs réels',D.scen&&scenActif(D.scen)?'ok':''],
+  [D.scen&&D.scen.make_actif!=null?(D.scen.make_actif?'ACTIVÉ':'désactivé'):'—','Scénario Make',D.scen&&D.scen.make_actif?'ok':''],
+  [D.scen&&D.scen.make_prochain_run?hm(D.scen.make_prochain_run):'—','Prochain run prévu',''],
+  [D.scen?(D.scen.college_actif?'ACTIF':'aucun run 24h'):'—','Collège — runs réels',D.scen&&D.scen.college_actif?'ok':''],
   [D.scen&&D.scen.runs_24h!=null?D.scen.runs_24h+' / 24h':'—','Runs des dernières 24h',''],
   [D.scen&&D.scen.maitre_on!=null?(D.scen.maitre_on?'ACTIF':'coupé'):'—','Interrupteur Supabase',''],
   [D.scen&&D.scen.dernier_run?hm(D.scen.dernier_run):'—','Dernier run déclenché',''],
@@ -1987,12 +1992,15 @@ function rOps(){
  T('runs',["Quand","Phase de marché","Ordres","Achats / Ventes"],runs.slice(0,8).map(x=>[(x.run_at?new Date(x.run_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'),esc(x.market_phase||'—'),(x.orders_count??'—'),(x.orders_buy??0)+' / '+(x.orders_sell??0)]),'Pas de runs.');
  // scénario + kill-switch état
  if(D.scen&&$('scenChip')){const on=!!scenActif(D.scen);$('scenChip').className='chip '+(on?'ok':'warn');
-  $('scenChip').textContent=on?('● Collège actif — '+(D.scen.runs_24h!=null?D.scen.runs_24h+' runs / 24h':'runs en cours')):'● Aucun run depuis 24h';
+  $('scenChip').textContent=(D.scen.make_actif!=null)
+   ?(on?('● Scénario Make ACTIVÉ'+(D.scen.make_en_pause?' (en pause)':'')):'● Scénario Make désactivé')
+   :(on?('● Collège actif — '+(D.scen.runs_24h!=null?D.scen.runs_24h+' runs / 24h':'runs en cours')):'● Aucun run depuis 24h');
   // Les horaires etaient ecrits en dur dans le HTML et cette ligne, restee inachevee,
   // declarait une variable sans jamais s'en servir. On affiche la planification reelle,
   // lue dans scenario_runs_planifies via v_scenario_etat.
   const m=$('scenHeures');
-  if(m&&D.scen.heures)m.textContent=(D.scen.nb_runs_jour!=null?D.scen.nb_runs_jour+' runs/j · ':'')+D.scen.heures;}
+  if(m&&D.scen.heures)m.textContent=(D.scen.nb_runs_jour!=null?D.scen.nb_runs_jour+' runs/j · ':'')+D.scen.heures
+   +(D.scen.make_nom?' · '+D.scen.make_nom:'');}
  if(D.ks!=null&&$('ksChip')){$('ksChip').className='chip '+(D.ks?'ok':'warn');$('ksChip').style.color=D.ks?'var(--red)':'';$('ksChip').textContent=D.ks?'● ARMÉ — ordres réels ACTIFS':'● Désarmé';}
  // Console de tests. Elle n'exposait que 12 des 21 actions d'oracle-tests : l'Alchimiste, les
  // Marées, les dossiers des Archimages et des Sages, les positions, les runs et la courbe
