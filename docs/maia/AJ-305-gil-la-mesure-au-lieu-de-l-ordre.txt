@@ -1,0 +1,101 @@
+GIL — LA MESURE AU LIEU DE L'ORDRE, SUR LE COUPE-CIRCUIT
+Scenario 7051944, module 305. 03/09/2026, tard.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+Troisieme et derniere phrase de ma main dans le prompt de GIL. Les deux premieres
+sont deja parties (fiche AH, faite ce soir : le stop loss en dur et le SELL MANDATE).
+
+
+==========================================================
+POURQUOI CELLE-CI COMPTE PLUS QUE LES DEUX AUTRES
+==========================================================
+
+Le prompt dit aujourd'hui :
+
+  CIRCUIT_BREAKERS: Si CTX contient circuit_breakers actifs pour GIL:
+  seulement SELL ou HOLD. Crypto circuit breaker strict:
+  si drawdown GIL >5% → pas de nouveau BUY crypto.
+
+Ce n'est pas un garde-fou. Le garde-fou, c'est execute-trades, et il fait deja le
+travail : tout achat de GIL est refuse avec le motif `coupe_circuit_defensif`,
+que le prompt le dise ou non. Verifie sur les runs du 03/09 : SQQQ a 21h15,
+ETHUSD a 18h30, BTCUSD et DOGEUSD a 15h45 — proposes, refuses.
+
+Cette phrase-la ne bloque donc rien. Elle demande a GIL de ne plus VOULOIR.
+
+Et c'est exactement ce qui rendait sa situation sans issue : la levee du
+coupe-circuit exige que le drawdown redescende sous 8 %, or il est passe de
+10,23 % le 25/08 a 11,15 % le 03/09 — neuf jours de vente forcee, et il a EMPIRE.
+Vendre fige la perte. S'il cesse aussi de proposer, plus rien ne peut jamais
+prouver qu'il avait raison, et il reste bloque pour toujours.
+
+Depuis ce soir il existe une deuxieme porte : le carnet virtuel note ses
+decisions REFUSEES, et le coupe-circuit se leve si elles se revelent bonnes
+(10 decisions closes, rendement positif, reussite >= 50 %). **Ce carnet ne peut
+se remplir que s'il continue de proposer.** La phrase ci-dessus travaille
+directement contre le mecanisme qui doit le liberer.
+
+
+==========================================================
+LA MODIFICATION — MODULE 305, CHAMP « BODY CONTENT »
+==========================================================
+
+Longueur actuelle : 6607 caracteres (apres tes deux retouches de ce soir).
+Longueur apres    : 6896 caracteres.
+
+CHERCHE (apparait exactement une fois) :
+
+CIRCUIT_BREAKERS: Si CTX contient circuit_breakers actifs pour GIL: seulement SELL ou HOLD. Crypto circuit breaker strict: si drawdown GIL >5% → pas de nouveau BUY crypto.
+
+REMPLACE PAR :
+
+CIRCUIT_BREAKERS: CTX te donne tes coupe-circuits actifs, avec pour chacun le motif, la valeur mesuree et le seuil franchi. Tant qu'un coupe-circuit drawdown est actif, tes ACHATS ne partent pas au courtier : ils sont refuses a l'execution et enregistres dans un carnet virtuel qui les note au prix reel. Continue de dire ce que tu ferais : c'est la seule chose qui puisse demontrer que tu as raison et lever le blocage. Tes ventes, elles, partent normalement.
+
+(+289 caracteres : on retire 171, on ajoute 460)
+
+
+CE QUE CA CHANGE, ET CE QUE CA NE CHANGE PAS
+--------------------------------------------
+CA NE DESSERRE AUCUNE SECURITE. Pas un centime de plus ne peut partir : le refus
+est dans execute-trades, il n'est pas touche. Le plafond de levier, le plafond de
+notionnel, le kill-switch, tout reste identique.
+
+CA LUI REND LA PAROLE. On lui donne le chiffre, le motif et le seuil — et le fait
+que ses achats sont bloques, parce que c'est une information vraie qu'il doit
+avoir pour raisonner. On ne lui dit plus ce qu'il doit vouloir.
+
+C'est la regle du 26/08 appliquee au dernier endroit ou je l'avais violee chez
+lui : la mesure, jamais le verbe d'action.
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 6896 caracteres exactement (6607 + 289).
+2. Recherche « seulement SELL ou HOLD » : ne doit plus rien trouver.
+3. Recherche « pas de nouveau BUY » : ne doit plus rien trouver.
+4. Recherche « CIRCUIT_BREAKERS: » : doit toujours apparaitre une fois.
+5. Nombre d'antislashs : 140, INCHANGE (ni le texte retire ni le texte ajoute
+   n'en contient).
+6. Les 17 expressions {{...}} du champ sont inchangees.
+
+ET UN CONTROLE EN PLUS, PARCE QUE TU L'AS DECLENCHE CE SOIR : verifie qu'il n'y a
+pas de vrai retour a la ligne dans le champ. Ta retouche precedente en a laisse un
+apres « quelle fraction. » — le run de 21h15 est passe quand meme, mais c'est le
+caractere qui avait arrete le run du 27/08. Si ton editeur en ajoute un, supprime-le
+et reste sur une seule ligne.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Redonne-moi le compteur : 6896.
+
+
+==========================================================
+LES DEUX AUTRES ARCHIMAGES ONT LA MEME PHRASE
+==========================================================
+
+JU (301) et SYL (303) portent un bloc CIRCUIT_BREAKERS de la meme famille. Ils ne
+sont pas bloques aujourd'hui, donc ca ne leur coute rien pour l'instant — mais le
+jour ou l'un des deux franchit le seuil, il tombera dans la meme impasse que GIL.
+
+Je ne te fais pas les fiches maintenant : une correction a la fois, verifiee. Dis-moi
+quand celle de GIL est passee et qu'on a vu son carnet se remplir, et je te prepare
+les deux autres sur le meme modele.
