@@ -1,131 +1,101 @@
-SAGE MEMOIRE — CE QUI NE VA PAS, ET LA SEULE CHOSE A CHANGER
-Scenario 7051944, module 207. 02/09/2026, apres rejeu reel de l'appel.
-
-Tu ne veux pas de gestionnaire d'erreur. D'accord — cette fiche n'en parle plus.
-Tout ce qui suit est mesure, rien n'est suppose. Ce que je n'ai pas pu prouver
-est ecrit comme tel.
+SAGE MEMOIRE — ANNULE ET REMPLACE. NE SUPPRIME PAS thinkingBudget.
+Scenario 7051944, module 207. 02/09/2026, apres test sur le VRAI modele.
 
 
-1. CE QUI S'EST PASSE A 20h02 — ETABLI
----------------------------------------
-Le panneau INPUT du 208 montre trois morceaux colles :
+==========================================================
+LA FICHE PRECEDENTE ETAIT FAUSSE. NE L'APPLIQUE PAS.
+==========================================================
 
-  1. l'objet JSON COMPLET et valide, jusqu'a "correction_cible":"MAREES"}
-  2. un fragment de 21 caracteres : ESPR_cible":"MAREES"}
-  3. LE MEME OBJET COMPLET, a l'identique
+Je te demandais de supprimer  ,"thinkingConfig":{"thinkingBudget":0}
+du corps du 207. J'avais tort, et je l'ai prouve moi-meme en le testant.
 
-Rien n'est tronque : les deux copies sont entieres, 11 cles chacune, exactement
-le schema demande. Le Sage Memoire a repondu DEUX FOIS dans la meme reponse.
-Colles ensemble, ces morceaux ne sont pas du JSON, et ParseJSON s'est arrete —
-a juste titre. Run stoppe au 21e module sur 76.
+J'ai envoye ton corps SANS thinkingConfig a gemini-3.5-flash, le vrai modele du
+module. Voici la reponse, telle quelle :
 
-Le fragment du milieu, je ne sais pas d'ou il sort. Je ne brode pas : ce qui est
-etabli, c'est que l'objet y est deux fois.
+  finishReason : MAX_TOKENS
+  usageMetadata : promptTokenCount 1441, thoughtsTokenCount 1919,
+                  candidatesTokenCount 64
+  texte rendu (142 caracteres) :
+  {"ju_win_rate":49,"syl_win_rate":54,"gil_win_rate":50,"alc_win_rate":51,
+   "marees_win_rate":34,"best_archimage":"SYL","best_agent":"SYL","failed
 
-Et ce n'est pas ta modification de midi : le module 207 est identique OCTET POUR
-OCTET dans tous les blueprints du 31/08 au 02/09 (verifie sur 9 sauvegardes), tu
-as modifie a 12:19:29, et le run de 12:19:50 a reussi avec ses 76 operations.
+Coupe net sur le mot "failed. Le modele a depense 1 919 jetons a REFLECHIR sur
+les 2 000 du plafond, il ne lui en restait que 64 pour repondre.
 
+thinkingBudget=0 n'est donc pas le defaut : c'est le garde-fou qui protege le
+budget de la reponse. Celui qui l'a mis savait ce qu'il faisait. Le supprimer
+aurait casse le Sage Memoire a TOUS les runs, au lieu d'un sur trois.
 
-2. UNE BONNE NOUVELLE QUE JE NE SAVAIS PAS — RELANCE SANS CRAINTE
-------------------------------------------------------------------
-Les cinq Sages ont  stopOnHttpError = false  (verifie sur les 5).
-
-Consequence : une erreur HTTP n'arrete PAS le run. Si l'API renvoie 503, 429 ou
-un timeout, le corps ne contient pas de `candidates`, l'expression ne resout
-rien, ifempty donne "{}", et le run CONTINUE avec ce Sage muet.
-
-Ce qui arrete le run, c'est uniquement une reponse REUSSIE mais malformee.
-C'est le cas d'hier soir, et c'est rare.
-
-DONC : tu peux relancer. Il n'y a rien de casse dans le scenario.
+Je m'etais fie a deux essais sur gemini-3.6-flash, un autre modele. Deux
+variables changees a la fois : mauvais test. Cette fois j'ai teste sur le bon
+modele avant de te parler.
 
 
-3. ETAT DE L'API EN CE MOMENT — MESURE
-----------------------------------------
-J'ai rejoue ton appel exact (meme URL, meme corps, meme cle) :
+==========================================================
+CE QUE LE TEST SUR LE VRAI MODELE DONNE VRAIMENT
+==========================================================
 
-  gemini-3.5-flash     503 UNAVAILABLE  « This model is currently experiencing
-                       high demand »   — 11 tentatives d'affilee, avec relances,
-                       sur plusieurs minutes
-  gemini-3.7-flash     503 UNAVAILABLE
-  gemini-flash-latest  503 UNAVAILABLE
-  gemini-2.5-flash     404 — « no longer available to new users »
+Meme corps que le tien, exactement, sur gemini-3.5-flash :
 
-Ta cle est bonne (200 sur /v1beta/models) et gemini-3.5-flash existe bien dans la
-liste des 31 modeles disponibles. C'est une saturation cote Google, pas un
-probleme chez toi. Si tu relances maintenant, le Sage Memoire sera muet — et,
-d'apres le point 2, le run passera quand meme.
+  corps TEL QUEL (thinkingBudget 0)     200, finishReason=STOP, 520 car.,
+                                        UN SEUL objet, JSON.parse OK
+  corps sans thinkingConfig             200, MAX_TOKENS, 142 car., tronque
+  corps avec JU_BIAS tronque a 260      200, STOP, 533 car., UN objet, OK
+
+Ton corps actuel produit donc UNE reponse propre quand je l'envoie moi-meme.
+Il n'est pas fautif en lui-meme.
 
 
-4. LE REGLAGE SUSPECT — ISOLE
--------------------------------
-Ton corps contient, a la toute fin :
+==========================================================
+ET POURTANT MAKE ECHOUE TROIS FOIS D'AFFILEE
+==========================================================
 
-  "generationConfig":{"temperature":0.01,"maxOutputTokens":2000,
-   "responseMimeType":"application/json","thinkingConfig":{"thinkingBudget":0}}
+  18:02:23   ParseJSON — 21 operations sur 76
+  18:21:40   ParseJSON — 21 operations sur 76
+  18:29:41   ParseJSON — 21 operations sur 76
 
-J'ai teste ce corps sur gemini-3.6-flash, qui lui repond (les autres sont
-satures). Resultat :
+Aucun `modify` du scenario depuis 12:19:29. Le blueprint n'a pas bouge entre le
+run reussi de 12:19 et ces trois echecs.
 
-  corps tel quel                      400 INVALID_ARGUMENT
-  corps sans responseMimeType         400 INVALID_ARGUMENT
-  corps sans systemInstruction        400 INVALID_ARGUMENT
-  corps SANS thinkingConfig           200  — une seule reponse, propre
-
-Le seul element rejete est donc  "thinkingConfig":{"thinkingBudget":0}.
-
-Et sans lui, la reponse est nette. Deux essais avant que Google me coupe au
-quota (429) :
-  essai 1 : 200, finishReason=STOP, 1 part, 509 caracteres, UN objet, JSON.parse OK, 11 cles
-  essai 2 : 200, finishReason=STOP, 1 part, 532 caracteres, UN objet, JSON.parse OK, 11 cles
-
-DEUX ESSAIS NE SONT PAS UNE PREUVE, et je le dis. Ce que je peux affirmer :
-thinkingBudget=0 force un modele concu pour reflechir a ne pas reflechir, et la
-repetition en boucle est la forme classique de degenerescence dans ce cas. C'est
-le seul reglage anormal de ton corps, et c'est le seul que les modeles recents
-refusent.
-
-A noter aussi : sur tes cinq Sages, un seul declare un responseSchema — le Sage
-Flash (209, Perplexity). Le 207 declare responseMimeType sans schema. Le mode
-JSON garantit la FORME de ce que le modele produit ; il ne l'empeche pas d'en
-produire deux. Un responseSchema le rendrait impossible. Je ne te le propose pas
-ce soir : je n'ai pas pu le tester, Google m'a coupe au quota.
+Ce n'est donc plus un alea : c'est reproductible. Et comme mon rejeu du meme
+corps donne une reponse propre, la difference est entre ce que MAKE envoie ou
+recoit et ce que j'envoie moi. Je ne peux pas la voir : l'API Make ne donne pas
+les entrees/sorties des modules.
 
 
-5. LA MODIFICATION — UNE SEULE, A LA MAIN
--------------------------------------------
-Module 207 « DEEP MEMORY », champ « Body content ». Longueur actuelle : 4442.
+==========================================================
+CE QUE J'AI BESOIN DE VOIR — UNE SEULE CHOSE
+==========================================================
 
-CHERCHE (apparait exactement une fois, verifie) :
-,"thinkingConfig":{"thinkingBudget":0}
+Ouvre l'historique d'execution d'un de ces trois runs, clique sur le module
+207 « DEEP MEMORY », et donne-moi le panneau OUTPUT (pas l'INPUT du 208, que tu
+m'as deja donne).
 
-SUPPRIME-LA entierement, virgule comprise. Rien d'autre.
+Je cherche trois choses precises :
 
-La fin du champ doit alors se lire :
-"generationConfig":{"temperature":0.01,"maxOutputTokens":2000,"responseMimeType":"application/json"}}
+  1. finishReason        -> STOP, MAX_TOKENS, ou autre chose ?
+  2. combien de `parts`  -> content.parts contient-il 1 element, ou plusieurs ?
+  3. combien de `candidates` -> le tableau candidates a-t-il 1 element, ou plusieurs ?
 
-TES CONTROLES
-  1. Compteur du champ : 4404 caracteres exactement (4442 - 38).
-  2. Recherche « thinkingBudget » : ne doit plus rien trouver.
-  3. Recherche « responseMimeType » : doit toujours trouver une occurrence.
-  4. Le champ se termine par deux accolades fermantes : }}
+Pourquoi ces trois-la : l'expression du 208 lit
+   207.data.candidates[1].content.parts[1].text
+c'est-a-dire le PREMIER candidat, PREMIERE part. Si Gemini en renvoie plusieurs,
+ou si Make resout cette expression autrement que je le crois, on tient
+l'explication du texte double — et ce sera une correction d'expression, pas un
+reglage de modele.
 
-C'est du texte fixe, pas une expression : aucun {{...}}, aucun guillemet a
-echapper, aucun risque du type 27/08. Une retouche a la main, sans Maia.
+Tant que je n'ai pas vu ce panneau, je ne te propose plus rien. J'ai deja donne
+deux explications fausses aujourd'hui (la troncature, puis thinkingBudget) : la
+troisieme sera fondee sur ce que le module a reellement renvoye.
 
-Puis « OK » sur le module, PUIS la disquette sur le scenario.
 
+==========================================================
+EN ATTENDANT, TU PEUX RELANCER
+==========================================================
 
-6. CE QUE CA CHANGE, ET CE QUE CA COUTE
------------------------------------------
-Le modele reflechira avant de repondre au lieu d'y etre force en repondant du
-premier jet. C'est ce qui devrait supprimer la repetition.
+stopOnHttpError = false sur les cinq Sages (verifie). Une erreur HTTP n'arrete
+pas le run : le corps n'a pas de `candidates`, ifempty rend "{}", et le run
+continue avec ce Sage muet. Seule une reponse REUSSIE mais malformee l'arrete.
 
-En contrepartie, il consommera des jetons de reflexion : la reponse sera un peu
-plus lente et un peu plus chere. Le module a un timeout de 120 secondes, il y a
-largement la marge, mais je te le dis pour que ce ne soit pas une surprise sur
-la facture Google.
-
-Si apres ce changement le probleme revient, on passera au responseSchema — et
-cette fois je le testerai avant de te le donner.
+Rien n'est casse dans le scenario. Le probleme est dans une reponse, pas dans
+ton montage.
