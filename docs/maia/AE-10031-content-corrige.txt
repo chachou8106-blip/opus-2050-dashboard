@@ -1,0 +1,79 @@
+LE HERAUT 10031 — L'EDITEUR A MANGE LES ESPACES. CHAMP COMPLET A RECOLLER.
+Scenario 7051944, module 10031, champ « Content ». 03/09/2026.
+
+TES TROIS AUTRES MODIFICATIONS SONT PARFAITES
+---------------------------------------------
+Verifie sur le blueprint en direct :
+  207   Sage Memoire   5071 caracteres  — responseSchema present, thinkingBudget garde
+  10012 Alchimiste     7735 caracteres  — commentaire supprime, prix_ref intact
+  20015 Marees         commentaire supprime
+Au caractere pres, les trois.
+
+CE QUI NE VA PAS SUR LE 10031
+-----------------------------
+Le champ fait 10383 au lieu de 10499. Deux choses, et une seule vient de toi.
+
+1. PAS DE TOI — l'editeur de Make a supprime 20 espaces dans le bloc des TRADES,
+   que tu n'as pas touche. Mesure : les 10 lignes passent de 618 a 606
+   caracteres. Chacune a perdu ses deux  & " " &  , les separateurs entre le
+   sens, la paire et le montant. 2 x 6 x 10 = 120 caracteres exactement.
+
+   Dans ton Discord ca donnerait :
+       ✅ SELLBTC-USD2.5$      au lieu de      ✅ SELL BTC-USD 2.5$
+
+   C'est le meme defaut que le 27/08 et le 28/08 : ouvrir un module et le
+   reenregistrer fait reecrire des expressions auxquelles personne n'a touche.
+
+2. De toi, et sans gravite — il manque le saut de ligne entre la ligne >= 3 et
+   la ligne >= 4 du bloc staking : elles sont collees sur une seule ligne
+   physique de 1192 caracteres. Les puces 3 et 4 sortiraient l'une derriere
+   l'autre au lieu d'etre l'une sous l'autre.
+
+   (Tes lignes portent aussi des retours chariot Windows, 4 en tout. Sans
+   consequence, mais je les ai enleves.)
+
+CE QUI EST BON, ET QUI RESTE BON
+---------------------------------
+  bloc des trades   : 10 lignes, indices 1 a 10, toutes presentes
+  bloc A DE-STAKER  : = 0, >= 1, >= 2, >= 3, >= 4, >= 5, >= 6, et le garde-fou > 6
+  antislashs        : zero, avant comme apres
+
+CE QUE TU FAIS
+--------------
+Ouvre le module 10031, champ « Content », SELECTIONNE TOUT (Ctrl+A dans le
+champ), et remplace par le contenu qui suit la ligne de tirets ci-dessous.
+Ne retape rien : copie-colle.
+
+CONTROLE : le compteur doit afficher 10500 caracteres exactement.
+Puis « OK » sur le module, PUIS la disquette. Reverifie le compteur apres la
+disquette — si l'editeur remange les espaces, il repassera a 10380 et il faudra
+recoller.
+
+--------------------------------------------------------------------------
+**L'ALCHIMISTE — CRYPTE REVOLUT X (REEL)**
+Kill switch: {{ifempty(get(20013.data; "kill_switch"); emptystring)}} | Executes: {{ifempty(get(20013.data; "a_executer"); 0)}}/{{ifempty(get(20013.data; "proposees"); 0)}}
+
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) = 0; "Aucun trade ce cycle"; emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 1; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "1.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "1.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "1.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "1.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "1.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "1.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 2; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "2.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "2.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "2.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "2.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "2.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "2.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 3; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "3.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "3.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "3.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "3.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "3.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "3.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 4; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "4.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "4.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "4.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "4.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "4.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "4.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 5; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "5.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "5.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "5.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "5.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "5.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "5.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 6; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "6.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "6.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "6.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "6.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "6.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "6.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 7; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "7.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "7.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "7.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "7.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "7.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "7.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 8; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "8.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "8.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "8.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "8.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "8.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "8.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 9; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "9.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "9.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "9.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "9.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "9.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "9.raison"); emptystring)); emptystring)}}
+{{if(length(ifempty(get(20013.data; "resultats"); emptyarray)) >= 10; if(contains(split("execute,simule"; ","); lower(ifempty(get(get(20013.data; "resultats"); "10.statut"); emptystring))); "✅ " & upper(ifempty(get(get(20013.data; "resultats"); "10.side"); emptystring)) & " " & upper(ifempty(get(get(20013.data; "resultats"); "10.paire"); emptystring)) & " " & toString(ifempty(get(get(20013.data; "resultats"); "10.montant_execute"); 0)) & "$"; "⏸️ " & upper(ifempty(get(get(20013.data; "resultats"); "10.paire"); emptystring)) & " — " & ifempty(get(get(20013.data; "resultats"); "10.raison"); emptystring)); emptystring)}}
+
+**À DÉ-STAKER**
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) = 0; "Aucune recommandation de dé-staking"; emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 1; "• " & upper(ifempty(get(10014.destake_recommande; "1.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "1.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "1.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "1.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "1.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "1.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 2; "• " & upper(ifempty(get(10014.destake_recommande; "2.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "2.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "2.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "2.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "2.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "2.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 3; "• " & upper(ifempty(get(10014.destake_recommande; "3.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "3.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "3.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "3.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "3.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "3.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 4; "• " & upper(ifempty(get(10014.destake_recommande; "4.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "4.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "4.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "4.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "4.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "4.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 5; "• " & upper(ifempty(get(10014.destake_recommande; "5.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "5.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "5.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "5.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "5.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "5.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 6; "• " & upper(ifempty(get(10014.destake_recommande; "6.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "6.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "6.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "6.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "6.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "6.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) > 6; "⚠️ " & toString(length(ifempty(10014.destake_recommande; emptyarray)) - 6) & " ligne(s) de plus non affichee(s) — previens-moi"; emptystring)}}
+
+
+{{ifempty(get(20020.data; "resume"); emptystring)}}
