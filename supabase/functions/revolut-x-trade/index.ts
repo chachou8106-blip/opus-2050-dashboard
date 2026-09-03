@@ -1,5 +1,15 @@
-// revolut-x-trade v8 — HARNAIS DE SECURITE + DRY-RUN (la crypte de JU / Revolut X)
+// revolut-x-trade v9 — HARNAIS DE SECURITE + DRY-RUN (la crypte de JU / Revolut X)
 // L'envoi reel (placeRealOrder) est ecrit par JU. Cadenas: kill_switch='ON' requis.
+//
+// v9 (03/09/2026, le soir) : LE JOURNAL DES REFUS. Toujours aucune touche au chemin d'envoi.
+//       Au run de 18h30, l'ordre ETH de 0,02 $ a ete refuse et la raison a disparu : logOrder
+//       n'ecrit qu'apres un succes, donc un refus ne laissait AUCUNE trace en base.
+//       Les sept points de refus (params, kill_switch, whitelist, paire non -USD, plafond
+//       ordre, plafond jour, et tout ce qui leve dans placeRealOrder) ecrivent desormais dans
+//       ju_crypte_refus. Table SEPAREE de ju_crypte_orders a dessein : le plafond journalier
+//       somme les amount_usd de ju_crypte_orders ou dry_run=false, et journaliser un refus
+//       la-bas ferait compter un montant jamais depense contre les 200 $/jour.
+//       Le contenu des reponses rendues est inchange.
 //
 // v8 (03/09/2026) : JOURNALISATION SEULEMENT. Le chemin d'envoi n'est pas touche —
 //       memes cadenas, meme corps d'ordre, memes plafonds, meme ordre des controles.
@@ -80,6 +90,31 @@ async function logOrder(row: OrderRow): Promise<{ ok: boolean; status: number; e
   } catch (e: any) {
     return { ok: false, status: 0, error: String(e?.message || e) };
   }
+}
+
+// Un ordre REFUSE ne laissait aucune trace : logOrder n'est appele qu'apres un succes, donc
+// quand Revolut refuse, la raison partait dans Discord et disparaissait. Constat du run de
+// 18h30 le 03/09 : ordre ETH a 0,02 $ refuse, impossible de savoir pourquoi apres coup.
+// Table SEPAREE de ju_crypte_orders a dessein : le plafond journalier fait la somme des
+// amount_usd de ju_crypte_orders ou dry_run=false. Un refus journalise la-bas compterait un
+// montant jamais depense contre les 200 $/jour et bloquerait de vrais ordres.
+// NE LEVE JAMAIS : un echec de journal ne doit pas changer la reponse rendue a l'appelant.
+async function logRefus(row: {
+  pair: string | null; side: string | null; amount_usd: number | null;
+  proposition_id: number | null; dry_run: boolean | null; etape: string; raison: string;
+}): Promise<void> {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/ju_crypte_refus`, {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(row),
+    });
+  } catch { /* journal best-effort : jamais au prix de la reponse */ }
 }
 
 // Balayage de la reponse Revolut : on cherche un prix et une quantite SANS supposer
@@ -232,15 +267,29 @@ async function placeRealOrder(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  // Declare AVANT le try : le bloc catch en a besoin pour journaliser le refus, et une
+  // constante declaree dans le try n'y est pas visible.
+  let reqBody: any = null;
   try {
-    const { pair, side, amount, dry_run = true, proposition_id = null } = await req.json();
+    reqBody = await req.json();
+    const { pair, side, amount, dry_run = true, proposition_id = null } = reqBody ?? {};
     // Attention : Number(null) vaut 0, et 0 est fini. Sans le test > 0, chaque ordre
     // sans proposition serait lie a une proposition n0 qui n'existe pas.
     const nProp = Number(proposition_id);
     const propId = Number.isFinite(nProp) && nProp > 0 ? nProp : null;
 
+    // Chaque refus est journalise avant d'etre rendu. Le contenu de la reponse ne change pas.
+    const refus = async (etape: string, raison: string, p?: string, s?: string, a?: number | null) => {
+      await logRefus({
+        pair: p ?? (pair ? String(pair) : null), side: s ?? (side ? String(side) : null),
+        amount_usd: a === undefined ? (Number.isFinite(Number(amount)) ? Number(amount) : null) : a,
+        proposition_id: propId, dry_run: dry_run !== false, etape, raison,
+      });
+      return json({ ok: false, reason: raison });
+    };
+
     if (!pair || !side || !(Number(amount) > 0)) {
-      return json({ ok: false, reason: "params invalides (pair / side / amount)" });
+      return await refus("params", "params invalides (pair / side / amount)");
     }
     const amt = Number(amount);
     const symbolNorm = String(pair).trim().toUpperCase().replace("/", "-");
@@ -249,7 +298,7 @@ Deno.serve(async (req) => {
     const cfg: Record<string, string> = Object.fromEntries((cfgRows || []).map((r: any) => [r.key, r.value]));
 
     if ((cfg.kill_switch || "").toLowerCase() !== "on") {
-      return json({ ok: false, reason: `kill_switch = ${cfg.kill_switch || "?"} (doit valoir 'ON' pour armer)` });
+      return await refus("kill_switch", `kill_switch = ${cfg.kill_switch || "?"} (doit valoir 'ON' pour armer)`, symbolNorm, side, amt);
     }
 
     // Whitelist OPTIONNELLE : "*" ou vide => pas de filtre statique (on suit la realite).
@@ -257,17 +306,17 @@ Deno.serve(async (req) => {
     if (rawAllowed !== "" && rawAllowed !== "*") {
       const allowed = rawAllowed.split(",").map((s: string) => s.trim());
       if (!allowed.includes(symbolNorm)) {
-        return json({ ok: false, reason: `paire ${pair} hors whitelist allowed_pairs` });
+        return await refus("whitelist", `paire ${pair} hors whitelist allowed_pairs`, symbolNorm, side, amt);
       }
     }
     // Contrainte structurelle spot : uniquement des paires -USD.
     if (!symbolNorm.endsWith("-USD")) {
-      return json({ ok: false, reason: `paire ${pair} non -USD (spot USD uniquement)` });
+      return await refus("paire_non_usd", `paire ${pair} non -USD (spot USD uniquement)`, symbolNorm, side, amt);
     }
 
     const maxOrder = parseFloat(cfg.max_order_usd || "0");
     if (amt > maxOrder) {
-      return json({ ok: false, reason: `montant ${amt} > plafond ordre ${maxOrder}` });
+      return await refus("plafond_ordre", `montant ${amt} > plafond ordre ${maxOrder}`, symbolNorm, side, amt);
     }
 
     const today = new Date().toISOString().split("T")[0];
@@ -275,7 +324,7 @@ Deno.serve(async (req) => {
     const dailyTotal = (todayRows || []).reduce((s: number, o: any) => s + Number(o.amount_usd || 0), 0);
     const maxDaily = parseFloat(cfg.max_daily_usd || "0");
     if (dailyTotal + amt > maxDaily) {
-      return json({ ok: false, reason: `plafond journalier atteint (${dailyTotal}/${maxDaily})` });
+      return await refus("plafond_jour", `plafond journalier atteint (${dailyTotal}/${maxDaily})`, symbolNorm, side, amt);
     }
 
     if (dry_run !== false) {
@@ -305,6 +354,19 @@ Deno.serve(async (req) => {
       log_ok: logReel.ok, log_error: logReel.error,
     });
   } catch (e: any) {
-    return json({ ok: false, error: String(e?.message || e) });
+    // Tout ce qui leve dans placeRealOrder arrive ici : secrets manquants, spot-check refuse,
+    // refus de Revolut, reponse sans venue_order_id. C'est LA cause la plus utile a garder,
+    // et c'est justement celle qui disparaissait.
+    const msg = String(e?.message || e);
+    try {
+      const b = reqBody;
+      await logRefus({
+        pair: b?.pair ? String(b.pair) : null, side: b?.side ? String(b.side) : null,
+        amount_usd: Number.isFinite(Number(b?.amount)) ? Number(b.amount) : null,
+        proposition_id: Number.isFinite(Number(b?.proposition_id)) && Number(b.proposition_id) > 0 ? Number(b.proposition_id) : null,
+        dry_run: b?.dry_run !== false, etape: "envoi_revolut", raison: msg,
+      });
+    } catch { /* le journal ne doit jamais masquer l'erreur d'origine */ }
+    return json({ ok: false, error: msg });
   }
 });
