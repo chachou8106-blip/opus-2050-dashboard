@@ -1,0 +1,67 @@
+-- get_oracle_context — les poussieres Alpaca ne partent plus dans le grimoire des Archimages.
+-- 03/09/2026.
+--
+-- CE QUE CHACHOU A VU
+-- « j'ai l'impression que JU a encore des crypto alors qu'il doit faire que les actions ».
+-- Il avait raison de le voir, et tort sur la cause — ce qui rendait le probleme plus grave,
+-- pas moins.
+--
+-- JU NE TRADE PLUS DE CRYPTO. Mesure sur oracle_college_orders :
+--   JU   dernier ordre crypto  20/07/2026   (45 jours)
+--   SYL  dernier ordre crypto  12/06/2026   (83 jours)
+--   GIL  dernier ordre crypto  26/08/2026   — c'est son univers, normal
+-- Les specialites sont respectees depuis longtemps.
+--
+-- CE QUI RESTAIT : QUATRE LIGNES DE POUSSIERE CHEZ ALPACA
+--   JU  · SOLUSD   qty 0,000000001   valeur 0 $   avg_entry -136 635 299 607 783,84 $
+--   JU  · XRPUSD   qty 0,000000001   valeur 0 $   avg_entry      -25 091 477 819,70 $
+--   GIL · SOLUSD   qty 0,000000001   valeur 0 $   avg_entry -188 325 097 639 587,88 $
+--   GIL · ETHUSD   qty 0,000119038   valeur 0,28 $  avg_entry 2 096,97 $  -> SAINE, on la garde
+--
+-- Des prix d'entree NEGATIFS a quinze chiffres : un cost_basis negatif (reste d'une vente a
+-- decouvert rachetee) divise par une quantite de 1e-9. Le « gain latent » n'est que l'oppose de
+-- ce cost_basis : 0 - (-136 635,30) = +136 635,30.
+--
+-- ELLES EXISTENT VRAIMENT CHEZ ALPACA. sync_alpaca_positions fonctionne en miroir strict :
+--   1. UPDATE ... SET is_stale = true WHERE archimage = X
+--   2. boucle d'insertion sur les positions renvoyees par Alpaca (is_stale = false)
+--   3. DELETE ... WHERE is_stale = true
+-- Ces lignes ont is_stale = false et last_synced = 03/09 10:15. Alpaca les renvoie donc encore.
+--
+-- ET ELLES SONT IMPOSSIBLES A FERMER. Chachou a essaye, Alpaca repond :
+--   « order qty must be >= minimal qty of order 0.000000002 »
+-- La position vaut 1e-9, le minimum d'ordre est 2e-9. Elles sont coincees a vie dans le compte.
+-- Le filtre n'est donc pas un contournement : c'est la seule reparation possible.
+--
+-- LE DEGAT REEL : elles partaient dans le prompt des Archimages a chaque run.
+-- get_oracle_context filtrait avec WHERE qty > 0, et 0,000000001 > 0 est vrai.
+--
+--   Agent   P&L reel      P&L fantome     ce que l'agent lisait
+--   JU       8 220,90 $    136 660,39 $    144 881,29 $   -> 18 fois trop, depuis 41 runs
+--   GIL     26 682,20 $    188 325,10 $    215 007,30 $   ->  8 fois trop, depuis 235 runs
+--   SYL      1 023,49 $              —       1 023,49 $
+--
+-- La console, elle, filtrait deja ces lignes (realPos dans aether.html). Le defaut etait donc
+-- cote AGENTS, pas cote affichage — invisible a l'ecran.
+--
+-- LE FILTRE : exactement celui de la console, deja eprouve, pas une invention.
+--   aether.html :  if(Math.abs(q)<1e-6) return false;
+--                  if((mv==null||Math.abs(mv)<1) && pl!=null && Math.abs(pl)>100) return false;
+--
+-- APRES, mesure sur get_oracle_context() :
+--   JU    23 -> 21 lignes,  144 881,29 $ -> 8 220,89 $,  crypto : AUCUNE
+--   GIL   18 -> 17 lignes,  215 007,30 $ -> 26 682,21 $, crypto : ETHUSD (la vraie, gardee)
+--   SYL   15 -> 15 lignes,    1 023,49 $ -> 1 023,47 $   (inchange)
+--
+-- Applique par remplacement de chaine sur pg_get_functiondef, avec garde-fou d'unicite de
+-- l'ancre. Aucun texte ajoute au contexte des agents : on retire trois chiffres faux.
+
+-- AVANT :
+--   FROM oracle_positions_live
+--   WHERE qty > 0
+--   GROUP BY archimage
+-- APRES :
+--   FROM oracle_positions_live
+--   WHERE qty >= 1e-6
+--     AND NOT (abs(coalesce(market_value,0)) < 1 AND abs(coalesce(unrealized_pl,0)) > 100)
+--   GROUP BY archimage
