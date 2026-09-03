@@ -86,9 +86,24 @@ Chaque element de propositions DOIT porter les huit cles ci-dessus. tp_pct et sl
 (+412 caracteres)
 
 
+--- REMPLACEMENT 3 (facultatif — c'est TOI qui decides, lis le paragraphe
+    « LA FOURCHETTE QUE J'AI ECRITE DANS SA TETE » plus bas) ---
+
+CHERCHE (apparait exactement une fois) :
+
+SORTIES (TP/SL) : laisse courir les gains — un stop trop serré se fait toucher trop souvent en crypto. Respecte ton calibrage appris (take-profit ~4 à 7 %, stop-loss ~3 à 4 %, ratio gain/risque ≥ 1:1,5), ajusté par ton bilan.
+
+REMPLACE PAR :
+
+SORTIES (TP/SL) : tu fixes toi-meme tp_pct et sl_pct sur chacune de tes propositions. Ton bilan mesure te parvient dans ton contexte : nombre de trades evalues, taux de reussite, gain moyen et perte moyenne. Le calibrage, tu le tires de ces chiffres.
+
+(+25 caracteres — le compteur final passe alors a 8202 au lieu de 8177)
+
+
 TES CONTROLES
 -------------
 1. Compteur du champ : 8177 caracteres exactement (7735 + 30 + 412).
+   Si tu fais aussi le remplacement 3 : 8202.
 2. Recherche « tp_pct » : 2 occurrences (une dans l'exemple JSON, une dans
    la phrase). Idem « sl_pct ».
 3. Recherche « les six cles » : ne doit plus rien trouver ; « les huit cles »
@@ -103,6 +118,86 @@ TES CONTROLES
 
 Puis « OK » sur le module, PUIS la disquette sur le scenario.
 Redonne-moi le compteur apres la disquette : il doit afficher 8177.
+
+
+==========================================================
+LA FOURCHETTE QUE J'AI ECRITE DANS SA TETE — remplacement 3
+==========================================================
+
+En relisant le prompt que tu m'as colle, j'ai trouve une phrase que j'avais
+oubliee ce matin, et qui est de ma main :
+
+  « Respecte ton calibrage appris (take-profit ~4 a 7 %, stop-loss ~3 a 4 %,
+    ratio gain/risque >= 1:1,5), ajuste par ton bilan. »
+
+Trois choses, mesurees et non supposees.
+
+1. LES TROIS AUTRES N'ONT PAS CA. Cherche dans leurs modules :
+     JU (301)  : aucune phrase sur le TP ou le SL. Il decide.
+     SYL (303) : aucune non plus.
+     GIL (305) : une seule ligne, « Stop loss crypto 5%, levier ETF 4% ».
+   L'Alchimiste est celui a qui j'en ai le plus impose — et jusqu'a la fiche
+   ci-dessus, il n'avait AUCUNE cle pour exprimer le moindre choix. On lui
+   demandait de respecter un calibrage qu'il ne pouvait pas rendre.
+
+2. LA FOURCHETTE EXCLUT LES SIX MEILLEURS COUPLES. Grille des 48 couples,
+   recalculee aujourd'hui sur les 62 trades (bt_optimize_alchimiste, frais
+   0,18 %, hold max 240 h) :
+
+     rang  TP    SL    reussite   rendement    dans ma fourchette ?
+       1   7 %  1,5 %    37,1 %    +92,81 %          non
+       2   7 %  2 %      38,7 %    +73,43 %          non
+       3   7 %  2,5 %    41,9 %    +63,83 %          non
+       4   6 %  1,5 %    37,1 %    +58,20 %          non
+       5   6 %  2 %      38,7 %    +40,97 %          non
+       6   5 %  1,5 %    38,7 %    +38,14 %          non
+       7   7 %  3 %      41,9 %    +36,76 %          OUI (le 1er admis)
+      23   5 %  4 %      48,4 %     -9,02 %          OUI  <- applique
+      26   4 %  3 %      45,2 %    -18,41 %          OUI
+
+   Ma phrase « stop-loss ~3 a 4 % » ecarte les six premiers. Et le taux de
+   reussite descend quand le rendement monte : je lui ai fait viser le
+   confort d'avoir souvent raison.
+
+3. LE RATIO QUE J'EXIGE, LE SIMULATEUR NE LE RESPECTAIT PAS. Je demande
+   >= 1:1,5. Le 5 / 4 applique en dur donne 1:1,25. Le bas de ma propre
+   fourchette (TP 4 / SL 3) donne 1:1,33. Les deux bouts se contredisaient.
+
+Le remplacement 3 retire la fourchette et le verbe d'action, et laisse les
+chiffres : c'est la regle du 26/08 — la mesure, jamais la conclusion.
+C'est ta decision, pas la mienne. La fiche marche avec ou sans lui.
+
+
+UN QUATRIEME POINT, QUE JE NE TOUCHE PAS
+----------------------------------------
+Il reste un canal que je n'ai pas le droit de modifier seul, et je te le
+signale au lieu d'agir : oracle_brain_state.CRYPTE_JU.current_bias contient
+aujourd'hui
+
+  « Backtest en grille sur tout l historique, valide par decoupage temporel :
+    le couple de meilleur rendement mesure est TP 5% / SL 4%. »
+
+Cette phrase part dans son prompt a chaque run. Elle est fabriquee par
+crypte_ju_evaluate_and_learn, qui va lire deux lignes de ju_crypte_config :
+tp_optimal_backtest = 5 et sl_optimal_backtest = 4. J'ai cherche qui met ces
+deux lignes a jour : PERSONNE. Aucune fonction ne les ecrit. Elles sont
+figees, et la grille recalculee ce jour classe ce couple 23e sur 48, a
+-9,02 %.
+
+La boucle se refermait sur elle-meme : le simulateur appliquait 5/4 en dur,
+donc les resultats du simulateur etaient ceux de 5/4, donc le bilan disait
+que 5/4 etait le meilleur, et il n'avait aucun moyen de proposer autre chose.
+
+Je ne reecris pas ce champ — c'est la regle absolue du 20/08, et c'est
+exactement la faute que j'ai commise en aout. Trois sorties possibles, a toi
+de trancher :
+  a) on n'y touche pas ;
+  b) crypte_ju_evaluate_and_learn recalcule les deux lignes de config depuis
+     bt_optimize_alchimiste a chaque run, au lieu de lire deux valeurs
+     figees : l'affirmation devient une mesure vivante ;
+  c) la phrase ne designe plus de gagnant et se contente du constat
+     (« sur 48 couples mesures, le couple applique se classe Ne »).
+Je te prepare celle que tu choisis. Pas avant.
 
 
 ==========================================================
