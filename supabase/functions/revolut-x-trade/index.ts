@@ -1,5 +1,21 @@
-// revolut-x-trade v7 — HARNAIS DE SECURITE + DRY-RUN (la crypte de JU / Revolut X)
+// revolut-x-trade v8 — HARNAIS DE SECURITE + DRY-RUN (la crypte de JU / Revolut X)
 // L'envoi reel (placeRealOrder) est ecrit par JU. Cadenas: kill_switch='ON' requis.
+//
+// v8 (03/09/2026) : JOURNALISATION SEULEMENT. Le chemin d'envoi n'est pas touche —
+//       memes cadenas, meme corps d'ordre, memes plafonds, meme ordre des controles.
+//       Constat du 03/09 : l'ordre reel de 15:49 est passe, et le prix paye n'existait
+//       NULLE PART. ju_crypte_orders n'avait aucune colonne de prix, et placeRealOrder
+//       jetait toute la reponse de Revolut sauf venue_order_id et state.
+//       1) On garde la reponse brute (colonne reponse) : on ne devine pas le schema
+//          de Revolut, on le MESURE. Le prix et la quantite sont extraits par balayage
+//          des cles ; si rien ne correspond, ils restent NULL. Jamais de valeur inventee.
+//       2) logOrder ne peut plus echouer en silence (regle du 31/08) : il rend le code
+//          HTTP. Mais il ne LEVE JAMAIS d'exception apres qu'un ordre est parti — sinon
+//          l'appelant croirait l'ordre refuse alors que l'argent a bouge. L'echec de
+//          journal est signale dans la reponse (log_ok / log_error).
+//       3) Toutes les lignes inserees portent les MEMES cles, a null quand la valeur
+//          manque (regle du 31/08 sur les inserts heterogenes).
+//       4) proposition_id optionnel : relie enfin l'ordre a la proposition qui l'a cause.
 //
 // v7 : le gate allowed_pairs devient une whitelist OPTIONNELLE. "*" ou vide => on suit
 //       la realite (univers -USD + spot-check des soldes ci-dessous). Une liste explicite
@@ -36,8 +52,61 @@ async function sb(path: string, init?: RequestInit): Promise<any> {
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
-async function logOrder(row: Record<string, unknown>) {
-  await sb("ju_crypte_orders", { method: "POST", body: JSON.stringify(row) });
+// Toutes les lignes portent les memes cles (insert homogene, regle du 31/08).
+type OrderRow = {
+  pair: string; side: string; amount_usd: number;
+  order_id: string; status: string; dry_run: boolean;
+  prix_exec: number | null; qty_exec: number | null;
+  proposition_id: number | null; reponse: unknown | null;
+};
+
+// NE LEVE JAMAIS. Un ordre parti reste un ordre parti, meme si le journal echoue :
+// remonter une exception ici ferait passer un ordre execute pour un ordre refuse.
+async function logOrder(row: OrderRow): Promise<{ ok: boolean; status: number; error: string | null }> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/ju_crypte_orders`, {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(row),
+    });
+    if (r.ok) return { ok: true, status: r.status, error: null };
+    let detail = ""; try { detail = await r.text(); } catch { /* corps illisible */ }
+    return { ok: false, status: r.status, error: `${r.status} ${detail}`.trim() };
+  } catch (e: any) {
+    return { ok: false, status: 0, error: String(e?.message || e) };
+  }
+}
+
+// Balayage de la reponse Revolut : on cherche un prix et une quantite SANS supposer
+// le nom des champs. Priorite aux moyennes d'execution. Rien trouve -> null.
+function pickNum(rec: any, patterns: RegExp[], depth = 3): number | null {
+  for (const re of patterns) {
+    const found = scan(rec, re, depth);
+    if (found !== null) return found;
+  }
+  return null;
+}
+function scan(node: any, re: RegExp, depth: number): number | null {
+  if (!node || typeof node !== "object" || depth < 0) return null;
+  for (const [k, v] of Object.entries(node)) {
+    // quote_size est le montant en USD qu'on a NOUS-MEMES envoye, pas une quantite
+    // recue. Le prendre pour une quantite donnerait un prix de 1,00.
+    if (/quote/i.test(k)) continue;
+    if (re.test(k)) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  }
+  for (const v of Object.values(node)) {
+    const n = scan(v, re, depth - 1);
+    if (n !== null) return n;
+  }
+  return null;
 }
 const REVX_BASE = "https://revx.revolut.com";
 const REVX_API_KEY = (Deno.env.get("REVX_API_KEY") || "").trim();
@@ -84,7 +153,7 @@ async function revxSigned(
 
 async function placeRealOrder(
   pair: string, side: string, amount: number,
-): Promise<{ order_id: string; status: string }> {
+): Promise<{ order_id: string; status: string; prix: number | null; qty: number | null; rec: any }> {
   if (!REVX_API_KEY || !REVX_PRIVATE_PEM) {
     throw new Error("Secrets Revolut X manquants (REVX_API_KEY / REVX_PRIVATE_KEY)");
   }
@@ -141,13 +210,34 @@ async function placeRealOrder(
   if (!order_id) {
     throw new Error(`reponse sans venue_order_id: ${JSON.stringify(res.body)}`);
   }
-  return { order_id, status };
+
+  // Lecture seule de la reponse deja recue : n'influence pas l'ordre, qui est parti.
+  let prix = pickNum(rec, [
+    /average.*price|avg.*price|fill.*price|executed.*price/i,
+    /(^|_)price($|_)/i,
+  ]);
+  // Motifs volontairement ETROITS : mieux vaut un NULL honnete qu'une quantite fausse,
+  // qui donnerait un prix faux et fausserait la mesure du spread. La reponse brute est
+  // gardee en base : au premier ordre reel on lira les vrais noms de champs.
+  const qty = pickNum(rec, [
+    /(filled|executed).*(size|qty|quantity)/i,
+    /(^|_)(base_size|base_quantity|base_qty)($|_)/i,
+  ]);
+  // A defaut de prix publie : le montant en USD divise par la quantite recue.
+  // C'est de l'arithmetique sur deux valeurs mesurees, pas une estimation.
+  if (prix === null && qty !== null && qty > 0) prix = amount / qty;
+
+  return { order_id, status, prix, qty, rec };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { pair, side, amount, dry_run = true } = await req.json();
+    const { pair, side, amount, dry_run = true, proposition_id = null } = await req.json();
+    // Attention : Number(null) vaut 0, et 0 est fini. Sans le test > 0, chaque ordre
+    // sans proposition serait lie a une proposition n0 qui n'existe pas.
+    const nProp = Number(proposition_id);
+    const propId = Number.isFinite(nProp) && nProp > 0 ? nProp : null;
 
     if (!pair || !side || !(Number(amount) > 0)) {
       return json({ ok: false, reason: "params invalides (pair / side / amount)" });
@@ -189,13 +279,31 @@ Deno.serve(async (req) => {
     }
 
     if (dry_run !== false) {
-      await logOrder({ pair: symbolNorm, side, amount_usd: amt, order_id: "DRY-" + Date.now(), status: "simulated", dry_run: true });
-      return json({ ok: true, dry_run: true, simulated: { pair: symbolNorm, side, amount: amt }, reason: "dry_run=true, rien envoye" });
+      const logSim = await logOrder({
+        pair: symbolNorm, side, amount_usd: amt,
+        order_id: "DRY-" + Date.now(), status: "simulated", dry_run: true,
+        prix_exec: null, qty_exec: null, proposition_id: propId, reponse: null,
+      });
+      return json({
+        ok: true, dry_run: true, simulated: { pair: symbolNorm, side, amount: amt },
+        reason: "dry_run=true, rien envoye",
+        log_ok: logSim.ok, log_error: logSim.error,
+      });
     }
 
     const order = await placeRealOrder(symbolNorm, side, amt);
-    await logOrder({ pair: symbolNorm, side, amount_usd: amt, order_id: order.order_id, status: order.status, dry_run: false });
-    return json({ ok: true, order_id: order.order_id, status: order.status });
+    const logReel = await logOrder({
+      pair: symbolNorm, side, amount_usd: amt,
+      order_id: order.order_id, status: order.status, dry_run: false,
+      prix_exec: order.prix, qty_exec: order.qty, proposition_id: propId,
+      reponse: order.rec ?? null,
+    });
+    // ok:true meme si le journal a echoue — l'ordre EST parti, l'appelant doit le savoir.
+    return json({
+      ok: true, order_id: order.order_id, status: order.status,
+      prix_exec: order.prix, qty_exec: order.qty,
+      log_ok: logReel.ok, log_error: logReel.error,
+    });
   } catch (e: any) {
     return json({ ok: false, error: String(e?.message || e) });
   }
