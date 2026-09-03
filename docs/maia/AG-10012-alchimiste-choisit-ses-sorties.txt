@@ -104,8 +104,10 @@ TES CONTROLES
 -------------
 1. Compteur du champ : 8177 caracteres exactement (7735 + 30 + 412).
    Si tu fais aussi le remplacement 3 : 8202.
-2. Recherche « tp_pct » : 2 occurrences (une dans l'exemple JSON, une dans
-   la phrase). Idem « sl_pct ».
+2. Recherche « tp_pct » : 3 occurrences (une dans l'exemple JSON, deux dans
+   la phrase). Idem « sl_pct ». [corrige apres coup : j'avais ecrit 2, la
+   phrase les nomme deux fois chacune. Le compteur de caracteres reste le
+   controle qui tranche.]
 3. Recherche « les six cles » : ne doit plus rien trouver ; « les huit cles »
    doit apparaitre une fois.
 4. Nombre d'antislashs : 86 (il y en avait 82 ; les 4 nouveaux sont ceux de
