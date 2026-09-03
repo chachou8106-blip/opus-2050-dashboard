@@ -194,3 +194,52 @@ prouve pas une affirmation large. Le contrôle porte désormais sur le module en
 scénario. Tant que la disquette n'est pas cliquée, le blueprint ne bouge pas — Maia peut
 annoncer un travail fait et le blueprint rester identique. Toujours vérifier le blueprint, pas
 la réponse de Maia.
+
+## RÈGLE ABSOLUE — Maia valide plus strictement que Make, et refuse du code qui tourne (31/08/2026)
+
+Deux tentatives de Maia dans la même soirée, deux refus, deux causes différentes — et **aucune
+des deux n'était un défaut du blueprint**.
+
+**Module 301.** Son outil réenregistre le module entier et **ré-échappe le corps** : elle a envoyé
+`\"bias\"` là où le champ contient `"bias"` nu. Make a refusé avec « backslash-escaped quote inside
+an IML expression ». Le validateur avait raison : c'est le crash du 27/08 qu'il a empêché. Mais la
+faute vient de son sérialiseur, pas du champ.
+
+**Module 10012.** Elle a refusé d'enregistrer en invoquant `20023.data.apy_texte`. Vérifié sur le
+blueprint : le module 20023 **existe**, il est en position 67 juste **avant** le 10012 en position
+68, et le module a tourné le soir même à 19:49 en produisant six verdicts de dé-staking avec les
+vrais APY (ATOM 21,06 %, TON 17,67 %, SOL 6,16 %). **Son validateur refuse une expression que Make
+exécute sans broncher** : il ne sait pas résoudre le schéma de sortie d'un module HTTP dynamique.
+Faux positif.
+
+**Et elle casse les clés, c'est maintenant prouvé en direct.** Sa PREMIÈRE tentative sur le 301 a
+envoyé une `x-api-key` de **109 caractères au lieu de 108**, divergence au caractère 42, début et
+fin corrects — invisible à l'œil. Elle s'est corrigée seule au deuxième essai, mais un
+enregistrement réussi du premier coup partait avec une clé cassée. Le contrôle par **longueur**
+est le seul qui attrape ça.
+
+Conséquences :
+1. **Un module dont le corps contient des guillemets nus dans un `{{...}}`, ou une référence
+   `.data.x` à un module HTTP, se retouche À LA MAIN.** Maia ne peut pas l'enregistrer.
+2. Chachou a fait le 301 à la main le 31/08 : 7013 → 7114 exactement, `x-api-key` **identique à
+   avant**, aucun autre module touché. La retouche manuelle ne présente aucun des deux risques.
+3. Quand Maia doit quand même intervenir, lui donner des **repères chiffrés qu'elle vérifie
+   elle-même** : longueur du corps, longueur de chaque en-tête, nombre d'antislashs. Jamais
+   « ne touche pas aux en-têtes » — son outil DOIT les réécrire, et la consigne rend le travail
+   impossible (elle a refusé pour ça le 31/08).
+
+## RÈGLE — Des clés ajoutées « seulement si » cassent un insert groupé (31/08/2026)
+
+`execute-trades` v43 ajoutait `stop_loss_pct`, `take_profit_pct` et `rationale` à `ordersToSave`
+**de façon conditionnelle**. Les objets d'un même envoi n'avaient donc pas le même jeu de clés, et
+**PostgREST refuse un insert groupé hétérogène**. Au run du 31/08 19:46 : 12 ordres acceptés chez
+Alpaca, **2 enregistrés** — le seul lot homogène, celui de GIL. Les 6 de JU et les 4 de SYL ont
+disparu.
+
+Et l'échec était **muet** : `.catch(() => {})` n'attrape que les erreurs réseau, jamais un code
+HTTP. Un refus 400 passait pour un succès.
+
+Deux règles qui en découlent :
+- **Tous les objets d'un insert groupé portent les mêmes clés**, à `null` quand la valeur manque.
+  Un `null` explicite empêche aussi le `DEFAULT` de la colonne de mentir (les 5/10 fantômes).
+- **Aucun `.catch` vide sur une écriture.** Vérifier `response.ok` et journaliser le code.

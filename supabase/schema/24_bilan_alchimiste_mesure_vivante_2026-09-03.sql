@@ -1,0 +1,96 @@
+-- Le bilan de l'Alchimiste devient une mesure vivante. 03/09/2026.
+-- Option (b) choisie par Chachou : « crypte_ju_evaluate_and_learn recalcule les deux lignes
+-- depuis bt_optimize_alchimiste a chaque run — l'affirmation devient une mesure vivante ».
+--
+-- CE QUI ETAIT FAUX
+-- oracle_brain_state.CRYPTE_JU.current_bias partait dans le prompt de l'Alchimiste a chaque
+-- run en affirmant :
+--   « Backtest en grille sur tout l historique, valide par decoupage temporel : le couple de
+--     meilleur rendement mesure est TP 5% / SL 4%. »
+-- Trois defauts, tous verifies :
+--   1. les deux nombres venaient de ju_crypte_config.tp_optimal_backtest / sl_optimal_backtest,
+--      deux lignes FIGEES : aucune fonction de la base ne les ecrivait (verifie sur pg_proc) ;
+--   2. la grille du jour classe ce couple 21e sur 48, a -9,02 % de rendement compose, quand le
+--      plus haut mesure est TP 7 % / SL 1,5 % a +92,81 % ;
+--   3. « valide par decoupage temporel » n'etait etaye par aucun calcul : la fonction ne
+--      decoupait rien, elle relisait deux chaines de caracteres.
+--
+-- ET UN TROISIEME COUPLE EN DUR, TROUVE EN OUVRANT LA FONCTION
+-- L'evaluation papier qui produit ce bilan (W/L, taux de reussite, gain et perte moyens)
+-- rejouait chaque proposition avec :
+--   v_tp := coalesce((p.resultat->>'take_profit_pct')::numeric,7);
+--   v_sl := coalesce((p.resultat->>'stop_loss_pct')::numeric,4);
+-- soit TP 7 / SL 4 — un couple different de celui du simulateur (5/4) et different de la
+-- fourchette du prompt (4 a 7 / 3 a 4). Et les deux cles lues n'existaient PAS dans resultat :
+-- l'Alchimiste n'a jamais produit take_profit_pct ni stop_loss_pct. Le coalesce tombait donc
+-- toujours sur 7/4. Quatre endroits, quatre reglages differents, aucun choisi par l'agent.
+--
+-- ---------------------------------------------------------------------------
+-- LES TROIS RETOUCHES (ancres verifiees uniques sur pg_get_functiondef)
+-- ---------------------------------------------------------------------------
+--
+-- A) la boucle charge les deux colonnes que l'Alchimiste remplit desormais
+--    AVANT : select acp.id, acp.paire, acp.prix_ref, acp.proposed_at, acp.side, acp.resultat
+--    APRES : ... , acp.resultat, acp.tp_pct, acp.sl_pct
+--
+-- B) les sorties viennent de la proposition, plus du dur
+--    AVANT :
+--      v_tp := coalesce((p.resultat->>'take_profit_pct')::numeric,7);
+--      v_sl := coalesce((p.resultat->>'stop_loss_pct')::numeric,4);
+--    APRES :
+--      v_tp := coalesce(p.tp_pct, (p.resultat->>'tp_pct')::numeric, (p.resultat->>'take_profit_pct')::numeric);
+--      v_sl := coalesce(p.sl_pct, (p.resultat->>'sl_pct')::numeric, (p.resultat->>'stop_loss_pct')::numeric);
+--      if v_tp is null or v_tp <= 0 or v_tp > 50 then v_tp := 5; end if;
+--      if v_sl is null or v_sl <= 0 or v_sl > 50 then v_sl := 4; end if;
+--    Le repli passe de 7/4 a 5/4 : c'est celui de alc_rebuild_virtual, donc les DEUX chemins
+--    de mesure disent enfin la meme chose sur les 63 propositions historiques. Preuve du
+--    recoupement : la grille au couple 5/4 mesure un taux de reussite de 48,4 % sur 62 trades,
+--    et l'evaluation papier renvoie desormais 48,4 % sur 62 propositions. Avant, elle disait
+--    51,6 % — le taux d'un couple (7/4) que rien n'appliquait.
+--
+-- C) la grille est rejouee et les deux lignes de config sont REECRITES
+--    AVANT : deux select dans ju_crypte_config, puis une phrase qui les recopie.
+--    APRES : select du meilleur couple sur bt_optimize_alchimiste() — les MEMES defauts que
+--    refresh_backtest_cache, donc la meme grille que la heatmap de la console — puis upsert
+--    des deux lignes (index unique sur key), puis la phrase :
+--      'Grille de N couples TP/SL rejouee a ce run sur T propositions (frais F %, portage max
+--       H h) : rendement compose mesure de MIN % a MAX %, le plus haut sur TP x % / SL y %.'
+--    La borne basse et la borne haute sont donnees : c'est une mesure avec sa dispersion, pas
+--    une designation. Aucun verbe d'action (regle du 26/08).
+--    Si bt_optimize_alchimiste echoue, la phrase reste VIDE et l'erreur est renvoyee dans
+--    backtest_erreur — pas de valeur perimee servie en silence (regle du 31/08 : aucun catch
+--    muet sur une ecriture).
+--
+-- ---------------------------------------------------------------------------
+-- MESURE AVANT / APRES
+-- ---------------------------------------------------------------------------
+--   bilan                AVANT (repli 7/4)      APRES (repli 5/4, choix de l'agent sinon)
+--   W/L                  32W / 30L              30W / 32L
+--   taux de reussite     51,6 %                 48,4 %  = celui de la grille au meme couple
+--   gain moyen           5,61 %                 4,54 %
+--   perte moyenne        5,84 %                 5,09 %
+--   ju_crypte_config     tp 5 / sl 4 (figes)    tp 7 / sl 1,5 (recalcules)
+--   duree d'execution    —                      710 ms (cron toutes les 2 h)
+--
+-- CADENCE REELLE, pour ne pas surpromettre : le cron crypte_ju_apprentissage tourne
+-- « 5 */2 * * * », donc le bilan a au plus 2 h. Le cache de la console (backtests_cache_6h,
+-- « 35 */6 * * * ») peut, lui, avoir jusqu'a 6 h de retard : les deux chiffres peuvent donc
+-- differer d'un cran sans que ce soit une panne.
+--
+-- SAUVEGARDES : bak_20260903_brain_crypte_ju, bak_20260903_ju_crypte_config.
+--
+-- CE QUE JE N'AI PAS FAIT : je n'ai pas ecrit current_bias a la main, ni epingle de texte.
+-- La phrase est produite par la fonction de l'agent, a partir de ses propres mesures. C'est
+-- la regle du 20/08, et c'est la faute que j'avais commise en aout.
+
+-- ---------------------------------------------------------------------------
+-- ET LA CONSOLE (aether.html), qui affirmait la meme chose en dur
+-- ---------------------------------------------------------------------------
+-- AVANT : const opt=(t===5&&s===4);
+--         « La case doree est le reglage en production, lu dans ju_crypte_config »
+-- APRES : une fonction btMeilleur() prend le maximum de total_ret_pct DANS la grille chargee,
+--         la case doree suit ce maximum, et le texte dit « Depuis le 03/09 l'Alchimiste choisit
+--         ses propres sorties sur chaque proposition : il n'y a plus de reglage unique. La case
+--         doree est le meilleur rendement mesure de la grille. »
+-- Le bloc script a ete revalide apres modification (152 484 o, syntaxe valide, plus aucune
+-- occurrence de t===5&&s===4).

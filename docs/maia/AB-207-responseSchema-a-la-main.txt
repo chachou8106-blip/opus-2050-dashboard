@@ -1,0 +1,111 @@
+SAGE MEMOIRE — LA REPARATION, TESTEE 7 FOIS SUR LE VRAI MODELE
+Scenario 7051944, module 207. 02/09/2026.
+
+Cette fiche remplace les deux precedentes, qui etaient fausses toutes les deux.
+Celle-ci repose sur ton panneau OUTPUT et sur 7 appels reels a gemini-3.5-flash.
+
+
+==========================================================
+CE QUE TON PANNEAU OUTPUT A PROUVE
+==========================================================
+
+  candidates : 1 seul
+  parts      : 1 seule
+  finishReason : STOP
+  candidatesTokenCount : 293
+  promptTokenCount     : 1441
+  modelVersion : gemini-3.5-flash
+  (aucun thoughtsTokenCount — thinkingBudget=0 fonctionne bien)
+
+Trois choses en decoulent, et elles ferment trois pistes :
+
+1. UN seul candidat, UNE seule part. L'expression du 208
+   ( 207.data.candidates[1].content.parts[1].text ) est donc CORRECTE.
+   Ce n'est pas un probleme d'indexation Make. Cette piste est morte.
+
+2. finishReason = STOP. Le modele n'a pas ete coupe : il a fini volontairement.
+   La piste de la troncature est morte (c'etait ma premiere hypothese, fausse).
+
+3. 293 jetons de reponse. Un objet seul en coute 141. Le modele a donc bien
+   GENERE le texte en double et l'a facture. Le doublon vient de lui, pas de Make.
+
+Et le chiffre qui tranche : promptTokenCount = 1441 chez toi. J'ai rejoue le
+meme corps de mon cote : promptTokenCount = 1441 aussi. IDENTIQUE AU JETON PRES.
+L'entree est donc exactement la meme. Mais ma reponse faisait 157 jetons et un
+seul objet, la tienne 293 et deux.
+
+MEME ENTREE, MEME MODELE, SORTIE DIFFERENTE. Gemini n'est pas deterministe,
+meme a temperature 0.01. Il n'y a RIEN de casse dans ton montage Make.
+
+
+==========================================================
+LA REPARATION : CONTRAINDRE LE DECODAGE
+==========================================================
+
+responseMimeType garantit que le modele produit du JSON. Il ne l'empeche pas
+d'en produire DEUX. responseSchema, lui, contraint le decodage : le modele ne
+peut plus emettre qu'un objet, avec ces 11 cles et pas d'autres.
+
+Ce n'est pas une idee neuve : ton Sage Flash (module 209, Perplexity) declare
+deja un schema. C'est le seul de tes cinq Sages a en avoir un. On applique au
+Memoire ce qui protege deja le Flash.
+
+TESTE 7 FOIS sur gemini-3.5-flash, avec ton corps exact :
+  4 essais schema complet : 200, STOP, 1 objet, 11 cles, JSON.parse OK
+  3 essais schema court   : 200, STOP, 1 objet, 11 cles, JSON.parse OK
+  jetons de reponse : 141-142 (contre 293 pour la reponse doublee)
+  promptTokenCount  : 1441, inchange — le schema ne coute rien en entree
+
+7 sur 7. Aucun doublon.
+
+
+==========================================================
+LA MODIFICATION — MODULE 207, CHAMP « BODY CONTENT »
+==========================================================
+
+Longueur actuelle : 4442 caracteres.
+
+CHERCHE (tout a la fin du champ, apparait exactement une fois — verifie) :
+
+"thinkingConfig":{"thinkingBudget":0}}}
+
+REMPLACE PAR (une seule ligne, sans retour a la ligne) :
+
+"thinkingConfig":{"thinkingBudget":0},"responseSchema":{"type":"OBJECT","properties":{"ju_win_rate":{"type":"NUMBER"},"syl_win_rate":{"type":"NUMBER"},"gil_win_rate":{"type":"NUMBER"},"alc_win_rate":{"type":"NUMBER"},"marees_win_rate":{"type":"NUMBER"},"best_archimage":{"type":"STRING"},"best_agent":{"type":"STRING"},"failed_pattern":{"type":"STRING"},"winning_pattern":{"type":"STRING"},"correction_directive":{"type":"STRING"},"correction_cible":{"type":"STRING"}},"required":["ju_win_rate","syl_win_rate","gil_win_rate","alc_win_rate","marees_win_rate","best_archimage","best_agent","failed_pattern","winning_pattern","correction_directive","correction_cible"]}}}
+
+Le mieux : copie-colle cette ligne, ne la retape pas.
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 5071 caracteres exactement (4442 + 629).
+2. Recherche « thinkingBudget » : doit toujours trouver UNE occurrence, a 0.
+   NE LE SUPPRIME PAS. Je te l'avais demande hier, j'avais tort : sans lui le
+   modele depense 1 919 jetons a reflechir sur les 2 000 du plafond et sa
+   reponse est coupee au milieu. Je l'ai teste, c'est mesure.
+3. Recherche « responseSchema » : une occurrence.
+4. Recherche « ju_win_rate » dans le champ : doit maintenant en trouver TROIS
+   (une dans le texte du prompt, une dans properties, une dans required).
+5. Recherche « \ » (antislash) : le corps n'en contient aucun avant, il n'en
+   contient aucun apres. Si tu en vois un, c'est que l'editeur a abime quelque
+   chose — dis-le-moi.
+6. Le champ se termine par TROIS accolades fermantes : }}}
+
+C'est du texte fixe. Aucune expression {{...}} n'est touchee, aucun guillemet
+n'a besoin d'etre echappe. Retouche a la main, pas de Maia.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Redonne-moi le compteur apres la disquette : il doit toujours afficher 5071.
+
+
+==========================================================
+CE QUE CA NE REPARE PAS
+==========================================================
+
+Les quatre autres Sages (202, 204, 206, 210) gardent le meme montage :
+ifempty(...; "{}") protege du VIDE, pas d'une reponse malformee. Le Macro et le
+Technique tournent sur Groq, le Risque sur Mistral — chacun a sa propre facon
+de deraper. Si l'un d'eux se met a doubler un jour, le run s'arretera pareil.
+
+Je ne te propose rien pour eux ce soir : on regarde d'abord si le Memoire tient
+sur plusieurs runs. Une correction a la fois, verifiee.

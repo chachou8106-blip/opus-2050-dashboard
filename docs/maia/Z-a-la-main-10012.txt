@@ -1,0 +1,78 @@
+A FAIRE A LA MAIN — MODULE 10012 SEUL — scenario 7051944
+(le 301 est deja fait, il est a 7114 et conforme)
+
+POURQUOI PAS MAIA
+-----------------
+Elle a refuse en invoquant l'expression 20023.data.apy_texte. Verifie sur ton
+blueprint, elle se trompe :
+- le module 20023 EXISTE (« LA RENTE DES SCELLES ») ;
+- il est en position 67, le 10012 en position 68 : il s'execute juste AVANT,
+  la reference est donc parfaitement legale ;
+- et le 10012 A TOURNE ce soir a 19:49 avec cette expression, en produisant six
+  verdicts de de-staking avec les vrais APY (ATOM 21,06 %, TON 17,67 %,
+  SOL 6,16 %, ETH 2,45 %, OSMO 5,39 %, TRX 3,26 %).
+
+Son validateur refuse ce que Make execute sans probleme : il ne sait pas
+resoudre le schema de sortie d'un module HTTP dynamique. C'est un faux positif,
+et il bloquera a chaque tentative. On passe donc a la main, comme pour le 301.
+
+
+CE QU'IL FAUT FAIRE
+-------------------
+Ouvre le module 10012 « L'Alchimiste de la Crypte », champ « Body content ».
+Compteur actuel : 7593 caracteres.
+Trois remplacements. Chacun apparait une seule fois : verifie ce soir.
+
+
+--- 1 sur 3 ---
+
+CHERCHE :
+|CTX_B64={{base64(CTX)}}|SAGES_B64={{base64(SAGES)}}|
+
+REMPLACE PAR :
+|CTX_B64={{base64(110.value)}}|SAGES_B64={{base64(215.value)}}|
+
+Pourquoi : dans Make une variable ne se lit pas par son nom. {{base64(CTX)}}
+n'envoie rien du tout. 110 est le module CTX (« LE CREUSET DU CONTEXTE »), 215
+le module SAGES (« LA MATRICE DES SIGNAUX »). Les deux existent et s'executent
+bien avant (positions 12 et 24). Ce n'est pas une formule inventee : c'est
+exactement ce que les modules 301, 303 et 305 utilisent deja pour lire ces deux
+memes modules.
+
+
+--- 2 sur 3 ---
+
+CHERCHE (les antislashs font partie du texte, il faut les taper) :
+\"raison\":\"une phrase courte sans guillemets\"}],\"destake_recommande\"
+
+REMPLACE PAR :
+\"raison\":\"une phrase courte sans guillemets\",\"prix_ref\":115200.5}],\"destake_recommande\"
+
+
+--- 3 sur 3 ---
+
+CHERCHE :
+Chaque element de propositions DOIT porter les cinq cles ci-dessus.
+
+REMPLACE PAR :
+Chaque element de propositions DOIT porter les six cles ci-dessus. prix_ref est le cours que tu LIS dans PRIX_REVOLUTX_B64 pour cette paire : si la paire ne s'y trouve pas, elle n'est pas negociable et tu ne la proposes pas.
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 7782 caracteres exactement (7593 + 189).
+2. Recherche « base64(CTX) » : ne doit plus rien trouver. Idem « base64(SAGES) ».
+
+Puis les DEUX validations :
+  a. « OK » sur le module ;
+  b. PUIS la disquette sur le scenario. Sans la deuxieme, rien n'est enregistre.
+
+Dis-moi le compteur et je verifie le blueprint moi-meme.
+
+
+CE QUE CA DEBLOQUE
+------------------
+- L'Alchimiste recevra enfin le contexte de marche et la synthese des cinq Sages.
+  Aujourd'hui il decide sans les avoir : ses deux champs arrivent vides.
+- Il devra donner le prix de reference lu dans la liste des 302 paires cotees.
+  C'est ce qui empechera un SQUID-USD sans cours, donc irreproductible a la main.

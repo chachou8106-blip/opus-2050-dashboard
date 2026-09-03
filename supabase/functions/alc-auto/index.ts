@@ -1,6 +1,22 @@
-// alc-auto v6 — EXECUTION SPOT ALIGNEE SUR LA REALITE REVOLUT X (buy + sell)
+// alc-auto v7 — EXECUTION SPOT ALIGNEE SUR LA REALITE REVOLUT X (buy + sell)
 // -----------------------------------------------------------------------------
-// Corrige le bug repete "l'Alchimiste trade ce qui n'est pas tradable".
+// v7 (03/09/2026) : LA BOUCLE SE REFERME. Aucune regle d'execution n'est touchee.
+//   Constat du run de 15:45 : l'ordre BTC de 2,50 $ est passe pour de vrai, et la
+//   proposition qui l'avait cause est restee avec oui_at = NULL et prix_exec = NULL.
+//   Rien ne reliait la ligne de ju_crypte_orders a sa proposition.
+//   1) On transmet proposition_id a revolut-x-trade.
+//   2) Apres un ordre REEL accepte, on ecrit sur la proposition : oui_at, order_id,
+//      et prix_exec quand Revolut l'a publie. Jamais de prix invente : si le prix
+//      n'est pas mesure, la colonne reste NULL.
+//   3) Le champ statut n'est TOUJOURS PAS touche : alc_rebuild_virtual ne lit que
+//      les statuts 'proposee' et 'expiree', le portefeuille virtuel reste intact.
+//   4) Garde-fou d'idempotence : en mode reel, une proposition qui porte deja un
+//      oui_at est sautee. Ce garde-fou ne peut que RETENIR un ordre, jamais en
+//      declencher un. Il protege du rejeu d'un meme run.
+//   5) L'ecriture verifie son code HTTP et le remonte (regle du 31/08, aucun echec
+//      muet). Elle ne peut pas faire echouer un ordre deja parti.
+//
+// v6 : corrige le bug repete "l'Alchimiste trade ce qui n'est pas tradable".
 //
 // Change vs v5 :
 //  - SUPPRIME le garde-fou "sell-only" (v5). Revolut X est SPOT : l'action naturelle
@@ -46,6 +62,27 @@ async function sb(path: string, init?: RequestInit): Promise<any> {
     },
   });
   try { return await r.json(); } catch { return null; }
+}
+// Ecriture qui rend son code HTTP. NE LEVE JAMAIS : elle intervient apres qu'un ordre
+// est parti, et une exception ici ferait passer un ordre execute pour un ordre refuse.
+async function sbPatch(path: string, patch: Record<string, unknown>): Promise<{ ok: boolean; status: number; error: string | null }> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(patch),
+    });
+    if (r.ok) return { ok: true, status: r.status, error: null };
+    let detail = ""; try { detail = await r.text(); } catch { /* corps illisible */ }
+    return { ok: false, status: r.status, error: `${r.status} ${detail}`.trim() };
+  } catch (e: any) {
+    return { ok: false, status: 0, error: String(e?.message || e) };
+  }
 }
 async function fn(slug: string, body: unknown): Promise<any> {
   const r = await fetch(`${SUPABASE_URL}/functions/v1/${slug}`, {
@@ -105,7 +142,7 @@ Deno.serve(async (req) => {
       (delaiRows || []).map((r: any) => [String(r.devise).toUpperCase(), String(r.unbonding_jours)]));
 
     // Propositions du cycle
-    let q = "alchimiste_crypte_propositions?select=id,paire,side,montant,confidence,run_id,statut&statut=eq.proposee&order=confidence.desc.nullslast,id.desc";
+    let q = "alchimiste_crypte_propositions?select=id,paire,side,montant,confidence,run_id,statut,oui_at,order_id&statut=eq.proposee&order=confidence.desc.nullslast,id.desc";
     if (run_id) q += `&run_id=eq.${encodeURIComponent(run_id)}`;
     else {
       const since = new Date(Date.now() - 20 * 60 * 1000).toISOString();
@@ -126,6 +163,12 @@ Deno.serve(async (req) => {
       const line: any = { id: p.id, paire, side, montant_demande: montant, confidence: p.confidence };
 
       if (!simulate && !arme) { line.statut = "bloque"; line.raison = `kill_switch=${cfg.kill_switch || "?"} (desarme)`; results.push(line); continue; }
+      // Idempotence : deja executee (rejeu du meme run). Ne peut que retenir un ordre.
+      if (!simulate && !dry_run && p.oui_at) {
+        line.statut = "deja_executee";
+        line.raison = `ordre deja passe le ${p.oui_at}${p.order_id ? ` (${p.order_id})` : ""}`;
+        results.push(line); continue;
+      }
       if (side !== "buy" && side !== "sell") { line.statut = "ignore"; line.raison = `side invalide (${p.side})`; results.push(line); continue; }
       if (whitelist && !whitelist.has(paire)) { line.statut = "ignore"; line.raison = "hors whitelist allowed_pairs"; results.push(line); continue; }
       const cote = univers.get(paire);
@@ -163,12 +206,25 @@ Deno.serve(async (req) => {
         results.push(line); continue;
       }
 
-      const rr = await fn("revolut-x-trade", { pair: paire, side, amount: montant, dry_run });
+      const rr = await fn("revolut-x-trade", { pair: paire, side, amount: montant, dry_run, proposition_id: p.id });
       line.resultat = rr;
       if (rr?.ok) {
         line.statut = dry_run ? "simule" : "execute";
         if (!dry_run) plannedDaily += montant;
         if (side === "buy") cashUSD -= montant;
+        // La boucle se referme : on relie la proposition a l'ordre reellement passe.
+        // statut n'est PAS touche (le portefeuille virtuel continue de la lire).
+        if (!dry_run) {
+          // Number(null) vaut 0 et 0 est fini : sans le test > 0 on ecrirait un prix
+          // d'execution de 0,00, qui est un mensonge. Pas de prix mesure -> NULL.
+          const px = Number(rr.prix_exec);
+          const maj = await sbPatch(`alchimiste_crypte_propositions?id=eq.${p.id}`, {
+            oui_at: new Date().toISOString(),
+            order_id: rr.order_id ?? null,
+            prix_exec: Number.isFinite(px) && px > 0 ? px : null,
+          });
+          line.maj_proposition = maj.ok ? "ok" : `ECHEC ${maj.error}`;
+        }
       } else {
         line.statut = "refuse"; line.raison = rr?.reason || rr?.error || "refuse";
       }

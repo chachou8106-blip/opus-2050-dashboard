@@ -1,0 +1,126 @@
+ALCHIMISTE — LE CHAMP QUI A CASSE LE RUN N'EST LU PAR PERSONNE
+Scenario 7051944, module 10012. 03/09/2026.
+
+
+==========================================================
+CE QUI S'EST PASSE — UN SEUL CARACTERE MANQUE
+==========================================================
+
+Le module 10014 a recu, du 10012, une reponse de 1 728 caracteres. Comptage
+fait sur ta sortie :
+
+  accolades  {  = 7   }  = 7   equilibrees
+  crochets   [  = 2   ]  = 1   DESEQUILIBRES
+
+JSON.parse s'arrete a la position 1451 : « Expected ',' or ']' after array
+element ».
+
+Et voici l'endroit exact, dans ta sortie :
+
+  ..."raison":"montant negligeable et delai de 14 jours..."}, "commentaire":"cash USD quasi nul...
+
+Le modele a ferme le 5e objet du tableau destake_recommande avec }, puis il est
+passe directement a la cle "commentaire" — SANS fermer le tableau avec ].
+
+Il aurait du ecrire :   ..."}], "commentaire":"..."}
+il a ecrit :            ..."},  "commentaire":"..."}
+
+C'est tout. Un crochet fermant. Le reste de la reponse est parfait : la
+proposition BTC est complete avec son prix_ref, les cinq lignes de dé-staking
+portent bien leurs sept cles, les verdicts sont GARDER/DESTAKER.
+
+
+==========================================================
+ET LE PIEGE, C'EST « commentaire » LUI-MEME
+==========================================================
+
+Pour ecrire "commentaire" apres un tableau d'objets, le modele doit se souvenir
+de fermer le tableau. C'est exactement la ou il a glisse.
+
+Maintenant regarde a quoi sert ce champ. J'ai cherche partout :
+
+  Dans le blueprint Make : "commentaire" n'apparait que dans les prompts qui le
+  DEMANDENT (10012 et 20015, les Marees). Aucun module ne le LIT. Ni le 10014
+  qui parse, ni le 10023 (Le Registre de Cristal), ni le 10031 (Discord).
+
+  Dans Supabase : zero. Aucune colonne, aucune fonction, aucune vue ne contient
+  ce mot. Requete faite sur information_schema.columns, pg_proc et pg_views.
+
+Le modele produit donc ce champ a chaque run, on le parse, et on le jette.
+C'est la « chaine livree a moitie » du 26/08 : quelqu'un l'a demande, personne
+ne l'a jamais lu — et c'est lui qui a arrete le run ce matin.
+
+La reparation est une SUPPRESSION, pas un ajout.
+
+
+==========================================================
+LA MODIFICATION — MODULE 10012, CHAMP « BODY CONTENT »
+==========================================================
+
+Longueur actuelle : 7782 caracteres.
+
+CHERCHE (apparait exactement une fois — verifie ; les antislashs font partie du
+texte, il faut les taper) :
+
+,\"commentaire\":\"<synthèse courte du cycle>\"
+
+SUPPRIME-LA entierement, la virgule de tete comprise. Rien d'autre.
+
+Le format de sortie demande doit alors se terminer par :
+
+...\"verdict\":\"GARDER\",\"raison\":\"une phrase courte sans guillemets\"}]}
+
+(deux crochets-accolades a la fin : }]} — au lieu de }],\"commentaire\"...)
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 7735 caracteres exactement (7782 - 47).
+2. Recherche « commentaire » : ne doit plus rien trouver dans le champ.
+3. Nombre d'antislashs : 82 (il y en avait 86 ; les 4 retires appartiennent a
+   la chaine supprimee).
+4. Recherche « prix_ref » : doit toujours trouver ses occurrences — on ne touche
+   pas a la correction du 31/08.
+5. Aucune expression {{...}} n'est touchee. Il y en a 15 dans ce champ, elles
+   restent identiques, et aucune ne contient d'antislash.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Redonne-moi le compteur apres la disquette : il doit afficher 7735.
+
+
+==========================================================
+CE QUE CA GARANTIT, ET CE QUE CA NE GARANTIT PAS
+==========================================================
+
+Ca supprime CE piege-la : le modele n'a plus a fermer un tableau avant une cle
+de haut niveau, sa sortie se termine par }]} et c'est fini.
+
+Ca ne garantit pas qu'il ne malformera jamais rien d'autre. Il reste deux
+tableaux dans sa sortie. C'est une reduction du risque, pas une preuve.
+
+LA GARANTIE, ce serait un response_format json_schema, comme celui que porte
+deja ton Sage Flash (module 209, meme API Perplexity, meme modele sonar-pro,
+0 run muet sur 19). JE NE TE LE DONNE PAS AUJOURD'HUI, et voici pourquoi :
+
+  · api.perplexity.ai est bloque depuis mon environnement : je n'ai pas pu
+    tester le schema, contrairement a celui de Gemini que j'ai teste 7 fois ;
+  · le schema du 209 est PLAT — que des chaines, aucun tableau imbrique. Celui
+    de l'Alchimiste en demanderait deux (propositions et destake_recommande).
+    Rien ne me prouve que sonar-pro accepte les tableaux d'objets imbriques ;
+  · et le 10012 est regle sur « Return error if HTTP request fails = true »
+    (le 209, lui, est a false). Si Perplexity refusait le schema avec un 400,
+    le run s'arreterait la — a chaque run, pas une fois sur trois.
+
+Je ne te fais pas courir ce risque sur un changement que je n'ai pas pu
+exercer. On fait la suppression, tu lances deux ou trois runs, et si ca casse
+encore ailleurs on rouvrira le sujet du schema — avec un test d'abord.
+
+
+==========================================================
+A NOTER POUR PLUS TARD, SANS URGENCE
+==========================================================
+
+Le module 20015 (L'Archimage des Marees) demande lui aussi un « commentaire »
+que personne ne lit, apres un tableau d'objets. Meme piege, meme structure. Il
+n'a pas casse jusqu'ici. Je ne touche a rien tant que tu ne me le demandes pas :
+une correction a la fois, verifiee.

@@ -1,0 +1,112 @@
+-- La console arretait de mentir sur l'etat du scenario. 03/09/2026, le soir.
+--
+-- CE QUE CHACHOU VOYAIT
+-- « des choses qui ne fonctionnent pas dans ma console, la commande et les heures d'arret
+-- du scenario ». Il avait raison sur les trois affichages.
+--
+-- LA CAUSE, dans la vue v_scenario_etat :
+--   dernier_run = ( select max(ts) from scenario_toggle_log where action = 'run' )
+-- Cette table n'enregistre que les runs declenches PAR SUPABASE. Le planificateur est passe
+-- dans Make, donc plus personne n'y ecrit : la valeur etait figee au 21/08 21:15, treize
+-- jours en arriere, pendant que le college tournait quatre fois par jour.
+--
+--   maitre_on = scenario_control.actif -> false depuis le 22/08 22:04.
+-- Ce booleen est l'etat de l'INTERRUPTEUR Supabase. Il etait affiche comme si c'etait l'etat
+-- du scenario. Ce n'est pas la meme chose : l'interrupteur ne commande plus les runs Make.
+--
+-- Mesure du jour : dernier run reel 03/09 21:17, 5 runs sur 24 h.
+
+-- ---------------------------------------------------------------------------
+-- LA VUE — les colonnes existantes gardent leur ordre (create or replace n'autorise pas
+-- l'insertion au milieu), les nouvelles sont ajoutees en fin.
+-- ---------------------------------------------------------------------------
+-- dernier_run           : greatest(toggle_log 'run', max(oracle_college_runs.created_at))
+--                         -> le dernier run REEL, quel que soit ce qui l'a declenche
+-- dernier_run_supabase  : l'ancienne mesure, conservee (rien n'est perdu)
+-- dernier_run_college   : la nouvelle source, isolee
+-- runs_24h              : nombre de runs sur 24 h
+-- minutes_depuis_dernier_run
+-- college_actif         : au moins un run en 24 h. C'est une MESURE, pas un verdict.
+--                         maitre_on reste l'etat de l'interrupteur, inchange.
+--
+-- heures et nb_runs_jour n'ont PAS ete touches : ils viennent de scenario_runs_planifies
+-- et ils etaient deja justes (09h00 · 15h45 · 18h30 · 21h15, 4 runs/j), identiques au
+-- planificateur Make. Verifie avant de conclure — ce n'etait pas la ces trois mensonges.
+--
+-- La fonction scenario-switch n'est PAS modifiee : elle fait select * sur la vue. Les
+-- actions on / off / run-now, protegees par le PIN, ne sont pas touchees du tout.
+
+-- ---------------------------------------------------------------------------
+-- COTE CONSOLE (aether.html) — quatre affichages corriges
+-- ---------------------------------------------------------------------------
+-- 1. helper scenActif(s) : lit college_actif, repli sur maitre_on si la vue est ancienne.
+-- 2. chip du scenario : « ● Coupé » -> « ● Collège actif — 5 runs / 24h ».
+-- 3. onglet Audit : la case « Planning scénario » devient « Collège — runs réels », et
+--    deux cases sont ajoutees : « Runs des dernières 24h » et « Interrupteur Supabase ».
+--    L'interrupteur reste affiche, mais nomme pour ce qu'il est.
+-- 4. les horaires « 4 runs/j · 09h · 15h45 · 18h30 · 21h15 » etaient ecrits EN DUR dans le
+--    HTML, et la ligne de code censee les rafraichir declarait une variable jamais utilisee :
+--       const m=document.querySelector('#opsContent .mono');
+--    Elle est terminee : le libelle affiche desormais D.scen.heures et nb_runs_jour.
+--
+-- Verification : les 153 211 caracteres de JavaScript de la console passent node --check.
+
+-- ---------------------------------------------------------------------------
+-- CE QUE J'AI VERIFIE ET QUI VA BIEN
+-- ---------------------------------------------------------------------------
+-- Les onze appels du demarrage de la console, rejoues un par un depuis la base (les edge
+-- functions sont toutes en verify_jwt=false, donc appelables sans cle) :
+--   inbox journal 200 · scenario-switch 200 · killswitch 200 (ON) · tests hero/sages/runs/
+--   positions/bt_alchimiste/equity/alchimiste : 200, avec des donnees.
+--   inbox suivi   200, 128 806 octets, 21 blocs — mais PLUS DE 5 SECONDES.
+--     Mesure exacte : 4 581 ms de requete/reponse au premier essai, qui a expire sur la
+--     limite de 5 000 ms de pg_net. Le navigateur, lui, attend et finit par afficher.
+--     C'est le bloc qui alimente huit affichages (kpis, gains, strats, comparaison,
+--     overview, stats, tables, alchimiste), et il est rafraichi toutes les 2 minutes.
+--     A regarder si la console parait lente. Cause probable : 25 lectures sequentielles
+--     dans oracle-inbox. Non corrige aujourd'hui : le 02/09 j'ai casse la console en
+--     parallelisant ces lectures sans mesurer, et je ne recommence pas a 22 h.
+--
+-- La case doree de la heatmap du backtest ne suit plus « t===5 && s===4 » : elle est
+-- calculee par btMeilleur() depuis la grille elle-meme. Deja corrige, verifie ce soir.
+
+-- ---------------------------------------------------------------------------
+-- COMPLEMENT DU MEME SOIR : la console pilotait le MAUVAIS SCENARIO
+-- ---------------------------------------------------------------------------
+-- scenario_control.scenario_id valait '6183820' = « ZCT — Oracle L'Alchimiste Financier v5
+-- VISIONNAIRE », isActive=false, derniere edition le 22/08, nextExec null. Il ne tourne pas.
+-- Le scenario qui tourne est 7051944 = « ZCT — Aether l'Oracle Financier », isActive=true,
+-- 4 creneaux lun-ven 09:00 / 15:45 / 18:30 / 21:15, prochain run 04/09 09:00.
+--
+-- CONSEQUENCE, ET ELLE TOUCHE A LA SECURITE : le bouton « ⏸ Couper » de la console envoyait
+-- /stop a 6183820, deja inactif. Il ne coupait PAS le robot qui passe des ordres reels.
+-- Chachou pouvait croire avoir arrete le robot alors qu'il continuait, kill_switch arme.
+--   update scenario_control set scenario_id = '7051944' where id = 1;
+--
+-- CE QUI RESTE UN PIEGE, ET QUE JE N'AI PAS TOUCHE : le job cron 30 `scenario_fire_5min`
+-- tourne toutes les 5 minutes. Aujourd'hui il ne fait rien (actif=false, pending_stop_at
+-- null). Mais si on appuie sur « ▶ Activer », scenario_fire declencherait /start aux 4
+-- creneaux EN PLUS du planificateur Make, puis /stop 3 minutes apres chaque run — ce qui
+-- desactiverait le scenario que Make vient de lancer. Les deux planificateurs se
+-- marcheraient dessus. NE PAS APPUYER SUR « Activer » avant d'avoir tranche lequel des deux
+-- planifie. Ce n'est pas a moi de le decider seul.
+
+-- ---------------------------------------------------------------------------
+-- L'ETAT REEL DE MAKE, MESURE TOUTES LES 5 MINUTES
+-- ---------------------------------------------------------------------------
+-- Demande de Chachou : « il faut que cela soit l'activation de mon scenario Make ».
+-- Le jeton Make est dans le Vault et ne doit pas en sortir : c'est donc une fonction SQL qui
+-- interroge l'API, et le jeton ne quitte jamais la base.
+--   scenario_make_etat        table : is_active, is_paused, next_exec, nom, mesure_at
+--   scenario_make_sync()      GET https://<zone>.make.com/api/v2/scenarios/<id>
+--                             LECTURE SEULE : un GET ne peut ni demarrer ni arreter.
+--                             net.http_get etant asynchrone, la fonction recolte la reponse
+--                             de l'appel precedent puis lance le suivant.
+--   cron job 'scenario_make_sync_5min', toutes les 5 minutes.
+--
+-- Premiere mesure : ZCT — Aether l'Oracle Financier · is_active true · is_paused false
+--                   prochain run 04/09 09:00.
+--
+-- La vue expose make_scenario_id, make_nom, make_actif, make_en_pause, make_prochain_run,
+-- make_mesure_at, make_erreur. La console affiche desormais « ● Scénario Make ACTIVÉ » et
+-- « Prochain run prévu », au lieu de deduire l'etat de l'interrupteur Supabase.

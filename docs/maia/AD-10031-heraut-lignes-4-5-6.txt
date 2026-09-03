@@ -1,0 +1,67 @@
+LE HERAUT DE LA CRYPTE N'AFFICHE QUE 3 LIGNES DE STAKING SUR 5
+Scenario 7051944, module 10031. 03/09/2026.
+
+
+CE QUE J'AI TROUVE
+------------------
+Tu as 5 lignes stakees sur Revolut X — mesure faite dans la base :
+
+  select count(*) filter (where en_stake) from v_alc_reel_live_positions
+  -> 5 : SOL, ETH, TRX, TON, ATOM
+
+Le bloc « A DE-STAKER » du Heraut, lui, s'arrete a 3. Ses conditions vont
+  >= 1, >= 2, >= 3   et c'est tout.
+
+Pour comparaison, le bloc des trades juste au-dessus, lui, va jusqu'a 10.
+
+CE QUE CA COUTE
+---------------
+Ce matin l'Alchimiste a rendu 5 verdicts : SOL DESTAKER, ETH DESTAKER,
+TON GARDER, ATOM GARDER, TRX GARDER. Tu n'aurais vu que les trois premiers.
+
+Cette fois c'etait sans consequence : les deux DESTAKER etaient en tete. Mais
+rien ne garantit cet ordre — c'est celui que le modele produit. Si un DESTAKER
+tombait en 4e ou 5e position, tu ne le verrais jamais, et tu ne saurais meme
+pas qu'il manque quelque chose.
+
+C'est ta demande d'origine : savoir quoi faire de tes stakings pour le
+reproduire en vrai. Aujourd'hui la reponse t'arrive amputee de 40 %.
+
+
+LA MODIFICATION — MODULE 10031, CHAMP « Content »
+--------------------------------------------------
+Longueur actuelle : 8499 caracteres.
+
+Colle les QUATRE lignes ci-dessous JUSTE APRES la ligne qui contient  >= 3
+(la derniere du bloc « A DE-STAKER »), et AVANT la ligne vide qui precede
+{{ifempty(get(20020.data; "resume"); emptystring)}}
+
+Les trois premieres sont la copie EXACTE de ta ligne 3 : seul l'index change
+(7 caracteres de difference, verifie). La quatrieme te previent s'il y a plus
+de 6 lignes — pour qu'une troncature ne redevienne jamais silencieuse.
+
+--- A COLLER ---
+
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 4; "• " & upper(ifempty(get(10014.destake_recommande; "4.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "4.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "4.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "4.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "4.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "4.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 5; "• " & upper(ifempty(get(10014.destake_recommande; "5.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "5.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "5.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "5.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "5.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "5.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) >= 6; "• " & upper(ifempty(get(10014.destake_recommande; "6.devise"); emptystring)) & " — " & toString(ifempty(get(10014.destake_recommande; "6.montant_usd"); 0)) & "$ — trade attendu " & toString(ifempty(get(10014.destake_recommande; "6.gain_trade_attendu_pct"); 0)) & "% vs APY staking " & toString(ifempty(get(10014.destake_recommande; "6.apy_staking_pct"); 0)) & "% — " & upper(ifempty(get(10014.destake_recommande; "6.verdict"); emptystring)) & " — " & ifempty(get(10014.destake_recommande; "6.raison"); emptystring); emptystring)}}
+{{if(length(ifempty(10014.destake_recommande; emptyarray)) > 6; "⚠️ " & toString(length(ifempty(10014.destake_recommande; emptyarray)) - 6) & " ligne(s) de plus non affichee(s) — previens-moi"; emptystring)}}
+
+--- FIN ---
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 10499 caracteres (8499 + 2000).
+2. Recherche « >= 4 », « >= 5 », « >= 6 » : une occurrence chacune.
+3. Recherche « \ » (antislash) : aucune dans ce que tu colles. Le champ n'en
+   contenait pas avant, il ne doit pas en contenir apres.
+4. Le bloc des trades (celui qui va jusqu'a >= 10) ne bouge pas.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+
+
+POURQUOI 6 ET PAS 5
+-------------------
+Tu as 5 lignes stakees aujourd'hui. Le 6e emplacement est la marge : si tu
+stakes une piece de plus, ca continue de marcher sans rien retoucher. Et
+au-dela de 6, la ligne d'alerte te le dit au lieu de couper en silence.

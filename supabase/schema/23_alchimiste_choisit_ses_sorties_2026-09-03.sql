@@ -1,0 +1,117 @@
+-- L'Alchimiste choisit ses sorties. 03/09/2026.
+--
+-- DEMANDE DE CHACHOU : « fais comme les autres, il doit choisir ses entrees et sorties
+-- tout seul comme tous les autres ».
+--
+-- CE QUI ETAIT VRAI AVANT
+--   JU / SYL / GIL  : stop_loss_pct et take_profit_pct dans leur schema de sortie, remplis
+--                     par eux depuis le 31/08 (oracle_college_orders en porte la trace).
+--   L'Alchimiste    : six cles, ni tp ni sl. Le 5 % / 4 % etait ecrit EN DUR quatre fois
+--                     dans alc_rebuild_virtual, et n'etait meme pas lu depuis
+--                     ju_crypte_config (prosrc ilike '%tp_optimal_backtest%' = false).
+--
+-- LA CHAINE COMPLETE, LES DEUX BOUTS (regle du 26/08 : qui ecrit, qui lit) :
+--   1. colonnes tp_pct / sl_pct sur alchimiste_crypte_propositions          <- ici
+--   2. alc_record_propositions les enregistre                                <- ici
+--   3. alc_rebuild_virtual les applique, avec repli 5/4 sur l'historique     <- ici
+--   4. module Make 10012 les demande au modele  -> fiche docs/maia/AG-10012-...
+--   Le module 10023 (Le Registre de Cristal) envoie le contenu BRUT en base64
+--   (base64(10012.data.choices[1].message.content)) : aucune autre retouche Make n'est
+--   necessaire, les deux nouvelles cles passent telles quelles.
+--
+-- SAUVEGARDES PRISES AVANT :
+--   bak_20260903_alc_virtual_trades   (60 lignes)
+--   bak_20260903_alc_propositions     (69 lignes)
+--   bak_20260903_avant_tpsl           (60 lignes, les 14 colonnes comparees)
+--
+-- VERIFICATION DE NON-REGRESSION, faite apres redeploiement :
+--   alc_rebuild_virtual() -> trades_total 60, tp 10, sl 1, VENTE 16, ouvertes 3,
+--                            win_rate 77,8 %, esperance 1,585 %, somme 42,8 %
+--   diff ligne a ligne contre bak_20260903_avant_tpsl sur les 14 colonnes :
+--                            0 ligne perdue, 0 ligne nouvelle.
+--   Les 63 propositions historiques se rejouent donc a l'identique via le repli 5/4.
+--
+-- VERIFICATION DU CHEMIN NEUF (propositions de test, supprimees depuis) :
+--   BTC-USD entree 79 739,99 le 25/08 00:00
+--     tp 1 / sl 0,5  -> TP le 25/08 02:00 a 80 537,3899 (= entree x 1,01), P&L +0,64
+--                       (= 1 - 2 x 0,18 de frais)
+--     sans tp ni sl  -> repli 5/4, SL a 76 550,3904 (= entree x 0,96), P&L -4,36
+--   Puis suppression des propositions de test et reconstruction : table identique.
+
+-- ---------------------------------------------------------------------------
+-- 1. LES COLONNES
+-- ---------------------------------------------------------------------------
+alter table public.alchimiste_crypte_propositions
+  add column if not exists tp_pct numeric,
+  add column if not exists sl_pct numeric;
+
+-- ---------------------------------------------------------------------------
+-- 2. alc_record_propositions — deux points de retouche, ancre verifiee unique
+-- ---------------------------------------------------------------------------
+-- AVANT (liste de colonnes de l'insert) :
+--   (run_id, paire, side, prix_ref, montant, confidence, raison, tolerance_pct, expire_at, statut, resultat)
+-- APRES :
+--   (run_id, paire, side, prix_ref, montant, confidence, raison, tp_pct, sl_pct, tolerance_pct, expire_at, statut, resultat)
+--
+-- AVANT (valeurs) :
+--       coalesce(v_elem->>'raison', v_elem->>'raison_courte'),
+--       p_tolerance,
+-- APRES :
+--       coalesce(v_elem->>'raison', v_elem->>'raison_courte'),
+--       nullif(coalesce(v_elem->>'tp_pct', v_elem->>'take_profit_pct'), '')::numeric,
+--       nullif(coalesce(v_elem->>'sl_pct', v_elem->>'stop_loss_pct'), '')::numeric,
+--       p_tolerance,
+--
+-- Les deux ecritures sont acceptees : tp_pct / sl_pct (les noms des colonnes de
+-- l'Alchimiste) et take_profit_pct / stop_loss_pct (les noms des trois Archimages), au
+-- cas ou le modele glisserait vers ceux-la. Teste : cles courtes OK, cles longues OK,
+-- absence des deux -> NULL.
+
+-- ---------------------------------------------------------------------------
+-- 3. alc_rebuild_virtual — six valeurs en dur remplacees, signature INCHANGEE
+-- ---------------------------------------------------------------------------
+-- La signature (p_fee_pct double precision, p_max_hold_h integer) n'est pas touchee :
+-- ajouter deux parametres a defaut aurait cree une SURCHARGE, et tout appel a deux
+-- arguments serait devenu ambigu (« function is not unique »). Verifie apres coup :
+-- une seule signature en base.
+--
+--  a) table temporaire
+--     AVANT : create temp table _alc_lots(lot_id serial, prop_id bigint, paire text, entry float8, montant float8, t0 timestamptz);
+--     APRES : ... , t0 timestamptz, tp float8, sl float8);
+--
+--  b) boucle de lecture des propositions, deux colonnes calculees en plus, avec le
+--     repli et le garde-fou de bornes :
+--       case when tp_pct is not null and tp_pct > 0 and tp_pct <= 50 then tp_pct::float8 else 5 end as tp,
+--       case when sl_pct is not null and sl_pct > 0 and sl_pct <= 50 then sl_pct::float8 else 4 end as sl
+--     Un tp_pct a 0 declencherait un TP des la premiere bougie ; une valeur absurde
+--     fabriquerait une position qui ne se ferme jamais. La borne est un garde-fou
+--     d'arithmetique du simulateur, pas une consigne envoyee a l'agent.
+--
+--  c) insertion du lot : ... values (r.id, r.paire, r.px, r.m, r.t0, r.tp, r.sl);
+--
+--  d) les quatre inserts dans alchimiste_virtual_trades :
+--     AVANT : ..., v_lot.t0, 5, 4, ...        APRES : ..., v_lot.t0, v_lot.tp, v_lot.sl, ...
+--     (VENTE, TP/SL touche, OUVERT ; et pour VENTE_LEGACY, r.tp / r.sl)
+--
+--  e) detection de la sortie :
+--     AVANT : ph.high >= v_lot.entry*1.05   ou   ph.low <= v_lot.entry*0.96
+--     APRES : ph.high >= v_lot.entry*(1 + v_lot.tp/100)
+--             ou ph.low  <= v_lot.entry*(1 - v_lot.sl/100)
+--     (aux trois endroits : le case du motif, le where, et le prix de sortie ecrit)
+--
+--  f) P&L au TP/SL :
+--     AVANT : case when v_hit.motif='TP' then  5 - 2*p_fee_pct else -4 - 2*p_fee_pct end
+--     APRES : case when v_hit.motif='TP' then v_lot.tp - 2*p_fee_pct else -v_lot.sl - 2*p_fee_pct end
+
+-- ---------------------------------------------------------------------------
+-- CE QUI N'EST PAS COUVERT
+-- ---------------------------------------------------------------------------
+-- Le compte REEL n'a toujours aucun stop. revolut-x-trade envoie
+--   order_configuration: { market: { quote_size: String(amount) } }
+-- et rien d'autre. Les tp_pct / sl_pct que l'Alchimiste va produire ne vivent que dans
+-- le simulateur. Poser un vrai stop chez Revolut X touche a l'execution d'ordres reels :
+-- ne part pas sans test en conditions reelles ni accord explicite (regle du 20/08).
+--
+-- Et aether.html dessine toujours son cadre dore en dur sur la case 5/4 de la heatmap
+-- (const opt=(t===5&&s===4)) — un affichage qui designe comme optimal un reglage classe
+-- 21e sur 48 par le backtest du 03/09.

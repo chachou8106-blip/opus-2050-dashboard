@@ -433,7 +433,7 @@ svg{max-width:100%}
     </div>
     <div class="card pad" style="margin-top:14px">
       <div class="chart-title">Les réglages ne sortent pas d'un chapeau — heatmap du backtest</div>
-      <div class="chart-sub" style="margin-bottom:10px">Rendement composé (%) de chaque combinaison Take-Profit × Stop-Loss, recalculé toutes les 6 h. La case dorée est le réglage en production, lu dans <b>ju_crypte_config</b> : <span id="btProd">—</span>.</div>
+      <div class="chart-sub" style="margin-bottom:10px">Rendement composé (%) de chaque combinaison Take-Profit × Stop-Loss, recalculé toutes les 6 h. Depuis le 03/09 l'Alchimiste choisit ses propres sorties sur chaque proposition : il n'y a plus de réglage unique. La case dorée est le <b>meilleur rendement mesuré</b> de la grille : <span id="btProd">—</span>.</div>
       <div class="scroll"><div id="heatmap" style="display:grid;grid-template-columns:auto repeat(5,1fr);gap:3px;min-width:420px"></div></div>
     </div>
     <div class="card pad" style="margin-top:14px">
@@ -573,7 +573,7 @@ svg{max-width:100%}
 
   <div id="opsContent" style="display:none">
   <div class="bento" style="margin-top:22px">
-    <div class="card op c6"><h3>⏯️ Scénario — marche / arrêt</h3><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="chip ok" id="scenChip">● Planning actif</span><span class="mono" style="font-size:11.5px;color:var(--dim)">4 runs/j · 09h · 15h45 · 18h30 · 21h15</span></div><div class="btnrow"><button class="btn go" data-wired data-scen="on">▶ Activer</button><button class="btn stop" data-wired data-scen="off">⏸ Couper</button><button class="btn" data-wired data-scen="run">⚡ Lancer</button></div><div class="note" style="margin-top:12px">🔒 Chaque action demande <b>Face ID</b> (repli PIN), vérifié côté serveur.</div></div>
+    <div class="card op c6"><h3>⏯️ Scénario — marche / arrêt</h3><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="chip ok" id="scenChip">● Planning actif</span><span class="mono" id="scenHeures" style="font-size:11.5px;color:var(--dim)">4 runs/j · 09h · 15h45 · 18h30 · 21h15</span></div><div class="btnrow"><button class="btn go" data-wired data-scen="on">▶ Activer</button><button class="btn stop" data-wired data-scen="off">⏸ Couper</button><button class="btn" data-wired data-scen="run">⚡ Lancer</button></div><div class="note" style="margin-top:12px">🔒 Chaque action demande <b>Face ID</b> (repli PIN), vérifié côté serveur.</div></div>
     <div class="card op c6"><h3>🛑 Kill-switch — trading réel</h3><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="chip warn" id="ksChip">● Désarmé</span><span class="mono" style="font-size:11.5px;color:var(--dim)">aucun ordre réel</span></div><div class="btnrow"><button class="btn go" data-wired data-ks="arm">🔓 Armer (Face ID)</button><button class="btn" data-wired data-ks="off">Désarmer</button></div><div class="note" style="margin-top:12px">L'armement passe l'Alchimiste en <b>argent réel</b> sur Revolut X.</div></div>
   </div>
 
@@ -1489,15 +1489,22 @@ function rAlc(){safe('alcpos',rAlcPositions);const jours=D.suivi?.alc_virtuel?.j
  // Sans la durée, un +17,4 % sur 7 jours se lit comme une performance établie.
  $('alcLegend').innerHTML='<span><i style="background:var(--s-alch)"></i>Brut <b>'+pctF(g)+'</b></span><span><i style="background:var(--red)"></i>Net de frais ('+fee.toFixed(2)+' %/trade) <b>'+pctF(n2)+'</b></span>'
   +'<span style="color:var(--amber)">sur '+jours.length+' jour'+(jours.length>1?'s':'')+' seulement</span>';}
+/* Le meilleur couple de la grille, lu DANS la grille. La case dorée suivait « t===5 && s===4 »,
+   écrit en dur : elle désignait comme optimal un couple que la grille classe 21e sur 48. */
+function btMeilleur(){const bt=Array.isArray(D.bt)?D.bt:[];let b=null;
+ bt.forEach(r=>{const v=num(r.total_ret_pct);if(v==null)return;
+  if(!b||v>b.v)b={tp:num(r.tp_pct),sl:num(r.sl_pct),v:v};});
+ return b;}
 function rHeat(){const bt=Array.isArray(D.bt)?D.bt:[];const el=$('heatmap');
  if(!bt.length){el.innerHTML='<div style="color:var(--mute);font-size:13px">Backtest indisponible (recalculé toutes les 6 h).</div>';return;}
  const TP=[...new Set(bt.map(r=>num(r.tp_pct)))].sort((a,b)=>a-b),SL=[...new Set(bt.map(r=>num(r.sl_pct)))].sort((a,b)=>a-b);
+ const best=btMeilleur();
  el.style.gridTemplateColumns='auto repeat('+SL.length+',1fr)';
  let h='<div class="mono" style="font-size:10px;color:var(--mute);display:grid;place-items:center">TP \\ SL</div>'+SL.map(s=>'<div class="mono" style="font-size:10px;color:var(--mute);text-align:center;padding:4px">SL '+s+'%</div>').join('');
  TP.forEach(t=>{h+='<div class="mono" style="font-size:10px;color:var(--mute);display:grid;place-items:center">TP '+t+'%</div>';
   SL.forEach(s=>{const r=bt.find(x=>num(x.tp_pct)===t&&num(x.sl_pct)===s);
    if(!r){h+='<div></div>';return;}
-   const v=num(r.total_ret_pct)||0,pos=v>=0,a=Math.min(.55,Math.abs(v)/12+.08),opt=(t===5&&s===4);
+   const v=num(r.total_ret_pct)||0,pos=v>=0,a=Math.min(.55,Math.abs(v)/12+.08),opt=(best!=null&&t===best.tp&&s===best.sl);
    h+='<div title="TP '+t+'% / SL '+s+'% · '+(r.trades||0)+' trades · WR '+(r.win_rate!=null?num(r.win_rate).toFixed(0):'—')+'% · '+pctF(v)+' composé" style="text-align:center;padding:9px 4px;border-radius:7px;font:600 12px var(--mono);background:'+(pos?'rgba(63,224,160,'+a+')':'rgba(255,107,125,'+a+')')+';color:'+(pos?'var(--grn)':'var(--red)')+(opt?';box-shadow:0 0 0 2px var(--gold);color:var(--gold-hi)':'')+'">'+pctF(v)+'</div>';});});
  el.innerHTML=h;}
 function T(el,head,rows,empty){$(el).innerHTML='<thead><tr>'+head.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+(rows.length?rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join(''):'<tr><td class="mono" style="color:var(--mute)" colspan="'+head.length+'">'+(empty||'Aucune donnée.')+'</td></tr>')+'</tbody>';}
@@ -1643,11 +1650,12 @@ function rEtatCollege(){const el=$('statutTxt');if(!el)return;
  el.textContent=txt;
  if(box)box.style.opacity=cls?'.75':'';}
 
-/* Réglage TP/SL en production : il était écrit « TP 5 % / SL 4 % » dans le texte de la heatmap.
-   Ces deux valeurs vivent dans ju_crypte_config et sont déjà servies par oracle-tests. */
-function rBtProd(){const el=$('btProd');if(!el)return;const a=D.alch||{};
- const tp=num(a.tp_pct),sl=num(a.sl_pct);
- el.textContent=(tp!=null&&sl!=null)?('TP '+tp+' % / SL '+sl+' %'):'réglage indisponible';}
+/* Il n'y a plus de « réglage TP/SL en production » : depuis le 03/09 l'Alchimiste porte ses
+   propres tp_pct / sl_pct sur chaque proposition, comme les trois Archimages. Cette ligne ne
+   dit donc plus un réglage appliqué mais le maximum MESURÉ de la grille — celui que la case
+   dorée entoure. */
+function rBtProd(){const el=$('btProd');if(!el)return;const b=btMeilleur();
+ el.textContent=b?('TP '+b.tp+' % / SL '+b.sl+' % ('+pctF(b.v)+' composé)'):'grille indisponible';}
 
 function rSpec(){const alc=D.suivi?.alc_reel_live?.resume||{};const mar=D.suivi?.marees_virtuel?.resume||{};
  // La carte porte le badge RÉEL : elle ne doit afficher que des chiffres du compte réel.
@@ -1908,9 +1916,17 @@ const AUTO=[
  {k:'reel',ic:'🔥',t:'Autonomie réelle',s:'argent réel — verrouillé par les 4 gates',
   d:'L\'Alchimiste passe des ordres avec ton argent réel sur Revolut X. L\'armement exige Face ID et reste subordonné aux 4 critères de passage au réel.',
   act:'Armer le trading réel (Face ID)',ks:'arm'}];
+// 03/09 — maitre_on est l'etat de l'INTERRUPTEUR Supabase, qui ne commande plus rien depuis
+// que le planificateur est passe dans Make : il est a false depuis le 22/08 alors que le
+// college tourne 4 fois par jour. college_actif est la MESURE (au moins un run en 24 h),
+// ajoutee a v_scenario_etat le meme jour. Repli sur maitre_on si la vue est plus ancienne.
+// Priorite a make_actif : c'est l'ACTIVATION REELLE du scenario Make, mesuree toutes les
+// 5 min par scenario_make_sync(). Replis successifs : college_actif (des runs ont eu lieu),
+// puis maitre_on (l'interrupteur Supabase), si la vue est plus ancienne.
+const scenActif=s=>!s?null:(s.make_actif!=null?!!s.make_actif:(s.college_actif!=null?!!s.college_actif:!!s.maitre_on));
 function autoNiveau(){
  if(D.ks)return 3;
- if(D.scen&&D.scen.maitre_on===false)return 0;
+ if(D.scen&&scenActif(D.scen)===false)return 0;
  return 2;}
 function rAuto(){const el=$('auto4');if(!el)return;const n=autoNiveau();
  el.innerHTML=AUTO.map((a,i)=>{const on=i===n,off=a.indispo||(a.k==='reel'&&!on);
@@ -1921,7 +1937,7 @@ function rAuto(){const el=$('auto4');if(!el)return;const n=autoNiveau();
  const G=gatesCalc();const ok=G?G.gates.filter(g=>g.ok).length:null;
  const note=$('autoNote');
  if(note)note.innerHTML='Niveau actuel : <b>'+AUTO[n].t+'</b> — déduit de l\'état réel (planning '
-  +((D.scen&&D.scen.maitre_on)?'actif':'coupé')+', kill-switch '+(D.ks?'ARMÉ':'désarmé')+(ok!=null?', gates '+ok+'/4':'')+'). Clique un cran pour voir ce qu\'il autorise.';}
+  +((D.scen&&scenActif(D.scen))?'actif':'coupé')+', kill-switch '+(D.ks?'ARMÉ':'désarmé')+(ok!=null?', gates '+ok+'/4':'')+'). Clique un cran pour voir ce qu\'il autorise.';}
 function openAutonomie(k){const a=AUTO.find(x=>x.k===k);if(!a)return;const n=autoNiveau();const on=AUTO[n].k===k;
  let h=modalHead(a.ic+' '+a.t,a.s);
  h+='<div style="margin-top:12px;font-size:13.5px;color:var(--dim);line-height:1.65">'+esc(a.d)+'</div>';
@@ -1961,7 +1977,11 @@ function rOps(){
  $('audit').innerHTML=[[(sf.data_completeness??sf.completude??sf.score)!=null?(sf.data_completeness??sf.completude??sf.score)+'/100':'—','Complétude des données',''],
   [(()=>{const cb=sf.circuit_breaker_fired??sf.circuit_breaker;return cb!=null?(cb?'DÉCLENCHÉ':'silencieux'):'—';})(),'Circuit breaker',(sf.circuit_breaker_fired??sf.circuit_breaker)?'':'ok'],
   [D.ks!=null?(D.ks?'ARMÉ':'ARRÊTÉ'):'—','Kill-switch réel',D.ks?'':'ok'],
-  [D.scen&&D.scen.maitre_on!=null?(D.scen.maitre_on?'ACTIF':'coupé'):'—','Planning scénario',D.scen&&D.scen.maitre_on?'ok':''],
+  [D.scen&&D.scen.make_actif!=null?(D.scen.make_actif?'ACTIVÉ':'désactivé'):'—','Scénario Make',D.scen&&D.scen.make_actif?'ok':''],
+  [D.scen&&D.scen.make_prochain_run?hm(D.scen.make_prochain_run):'—','Prochain run prévu',''],
+  [D.scen?(D.scen.college_actif?'ACTIF':'aucun run 24h'):'—','Collège — runs réels',D.scen&&D.scen.college_actif?'ok':''],
+  [D.scen&&D.scen.runs_24h!=null?D.scen.runs_24h+' / 24h':'—','Runs des dernières 24h',''],
+  [D.scen&&D.scen.maitre_on!=null?(D.scen.maitre_on?'ACTIF':'coupé'):'—','Interrupteur Supabase',''],
   [D.scen&&D.scen.dernier_run?hm(D.scen.dernier_run):'—','Dernier run déclenché',''],
   [G?G.gates.filter(g=>g.ok).length+'/4':'—','Gates du réel','']]
   .map(t=>'<div class="card kpi c4" style="min-height:80px"><span class="lab">'+t[1]+'</span><span class="val" style="font-size:20px;'+(t[2]==='ok'?'color:var(--grn)':'')+'">'+t[0]+'</span></div>').join('');
@@ -1971,8 +1991,16 @@ function rOps(){
  const runs=Array.isArray(D.runs)?D.runs:[];
  T('runs',["Quand","Phase de marché","Ordres","Achats / Ventes"],runs.slice(0,8).map(x=>[(x.run_at?new Date(x.run_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'),esc(x.market_phase||'—'),(x.orders_count??'—'),(x.orders_buy??0)+' / '+(x.orders_sell??0)]),'Pas de runs.');
  // scénario + kill-switch état
- if(D.scen&&$('scenChip')){const on=!!D.scen.maitre_on;$('scenChip').className='chip '+(on?'ok':'warn');$('scenChip').textContent=on?'● Planning actif':'● Coupé';
-  const m=document.querySelector('#opsContent .mono');}
+ if(D.scen&&$('scenChip')){const on=!!scenActif(D.scen);$('scenChip').className='chip '+(on?'ok':'warn');
+  $('scenChip').textContent=(D.scen.make_actif!=null)
+   ?(on?('● Scénario Make ACTIVÉ'+(D.scen.make_en_pause?' (en pause)':'')):'● Scénario Make désactivé')
+   :(on?('● Collège actif — '+(D.scen.runs_24h!=null?D.scen.runs_24h+' runs / 24h':'runs en cours')):'● Aucun run depuis 24h');
+  // Les horaires etaient ecrits en dur dans le HTML et cette ligne, restee inachevee,
+  // declarait une variable sans jamais s'en servir. On affiche la planification reelle,
+  // lue dans scenario_runs_planifies via v_scenario_etat.
+  const m=$('scenHeures');
+  if(m&&D.scen.heures)m.textContent=(D.scen.nb_runs_jour!=null?D.scen.nb_runs_jour+' runs/j · ':'')+D.scen.heures
+   +(D.scen.make_nom?' · '+D.scen.make_nom:'');}
  if(D.ks!=null&&$('ksChip')){$('ksChip').className='chip '+(D.ks?'ok':'warn');$('ksChip').style.color=D.ks?'var(--red)':'';$('ksChip').textContent=D.ks?'● ARMÉ — ordres réels ACTIFS':'● Désarmé';}
  // Console de tests. Elle n'exposait que 12 des 21 actions d'oracle-tests : l'Alchimiste, les
  // Marées, les dossiers des Archimages et des Sages, les positions, les runs et la courbe
