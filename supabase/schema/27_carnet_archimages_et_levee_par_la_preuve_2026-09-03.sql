@@ -1,0 +1,97 @@
+-- Le carnet virtuel des Archimages, et la levee du coupe-circuit PAR LA PREUVE.
+-- 03/09/2026, sur demande de Chachou : « fais le carnet et fais la levee ».
+--
+-- LE PROBLEME, MESURE
+--   La levee de drawdown_8pct exigeait drawdown < 8 %. GIL etait a 10,23 % le 25/08 et a
+--   11,15 % le 03/09 : neuf jours de vente forcee, et le drawdown a EMPIRE. Vendre fige la
+--   perte ; sans achat, rien ne peut le faire remonter. L'impasse etait arithmetique.
+--
+-- CE QU'ON A DECOUVERT EN CHERCHANT
+--   GIL n'etait pas muet : il PROPOSE toujours des achats, et c'est execute-trades qui les
+--   refuse avec le motif `coupe_circuit_defensif`. Ces refus partent dans
+--   oracle_exec_debug.payload.skipped_detail. La matiere pour le noter existait deja,
+--   personne ne la lisait.
+
+-- ---------------------------------------------------------------------------
+-- 1. LE CARNET
+-- ---------------------------------------------------------------------------
+-- Table archimage_virtual_trades : une ligne par decision BLOQUEE, notee comme le fait
+-- alc_rebuild_virtual pour l'Alchimiste depuis le 13/08.
+--   prix d'entree : derniere bougie 1h connue AU MOMENT de la decision
+--   seuils        : ceux que l'agent a LUI-MEME ecrits sur ce symbole (le plus recent avant
+--                   la decision). A defaut, la mediane de ses propres seuils — jamais une
+--                   valeur de ma main. La colonne seuils_source dit lequel des deux.
+--   sortie        : premiere bougie qui touche TP ou SL dans la limite de max_hold_h,
+--                   sinon OUVERT au dernier prix connu.
+--   frais         : 2 x fee_pct, comme dans le carnet de l'Alchimiste.
+--
+-- Fonction arch_rebuild_virtual(), cron 'arch_rebuild_virtual_2h' a la minute 14 des heures
+-- paires — juste avant check_circuit_breakers (job 13, minute 19), pour que la levee juge
+-- sur un carnet frais.
+--
+-- LA LIMITE, DITE FRANCHEMENT : price_history ne contient que SPY, QQQ et les cryptos.
+-- SQQQ, TQQQ, XLU, MSTR et les autres actions/ETF n'y sont pas. Ces decisions sont
+-- enregistrees avec exit_reason = 'NON_COTE' et ne comptent NI en faveur NI en defaveur de
+-- l'agent. Sur les 16 decisions bloquees de GIL, 5 sont dans ce cas. Elargir la couverture
+-- de price_history aux tickers actions accelererait la levee ; c'est une question de donnees,
+-- pas de code.
+
+-- ---------------------------------------------------------------------------
+-- 2. LA LEVEE PAR LA PREUVE
+-- ---------------------------------------------------------------------------
+-- arch_levee_config — les criteres sont EN BASE, pas en dur : Chachou les change sans code.
+--   min_decisions_closes      10     decisions virtuelles CLOSES exigees
+--   min_rendement_total_pct    0     rendement cumule des closes, en %
+--   min_win_rate_pct          50     taux de reussite des closes, en %
+--   fee_pct                 0.05     frais par cote
+--   max_hold_h               240     duree de detention maximale
+--
+-- arch_levee_prouvee(archimage) ne juge QUE les decisions posterieures au declenchement du
+-- coupe-circuit : ce qui s'est passe avant a deja ete paye.
+--
+-- check_circuit_breakers gagne une instruction AVANT ses resolutions existantes. Aucune
+-- condition existante n'est modifiee : la levee par le drawdown reste intacte, on ajoute une
+-- seconde porte. La ligne resolue porte une trace dans notes :
+--   « leve par la preuve le JJ/MM HH:MM : carnet virtuel des decisions bloquees conforme »
+--
+-- LE GARDE-FOU D'EXECUTION N'EST PAS DESSERRE. Tant que la preuve n'est pas faite,
+-- execute-trades continue de refuser les achats. On ne retire aucune securite : on remplace
+-- une impasse par une sortie mesurable.
+
+-- ---------------------------------------------------------------------------
+-- 3. ETAT AU MOMENT DE LA LIVRAISON — v_arch_levee
+-- ---------------------------------------------------------------------------
+--   GIL, bloque depuis le 25/08 (9 jours), drawdown 11,15 % pour un seuil de 8 %
+--   16 decisions bloquees : 2 closes, 9 ouvertes, 5 non cotees
+--   rendement des closes  : -10,20 %   (deux stops sur AVAX les 27 et 28/08)
+--   latent des ouvertes   : +37,08 %   (BTC x4, AVAX x3, DOGE, ETH — toutes en gain)
+--   levee_prouvee         : false      (2 closes sur les 10 exigees)
+--
+-- A NOTER, ET C'EST IMPORTANT : ce carnet contredit le rejeu bt_replay_archmages qui donnait
+-- GIL a 78 % de reussite. Les deux ne mesurent pas la meme chose — bt_replay rejoue les
+-- ordres EXECUTES (surtout avant le blocage), le carnet note les decisions REFUSEES (pendant
+-- le drawdown). Sur les 2 seules decisions closes depuis le blocage, le coupe-circuit avait
+-- raison. Deux decisions ne prouvent rien, dans un sens comme dans l'autre — c'est
+-- exactement pourquoi le seuil est a 10.
+
+-- ---------------------------------------------------------------------------
+-- 4. TESTS FAITS
+-- ---------------------------------------------------------------------------
+--   check_circuit_breakers() appelee en reel : tourne, GIL reste bloque. Correct.
+--   criteres temporairement assouplis (2 closes / -100 % / 0 %) -> arch_levee_prouvee = true
+--   criteres restaures (10 / 0 / 50)                            -> arch_levee_prouvee = false
+--   Le test n'a interroge que la fonction de decision, jamais check_circuit_breakers :
+--   le coupe-circuit ne pouvait pas bouger pendant l'essai.
+
+-- ---------------------------------------------------------------------------
+-- 5. CE QUI RESTE A FAIRE
+-- ---------------------------------------------------------------------------
+--   a) Le prompt de GIL dit encore « CIRCUIT_BREAKERS: seulement SELL ou HOLD ». Il propose
+--      des achats malgre tout — heureusement, sinon le carnet serait vide. Mais cette phrase
+--      reste un verbe d'action de ma main (regle du 26/08) et devrait devenir la mesure :
+--      le motif, la valeur, le seuil, et le fait que ses achats ne partiront pas tant que la
+--      preuve n'est pas faite. Fiche a preparer, decision de Chachou.
+--   b) Elargir price_history aux tickers actions/ETF pour que les 5 decisions non cotees
+--      comptent.
+--   c) Afficher v_arch_levee dans la console : combien de decisions closes, combien il en
+--      manque, ou en est la preuve.
