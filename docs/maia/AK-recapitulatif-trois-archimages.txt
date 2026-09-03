@@ -1,0 +1,120 @@
+CE QU'IL RESTE A FAIRE SUR LES TROIS ARCHIMAGES — RECAPITULATIF
+Scenario 7051944. 03/09/2026, fin de soiree.
+TOUT SE FAIT A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CES MODULES.
+
+Reponse a « dis-moi ce que je dois faire pour GIL, JU et SYL ».
+Trois modules, trois situations differentes. Mesure faite sur le blueprint en direct.
+
+
+##########################################################
+JU — MODULE 301 : RIEN A FAIRE
+##########################################################
+
+Verifie mot par mot sur son champ de 7114 caracteres :
+
+  « SELL MANDATE »     0 occurrence
+  « stop loss »        0 occurrence
+  « seulement SELL »   0 occurrence
+  fourchette de TP/SL  aucune
+
+Ses seules mentions de coupe-circuit sont :
+  1. le bloc AUTOCRITIQUE, qui est DEJA a la bonne forme :
+     « CIRCUIT_BREAKERS et COACHING sont TES resultats mesures, pas une opinion.
+       Chaque coupe-circuit te donne un motif, la valeur mesuree et le seuil franchi. »
+  2. deux expressions {{...}} du corps utilisateur, qui transportent la donnee.
+
+JU est la reference. C'est aussi lui qui varie le plus ses sorties : 7 valeurs de
+take-profit et 3 de stop-loss distinctes sur 7 jours, contre 1 et 1 pour GIL.
+Le lien entre les deux n'est pas une preuve, mais il se voit.
+
+Ne touche pas au 301.
+
+
+##########################################################
+GIL — MODULE 305 : UNE SEULE CHOSE
+##########################################################
+
+Tu as deja fait les deux premieres ce soir (le stop loss en dur et le SELL
+MANDATE) : le champ est passe de 6647 a 6607. Il reste la troisieme.
+
+C'est le detail de la fiche AJ. En resume :
+
+  6607  ->  6896 caracteres
+
+  CHERCHE (une seule fois) :
+CIRCUIT_BREAKERS: Si CTX contient circuit_breakers actifs pour GIL: seulement SELL ou HOLD. Crypto circuit breaker strict: si drawdown GIL >5% → pas de nouveau BUY crypto.
+
+  REMPLACE PAR :
+CIRCUIT_BREAKERS: CTX te donne tes coupe-circuits actifs, avec pour chacun le motif, la valeur mesuree et le seuil franchi. Tant qu'un coupe-circuit drawdown est actif, tes ACHATS ne partent pas au courtier : ils sont refuses a l'execution et enregistres dans un carnet virtuel qui les note au prix reel. Continue de dire ce que tu ferais : c'est la seule chose qui puisse demontrer que tu as raison et lever le blocage. Tes ventes, elles, partent normalement.
+
+C'est la plus importante des trois, parce qu'elle est la seule qui agisse CONTRE
+le mecanisme de liberation : le carnet ne peut se remplir que s'il continue de
+proposer des achats.
+
+
+##########################################################
+SYL — MODULE 303 : DEUX CHOSES, DANS CET ORDRE
+##########################################################
+
+Longueur actuelle : 6816 caracteres. Fais les deux dans la meme session.
+
+--- 1. LE SELL MANDATE (c'est la fiche AI) ---
+
+  6816  ->  6802
+
+  CHERCHE (une seule fois) :
+SELL MANDATE: Minimum 2 SELL par run si positions ouvertes dans CTX POS_SYL. Si position >20% unrealized gain: prendre profit partiel. Si catalyseur négatif détecté sur un actif détenu: SELL immédiat.
+
+  REMPLACE PAR :
+VENTES: CTX POS_SYL te donne tes positions, leur gain ou perte latent en pourcentage, et FLASH_INTEL te donne les catalyseurs. Tu decides seul ce que tu vends, quand, et quelle fraction.
+
+--- 2. LE BLOC COUPE-CIRCUIT ---
+
+  6802  ->  7171
+
+  CHERCHE (une seule fois) :
+CIRCUIT_BREAKERS: Si CTX contient circuit_breakers actifs pour SYL: seulement SELL ou HOLD.
+
+  REMPLACE PAR :
+CIRCUIT_BREAKERS: CTX te donne tes coupe-circuits actifs, avec pour chacun le motif, la valeur mesuree et le seuil franchi. Tant qu'un coupe-circuit drawdown est actif, tes ACHATS ne partent pas au courtier : ils sont refuses a l'execution et enregistres dans un carnet virtuel qui les note au prix reel. Continue de dire ce que tu ferais : c'est la seule chose qui puisse demontrer que tu as raison et lever le blocage. Tes ventes, elles, partent normalement.
+
+SYL n'est pas bloque aujourd'hui — son drawdown est a 1,49 %, tres loin des 8 %.
+Cette seconde correction est donc preventive : le jour ou il franchit le seuil,
+il tombe dans l'impasse ou GIL est depuis neuf jours. Autant ne pas l'y laisser.
+
+
+##########################################################
+LES COMPTEURS, EN UN COUP D'OEIL
+##########################################################
+
+  301  JU    7114  ->  7114   (rien)
+  305  GIL   6607  ->  6896   (+289)
+  303  SYL   6816  ->  6802  ->  7171   (-14 puis +369)
+
+Pour CHAQUE module, les memes controles :
+  · le compteur affiche exactement la valeur attendue
+  · la phrase retiree ne se trouve plus (« seulement SELL », « SELL MANDATE »)
+  · « CIRCUIT_BREAKERS: » apparait toujours une fois
+  · le nombre d'antislashs est INCHANGE : 140 pour le 305, 173 pour le 303
+    (aucun des textes retires ni ajoutes n'en contient)
+  · les expressions {{...}} sont inchangees : 17 dans le 305, 16 dans le 303
+  · PAS de vrai retour a la ligne dans le champ. Ta retouche de ce soir sur le 305
+    en a laisse un apres « quelle fraction. » Le run de 21h15 est passe quand meme,
+    mais c'est le caractere qui a arrete le run du 27/08. Reste sur une seule ligne.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario. Les deux, sinon le
+blueprint ne bouge pas.
+
+
+##########################################################
+CE QUE CA NE CHANGE PAS
+##########################################################
+
+Aucune securite n'est desserree, sur aucun des trois. Les achats de GIL restent
+refuses par execute-trades tant que la preuve n'est pas faite ; les plafonds de
+levier et de notionnel, le kill-switch, les coupe-circuits eux-memes : rien n'est
+touche. On retire des ordres que je leur avais donnes, on ne retire pas de barriere.
+
+Apres ces trois retouches, plus aucun des cinq traders ne portera de seuil de
+sortie, de quota de vente ou d'interdiction de vouloir ecrits de ma main.
+L'Alchimiste a ete nettoye ce matin, les Marees n'en ont jamais eu.
