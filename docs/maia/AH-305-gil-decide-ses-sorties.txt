@@ -1,0 +1,138 @@
+GIL DECIDE SES SORTIES — RETIRER LE CHOIX EN DUR
+Scenario 7051944, module 305 « L'ARBITRE DORE — GIL ». 03/09/2026.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+
+==========================================================
+CE QUE LA COMPARAISON DIT, CHIFFRES A L'APPUI
+==========================================================
+
+Demande de Chachou : « il ne doit pas y avoir de choix en dur dans le prompt,
+il doit decider tout seul de ses entrees et sorties comme les autres ».
+
+J'ai compte, sur les trois prompts, ce qui dicte une sortie :
+
+                            JU (301)   SYL (303)   GIL (305)
+  stop loss chiffre en dur      0           0           1     <- GIL seul
+  SELL MANDATE                  0           1           1
+  seuil chiffre -> action       0           0           2
+  longueur du champ           7114        6816        6647
+
+**Une seule chose n'existe que chez GIL** : la ligne
+
+    Stop loss crypto 5%, levier ETF 4%.
+
+C'est elle qui explique le tableau d'aujourd'hui : GIL ecrit 5/10 sur TOUS ses
+ordres, une seule valeur de TP et une seule de SL, quand JU en varie sept et SYL
+trois. Il ne calibre pas parce qu'on ne lui a jamais demande de calibrer.
+
+Le remplacement 1 ci-dessous suffit a le mettre au niveau de SYL.
+
+
+==========================================================
+REMPLACEMENT 1 — LE COEUR DE LA DEMANDE
+==========================================================
+
+Longueur actuelle du champ : 6647 caracteres.
+Longueur apres            : 6611 caracteres.
+
+CHERCHE la ligne REGLES. Elle se lit aujourd'hui :
+
+RÈGLES: Position max 30%. Cash min 10%. Crypto max: 30% (tu es le spécialiste crypto). Stop loss crypto 5%, levier ETF 4%.
+
+SUPPRIME uniquement la fin, en partant de l'espace qui precede « Stop » :
+
+ Stop loss crypto 5%, levier ETF 4%.
+
+(36 caracteres, l'espace de tete et le point final compris)
+
+La ligne doit alors se terminer par :
+
+RÈGLES: Position max 30%. Cash min 10%. Crypto max: 30% (tu es le spécialiste crypto).
+
+
+CE QUE JE GARDE, ET POURQUOI
+----------------------------
+« Position max 30 %, Cash min 10 %, Crypto max 30 % » RESTE. Ce ne sont pas des
+decisions de trader, ce sont des bornes d'exposition — la meme famille qu'un
+plafond de levier ou qu'un plafond de notionnel. Elles ne disent pas a GIL quoi
+acheter ni quand sortir, elles bornent la casse. C'est la distinction du 26/08 :
+un garde-fou d'execution est legitime, un verbe d'action dans sa tete ne l'est pas.
+
+
+==========================================================
+REMPLACEMENT 2 — FACULTATIF, ET IL TE CONCERNE DEUX FOIS
+==========================================================
+
+Il reste un deuxieme choix en dur chez GIL. Mais SYL a le meme, presque mot pour
+mot. Si tu ne le retires que chez GIL, tu crees une nouvelle asymetrie a la place
+de celle qu'on repare. C'est ta decision, pas la mienne.
+
+Le texte actuel du 305 :
+
+SELL MANDATE: Minimum 2 SELL par run si positions ouvertes dans CTX POS_GIL. Crypto: si >20% unrealized gain → take profit. Si BTC/ETH held >3 runs sans SELL → sortie partielle obligatoire.
+
+Trois ordres y sont donnes : vendre au moins deux fois par run, prendre son profit
+a 20 %, et sortir d'office apres trois runs. Aucun ne vient de GIL.
+
+REMPLACE PAR :
+
+VENTES: CTX POS_GIL te donne tes positions, leur gain ou perte latent en pourcentage et leur anciennete en nombre de runs. Tu decides seul ce que tu vends, quand, et quelle fraction.
+
+(-7 caracteres ; le compteur final passe alors a 6604 au lieu de 6611)
+
+Le meme texte existe dans le module 303 (SYL), avec POS_SYL et « prendre profit
+partiel » au lieu de « take profit ». Si tu veux le retirer aussi, dis-le moi et
+je te fais la fiche pour le 303 — je ne touche pas a SYL sans que tu le demandes.
+
+A SAVOIR AVANT DE DECIDER : ce mandat n'a aucun effet mecanique. Rien dans
+execute-trades ne le lit ni ne le fait respecter — c'est du texte dans un prompt,
+et rien d'autre. Le retirer ne desarme aucun garde-fou.
+
+
+==========================================================
+CE QUI NE CHANGE PAS
+==========================================================
+
+Le coupe-circuit de GIL n'est PAS touche. `drawdown_8pct` est actif depuis le
+25/08, il l'empeche d'ouvrir et le laisse vendre. C'est la securite qui fait
+exactement son travail, et elle reste. Les 19 ordres de GIL sur 7 jours sont tous
+des ventes : c'est le coupe-circuit, pas le prompt.
+
+Le bloc CIRCUIT_BREAKERS du prompt reste lui aussi : il transmet a GIL le motif,
+la valeur mesuree et le seuil franchi. C'est une mesure, pas une consigne.
+
+Et l'exemple JSON reste tel quel, avec ses "stop_loss_pct":5 et
+"take_profit_pct":20 dans trade_1 : c'est la meme convention illustrative que
+chez SYL (5 et 12) et que celle qu'on a mise chez l'Alchimiste. Un exemple montre
+la FORME, il ne prescrit pas la valeur.
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 6611 caracteres (6647 - 36).
+   Si tu fais aussi le remplacement 2 : 6604.
+2. Recherche « Stop loss crypto » : ne doit plus rien trouver.
+3. Recherche « Position max 30% » : doit toujours etre la.
+4. Nombre d'antislashs : 140, INCHANGE dans les deux cas (les deux passages
+   retires n'en contiennent aucun).
+5. Les 17 expressions {{...}} du champ sont inchangees, et aucune ne contient
+   d'antislash.
+6. Recherche « stop_loss_pct » : doit toujours apparaitre dans le FORMAT DE
+   SORTIE — on retire la consigne, pas la cle.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Redonne-moi le compteur apres la disquette.
+
+
+==========================================================
+CE QU'ON VERRA APRES
+==========================================================
+
+GIL est en coupe-circuit : il ne peut pas ouvrir, donc ses seuils ne serviront
+qu'aux ventes tant que le drawdown ne s'est pas resorbe. Le vrai test viendra
+quand il pourra racheter.
+
+Le signe a surveiller, c'est le meme que pour l'Alchimiste ce matin : le nombre
+de valeurs DISTINCTES de stop_loss_pct et take_profit_pct dans
+oracle_college_orders pour GIL. Aujourd'hui : 1 et 1. JU est a 3 et 7.
