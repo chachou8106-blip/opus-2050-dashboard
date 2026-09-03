@@ -1,0 +1,148 @@
+L'ALCHIMISTE CHOISIT SES SORTIES — COMME LES TROIS ARCHIMAGES
+Scenario 7051944, module 10012. 03/09/2026.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+
+==========================================================
+POURQUOI
+==========================================================
+
+Demande de Chachou : « fais comme les autres, il doit choisir ses entrees
+et ses sorties tout seul comme tous les autres ».
+
+Etat constate avant cette fiche :
+
+  JU (301), SYL (303), GIL (305)  -> leur schema de sortie porte
+                                     stop_loss_pct et take_profit_pct.
+                                     Ils decident leurs sorties depuis le 31/08.
+  L'Alchimiste (10012)            -> six cles. Ni tp, ni sl.
+                                     Le 5 % / 4 % etait ecrit EN DUR dans la
+                                     fonction SQL alc_rebuild_virtual, quatre fois.
+
+Il etait le seul a qui on imposait ses sorties.
+
+
+==========================================================
+CE QUI EST DEJA FAIT COTE SUPABASE (rien a faire pour toi)
+==========================================================
+
+1. alchimiste_crypte_propositions a deux colonnes de plus : tp_pct, sl_pct.
+2. alc_record_propositions les lit et les enregistre. Elle accepte DEUX
+   ecritures : tp_pct / sl_pct, et aussi take_profit_pct / stop_loss_pct
+   (les noms des Archimages), au cas ou le modele glisse vers ceux-la.
+   Teste sur trois propositions : cles courtes OK, cles longues OK,
+   absence des deux -> NULL.
+3. alc_rebuild_virtual lit les valeurs de la proposition au lieu d'ecrire 5 et 4.
+   Quand elles sont absentes (les 63 propositions historiques), elle retombe
+   sur 5 / 4 : l'historique reste comparable.
+   Verifie : reconstruction avant / apres, 60 lignes, 14 colonnes,
+   ZERO ligne perdue, ZERO ligne nouvelle. TP 10, SL 1, VENTE 16,
+   somme des rendements 42,8 %. Identique au trait pres.
+   Verifie aussi sur deux propositions de test : tp 1 / sl 0,5 -> TP touche
+   a 80 537,39 (= entree x 1,01), P&L 0,64 % ; sans tp ni sl -> repli 5 / 4,
+   SL a 76 550,39 (= entree x 0,96), P&L -4,36 %. Les deux chemins marchent.
+   Les propositions de test ont ete supprimees, la table est revenue a l'identique.
+
+Garde-fou : une valeur nulle, negative ou superieure a 50 est ignoree et
+remplacee par le repli. Un tp_pct a 0 declencherait un TP immediat.
+
+Il ne reste donc qu'une chose : LUI DEMANDER ses deux valeurs.
+
+
+==========================================================
+LA MODIFICATION — MODULE 10012, CHAMP « BODY CONTENT »
+==========================================================
+
+Longueur actuelle : 7735 caracteres.
+Longueur apres    : 8177 caracteres.
+
+Il y a DEUX remplacements. Les antislashs font partie du texte, il faut les
+taper tels quels.
+
+
+--- REMPLACEMENT 1 (apparait exactement une fois) ---
+
+CHERCHE :
+
+\"prix_ref\":115200.5}]
+
+REMPLACE PAR :
+
+\"prix_ref\":115200.5,\"tp_pct\":6.0,\"sl_pct\":2.0}]
+
+(+30 caracteres)
+
+
+--- REMPLACEMENT 2 (apparait exactement une fois) ---
+
+CHERCHE :
+
+Chaque element de propositions DOIT porter les six cles ci-dessus.
+
+REMPLACE PAR :
+
+Chaque element de propositions DOIT porter les huit cles ci-dessus. tp_pct et sl_pct sont TES sorties, en pourcentage du prix d entree : tp_pct est la hausse a laquelle tu prends ton benefice, sl_pct la baisse a laquelle tu coupes ta perte. Tu les choisis toi-meme pour chaque trade, selon la volatilite de la paire et ta conviction ; les valeurs de l exemple sont illustratives, elles ne sont pas une consigne. Les deux sont strictement positives et inferieures ou egales a 50.
+
+(+412 caracteres)
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 8177 caracteres exactement (7735 + 30 + 412).
+2. Recherche « tp_pct » : 2 occurrences (une dans l'exemple JSON, une dans
+   la phrase). Idem « sl_pct ».
+3. Recherche « les six cles » : ne doit plus rien trouver ; « les huit cles »
+   doit apparaitre une fois.
+4. Nombre d'antislashs : 86 (il y en avait 82 ; les 4 nouveaux sont ceux de
+   \"tp_pct\" et \"sl_pct\").
+5. Les 15 expressions {{...}} du champ sont INCHANGEES et aucune ne contient
+   d'antislash. Les deux remplacements sont hors de toute expression.
+6. Recherche « prix_ref » : toujours presente — on ne touche pas a la
+   correction du 31/08. Recherche « commentaire » : toujours rien — on ne
+   revient pas sur la correction de ce matin.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Redonne-moi le compteur apres la disquette : il doit afficher 8177.
+
+
+==========================================================
+POURQUOI A LA MAIN, ET PAS PAR MAIA
+==========================================================
+
+C'est la lecon du 31/08, deja payee deux fois :
+
+  · l'outil de Maia reenregistre le module entier et RE-ECHAPPE le corps.
+    Sur le 301 elle a envoye \\\"bias\\\" la ou le champ contient \"bias\" nu.
+    Make a refuse. Ce champ-ci contient exactement la meme forme, il subirait
+    exactement le meme sort ;
+  · et elle reecrit les en-tetes au passage. Sur le 301, premiere tentative :
+    x-api-key de 109 caracteres au lieu de 108, divergence au caractere 42,
+    debut et fin corrects — invisible a l'oeil.
+
+Ta retouche manuelle du 301 le 31/08 (7013 -> 7114) n'a presente aucun des
+deux risques. On refait pareil.
+
+
+==========================================================
+CE QUE CA CHANGE, ET CE QUE CA NE CHANGE PAS
+==========================================================
+
+CA CHANGE : a partir du prochain run, chaque proposition arrive avec les
+sorties choisies par l'Alchimiste, et le portefeuille virtuel les applique.
+Le 5 / 4 ne s'applique plus qu'aux propositions qui n'en portent pas.
+
+CA NE CHANGE RIEN AU COMPTE REEL. revolut-x-trade n'envoie qu'un ordre au
+marche :
+
+  order_configuration: { market: { quote_size: String(amount) } }
+
+Pas de TP, pas de SL, pas de stop. Le tp_pct et le sl_pct que l'Alchimiste
+va produire n'existent, pour l'instant, que dans le simulateur. Poser un vrai
+stop chez Revolut X est un autre chantier, et il touche a l'execution
+d'ordres reels : il ne partira pas sans test ni sans ton accord.
+
+A NOTER AUSSI : la console dessine un cadre dore sur la case 5 / 4 de la
+heatmap du backtest, en dur (const opt=(t===5&&s===4) dans aether.html). Cet
+ecran designe comme « optimal » un reglage que le backtest du 03/09 classe
+21e sur 48. Je n'y touche pas aujourd'hui — c'est un affichage, pas une
+decision — mais il ment.
