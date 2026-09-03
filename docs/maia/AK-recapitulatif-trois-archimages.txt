@@ -118,3 +118,31 @@ touche. On retire des ordres que je leur avais donnes, on ne retire pas de barri
 Apres ces trois retouches, plus aucun des cinq traders ne portera de seuil de
 sortie, de quota de vente ou d'interdiction de vouloir ecrits de ma main.
 L'Alchimiste a ete nettoye ce matin, les Marees n'en ont jamais eu.
+
+
+##########################################################
+FAIT — CONTROLE DU 03/09 A 22:42
+##########################################################
+
+Chachou a applique les trois retouches. Blueprint relu en direct
+(derniere edition 2026-09-03T20:42:28Z), scenario 7051944 actif, 80 modules.
+
+  301  JU    7114  CONFORME (non touche, comme prevu)
+  303  SYL   7171  CONFORME
+  305  GIL   6896  CONFORME
+  10012 Alch 8202  CONFORME (rappel, fait ce matin)
+
+Controles de forme :
+  antislashs   303 : 173 inchange   ·  305 : 140 inchange
+  expressions  303 :  16 inchangees ·  305 :  17 inchangees
+  textes retires : « seulement SELL ou HOLD », « SELL MANDATE »,
+                   « Stop loss crypto », « pas de nouveau BUY » -> introuvables
+  texte ajoute   : « carnet virtuel » present dans le 303 ET le 305
+
+RESTE UN DETAIL, SANS GRAVITE : le champ du 305 contient toujours les deux
+caracteres CR+LF apres « quelle fraction. », vestige de la retouche precedente.
+Le run de 21h15 est passe avec, GIL a produit son ordre. A retirer a l'occasion,
+sans urgence.
+
+A partir de maintenant, aucun des cinq traders ne porte plus de seuil de sortie,
+de quota de vente ni d'interdiction de vouloir ecrits de ma main.
