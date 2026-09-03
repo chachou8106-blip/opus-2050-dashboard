@@ -1,0 +1,78 @@
+SYL DECIDE SES VENTES — RETIRER LE MANDAT EN DUR
+Scenario 7051944, module 303 « LE PROPHETE D'ARGENT — SYL ». 03/09/2026.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+Fiche jumelle de la AH (module 305, GIL). Chachou : « et oui il faut enlever
+pour SYL aussi ». A faire dans la meme session que le remplacement 2 de la AH,
+pour que les deux restent alignes.
+
+
+==========================================================
+LA MODIFICATION — MODULE 303, CHAMP « BODY CONTENT »
+==========================================================
+
+Longueur actuelle : 6816 caracteres.
+Longueur apres    : 6802 caracteres.
+
+CHERCHE (apparait exactement une fois) :
+
+SELL MANDATE: Minimum 2 SELL par run si positions ouvertes dans CTX POS_SYL. Si position >20% unrealized gain: prendre profit partiel. Si catalyseur négatif détecté sur un actif détenu: SELL immédiat.
+
+REMPLACE PAR :
+
+VENTES: CTX POS_SYL te donne tes positions, leur gain ou perte latent en pourcentage, et FLASH_INTEL te donne les catalyseurs. Tu decides seul ce que tu vends, quand, et quelle fraction.
+
+(-14 caracteres)
+
+
+==========================================================
+CE QU'ON RETIRE, MOT PAR MOT
+==========================================================
+
+Trois ordres etaient donnes a SYL, aucun ne venait de lui :
+
+  « Minimum 2 SELL par run »              -> un quota d'actes
+  « >20% unrealized gain: prendre profit » -> un seuil de sortie
+  « catalyseur negatif: SELL immediat »    -> un declencheur
+
+Ce qu'on garde a la place, c'est la MATIERE : ses positions, leur gain latent,
+ses catalyseurs. Il en tire ce qu'il veut. C'est la regle du 26/08 — la mesure,
+jamais le verbe d'action.
+
+Ce qui compte, et qui rend le retrait sans danger : ce mandat n'a AUCUN effet
+mecanique. J'ai verifie execute-trades ligne a ligne — rien n'y lit ce texte,
+rien ne compte les ventes par run, rien n'impose une sortie a 20 %. C'etait du
+texte dans un prompt, et rien d'autre. Le retirer ne desarme aucun garde-fou.
+
+Le vrai stop, lui, reste en place et ne bouge pas : execute-trades ferme une
+position quand le seuil que SYL A LUI-MEME ECRIT est franchi
+(stop_loss_pct / take_profit_pct de son ordre d'ouverture). Depuis la v44, sans
+seuil de l'agent il n'y a aucune sortie automatique du tout.
+
+
+TES CONTROLES
+-------------
+1. Compteur du champ : 6802 caracteres exactement (6816 - 14).
+2. Recherche « SELL MANDATE » : ne doit plus rien trouver.
+3. Recherche « Minimum 2 SELL » : ne doit plus rien trouver.
+4. Nombre d'antislashs : 173, INCHANGE (le passage retire n'en contient aucun).
+5. Les 16 expressions {{...}} du champ sont inchangees.
+6. Recherche « stop_loss_pct » : doit toujours apparaitre dans le FORMAT DE
+   SORTIE — on retire la consigne, pas la cle.
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Redonne-moi le compteur apres la disquette : 6802.
+
+
+==========================================================
+RECAPITULATIF DES DEUX FICHES
+==========================================================
+
+  Module 305 (GIL) · fiche AH
+    remplacement 1 : retirer « Stop loss crypto 5%, levier ETF 4%. »   6647 -> 6611
+    remplacement 2 : SELL MANDATE -> VENTES                            6611 -> 6604
+  Module 303 (SYL) · cette fiche
+    remplacement unique : SELL MANDATE -> VENTES                       6816 -> 6802
+
+Apres ca, aucun des trois Archimages ne portera de seuil de sortie ni de quota
+de vente ecrit par moi. JU (301) n'en avait deja aucun — c'est lui la reference.
