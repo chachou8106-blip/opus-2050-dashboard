@@ -95,3 +95,43 @@
 --      comptent.
 --   c) Afficher v_arch_levee dans la console : combien de decisions closes, combien il en
 --      manque, ou en est la preuve.
+
+-- ===========================================================================
+-- SUITE DU MEME SOIR : les deux limites levees, et deux defauts de ma livraison
+-- ===========================================================================
+--
+-- LIMITE 1 — LA COUVERTURE DES PRIX. Reglee, et sans toucher une ligne de code :
+-- ingest-indices accepte deja une liste de symboles en parametre. Les tickers que les
+-- Archimages decident reellement ont ete releves dans oracle_college_orders et dans les
+-- refus de oracle_exec_debug sur 30 jours : 45 manquaient.
+--   45 tickers charges, 41 157 bougies horaires depuis le 05/06
+--   cron 'ingest_actions_archimages_6h' a la minute 30 des heures multiples de 6
+-- Resultat sur le carnet : 5 decisions NON_COTE -> ZERO. Les 16 decisions bloquees de GIL
+-- sont toutes notables.
+--
+-- DEFAUT 1 DE MA LIVRAISON — le cron portait un placeholder « __DEBUT__ » que j'avais
+-- oublie de remplacer dans le champ `start`. Corrige : le parametre est retire, la fonction
+-- retombe sur ses 90 jours par defaut. Verifie : plus aucun job ne contient le placeholder.
+--
+-- DEFAUT 2, PLUS SERIEUX — je notais une VENTE A DECOUVERT comme un achat. Le carnet
+-- cherchait le TP au-dessus du prix d'entree et le SL en dessous, quel que soit le sens.
+-- Sur un short, c'est exactement l'inverse : on gagne quand le prix BAISSE. Une decision
+-- (TQQQ vendu le 27/08) etait donc notee a l'envers, comptee perdante alors qu'elle ne
+-- l'etait pas. Corrige aux trois endroits : detection du seuil touche, prix de sortie
+-- ecrit, et P&L latent des positions encore ouvertes.
+--   avant correctif : 4 closes, -20,40 %
+--   apres correctif : 3 closes, -15,30 %
+-- C'est peu de chose sur une decision, mais GIL est le contrarian : le short est son
+-- outil principal. Le defaut aurait fausse sa notation de facon systematique.
+--
+-- ETAT APRES LES DEUX CORRECTIONS
+--   GIL, bloque depuis 9 jours, drawdown 11,15 % pour un seuil de 8 %
+--   16 decisions bloquees : 3 closes, 13 ouvertes, 0 non cotee
+--   closes   : -15,30 %  (3 stops, aucun take-profit)
+--   latent   : +39,40 %  sur les 13 ouvertes
+--   levee_prouvee : false — il manque 7 decisions closes sur les 10 exigees
+--
+-- Ce que ca dit, sans arrondir : depuis son blocage, AUCUNE des decisions de GIL qui sont
+-- allees au bout n'a atteint son take-profit. Trois ont touche leur stop. Les treize autres
+-- sont en gain latent mais aucune n'a encore atteint +10 %. Le coupe-circuit n'a pas eu tort
+-- jusqu'ici. La porte de sortie existe desormais ; c'est a lui de la franchir.
