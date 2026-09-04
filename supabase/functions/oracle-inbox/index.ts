@@ -1,3 +1,21 @@
+// oracle-inbox v29 — CE FICHIER EST CELUI DE LA v27, INCHANGE. NE PAS LE PARALLELISER.
+// 04/09/2026. Le bloc `suivi` depassait 25 s (il alimente 8 affichages et se rafraichit
+// toutes les 2 min). Deux causes ; UNE SEULE se corrige ici, et ce n'est pas celle-la.
+//
+//   CE QUI A MARCHE, ET QUI EST EN BASE, PAS ICI : v_dernier_prix parcourait les 631 216
+//   lignes de price_history pour en tirer 376 symboles (1,07 s, et plusieurs vues l'appellent).
+//   Remplacee par un parcours d'index par sauts. Resultat verifie identique : 376 lignes,
+//   meme md5, 0 ligne en trop, 0 manquante. Total des 22 vues du bloc : 12,5 s -> 4,0 s.
+//
+//   CE QUI A ECHOUE, ET QUE J'AI ANNULE : regrouper les 25 lectures en vagues de Promise.all.
+//   Deploye en v28, mesure, ANNULE dans la demi-heure. La reponse est revenue en 41 s (pire
+//   qu'avant) et surtout QUATRE BLOCS SONT REVENUS VIDES : stats 23 cles -> 0, avance 24 -> 0,
+//   sharpe 24 -> 0, mensuel 24 -> 0. Les lectures concurrentes echouent cote PostgREST et
+//   sb() renvoie body:null sans bruit — arr(null) donne [], donc un ecran vide passe pour un
+//   ecran sans donnees. C'est la MEME panne que le 02/09. Deux fois suffisent :
+//   LES LECTURES DE `suivi` RESTENT SEQUENTIELLES.
+//   Ce qui reste a faire, si un jour on veut descendre sous 10 s : reduire le NOMBRE d'appels
+//   (une seule RPC SQL qui renvoie tout le bloc), pas les lancer en parallele.
 // oracle-inbox v27 — LES TRADES DE L'ALCHIMISTE VIRTUEL, REPRODUCTIBLES A LA MAIN.
 // Le bloc alc_virtuel.positions transportait paire, sens, prix d'entree, montant et prix
 // actuel — mais ni le TP ni le SL, pourtant stockes dans alchimiste_virtual_trades depuis
