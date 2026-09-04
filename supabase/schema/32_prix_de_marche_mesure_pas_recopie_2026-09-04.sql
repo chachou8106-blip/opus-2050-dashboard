@@ -74,3 +74,43 @@
 -- b) Discord n'affiche toujours ni le prix d'entree ni les seuils : alc-auto ne transmet ni
 --    prix_ref, ni tp_pct, ni sl_pct dans ses `resultats`. Trois champs a ajouter dans sa
 --    reponse — chemin des ordres reels, donc a tester avant de deployer.
+
+-- ===========================================================================
+-- SUITE DU MEME SOIR : POURQUOI LE 981 NE PEUT PAS LIRE 500 / 520 / 540
+-- ===========================================================================
+--
+-- Make a refuse l'enregistrement du gabarit :
+--   « module 981 references inaccessible module 500 / 520 / 540 »
+--
+-- Chachou a fait remarquer, a juste titre, que ces modules s'executent AVANT le 981.
+-- C'est vrai. Mais Make distingue l'ORDRE D'EXECUTION et la PORTEE DE MAPPAGE : une
+-- branche de routeur ne voit pas les modules d'une autre branche, meme executee avant.
+-- Le 981 est le PREMIER module de sa route : il ne peut lire que l'amont du routeur.
+--
+-- MESURE, sur le blueprint en direct, 80 modules et 145 references {{NNN.…}} :
+--   depuis un module en amont du routeur .............. 69
+--   depuis une branche vers l'amont du routeur ........ 50
+--   a l'interieur d'une meme branche .................. 26
+--   VERS UNE AUTRE BRANCHE ............................  0
+-- Zero sur un scenario construit depuis des mois. Ce n'est pas un faux positif du
+-- validateur (contrairement au cas du 31/08 sur le module 10012, ou la reference
+-- 20023.data.apy_texte etait dans la MEME branche et fonctionnait).
+--
+-- LA PORTE DE SORTIE, ET ELLE EST OUVERTE
+-- execute-trades ecrit deja tout dans oracle_exec_debug (archimage, run_id, total,
+-- accepted, skipped), et il l'ecrit AVANT que la route du 981 demarre — mesure du
+-- 04/09 : GIL a 15:48:03,4 ; le message Discord part apres. La vue
+-- v_college_execution_run expose ce bilan a raison d'une ligne par run, les trois
+-- Archimages en colonnes. Un module Supabase place dans la MEME branche que le 981,
+-- juste avant lui, la lit avec ?run_id=eq.{{101.value}} ; le 981 le reference alors
+-- normalement.
+--
+-- Ce que ca aurait montre, sur les runs du jour :
+--   run     JU decides/partis/bloques   SYL            GIL
+--   09h36   5 / 2 / 5                   6 / 3 / 8      4 / 2 / 7
+--   15h45   5 / 5 / 2                   3 / 3 / 5      5 / 1 / 9
+--   18h30   3 / 3 / 2                   2 / 2 / 5      5 / 3 / 8
+-- GIL a 15h45 : cinq decisions, UNE arrivee au courtier. C'est exactement le chiffre
+-- qui manquait dans Discord. A 18h30 il repasse a trois sur cinq.
+--
+-- L'ajout du module Make est une manipulation a decider : ce n'est pas fait ici.
