@@ -51,25 +51,34 @@ casse.
 
 
 ==========================================================
-LA CORRECTION — UN REMPLACER-TOUT
+LA CORRECTION — RIEN A EDITER, TOUT EST PRET
 ==========================================================
 
-Module 10031 (Discord, « Send a message »), champ « Message ».
+Le Bloc-notes ne s'en sort pas sur 10 566 caracteres : ne cherche pas a faire le
+remplacement toi-meme. Le champ corrige est deja ecrit, en entier :
 
-  1. Clique dans le champ, Ctrl+A, Ctrl+C.
-  2. Colle dans le Bloc-notes.
-  3. Remplacer tout :   " & "   par   " + "
-     (avec UNE espace avant et UNE espace apres, des deux cotes)
-  4. Ctrl+A, Ctrl+C dans le Bloc-notes, puis retour dans Make : Ctrl+A, Ctrl+V.
+  docs/maia/AM-10031-message-corrige.txt
 
-  Puis « OK » sur le module, PUIS la disquette sur le scenario.
+  1. Ouvre ce fichier, Ctrl+A, Ctrl+C.
+  2. Module 10031 (Discord, « Send a message »), champ « Message » :
+     Ctrl+A, Ctrl+V.
+  3. « OK » sur le module, PUIS la disquette sur le scenario.
+
+CE FICHIER EST TON CHAMP ACTUEL, AU BIT PRES. Verifie, pas suppose : j'ai calcule
+l'empreinte md5 du fichier et, separement, l'empreinte du champ lu en direct dans
+le blueprint avec les 158 « & » remplaces par « + ». Les deux donnent
+
+  1c01b497751ab01b08a9525402f9d29e        10 757 octets
+
+Aucun autre caractere n'a bouge : ni un espace, ni un accent, ni un emoji, ni un
+retour a la ligne.
 
 
 TES CONTROLES — les trois comptent, fais les trois
 --------------------------------------------------
   · longueur du champ : 10 566 caracteres AVANT et 10 566 APRES.
     « & » et « + » font un caractere chacun : la longueur ne doit pas bouger d'un
-    seul caractere. Si elle bouge, quelque chose d'autre a ete touche.
+    seul caractere. Si elle bouge, le copier-coller a abime quelque chose.
   · recherche « & » : doit donner ZERO resultat.
   · recherche « + » : doit donner 158 resultats (il y en avait 0 avant).
 
