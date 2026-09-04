@@ -86,6 +86,28 @@
 -- · les 154 359 caractères de JavaScript passent node --check.
 
 -- ---------------------------------------------------------------------------
+-- CONTRÔLE DU 04/09 À 12:27 — LA SENTINELLE A SERVI, ET ON A APPRIS UNE CHOSE
+-- ---------------------------------------------------------------------------
+-- Chachou a collé le champ corrigé du module 10031 et enregistré. Blueprint relu en direct :
+--   80 modules, un seul modifié (10031), md5 du champ = 1c01b497751ab01b08a9525402f9d29e,
+--   identique au fichier livré. Le module 999 apparaît « modifié » dans le diff : c'est le
+--   routeur builtin:BasicRouter qui CONTIENT le 10031 dans ses routes ; hors routes il est
+--   octet pour octet identique. Aucun autre module, aucun en-tête, aucune clé n'a bougé.
+--
+-- MAIS l'enregistrement a DÉSACTIVÉ le scénario : is_active=false, next_exec=null. Sans
+-- rien, le run de 15h45 ne serait pas parti. La sentinelle a rallumé (scenario_control.actif
+-- valait true, mesure fraîche, dernière relance à 09:37 donc hors du garde-fou de 30 min)
+-- et le scénario est revenu actif, prochain run 15h45. C'est exactement le cas pour lequel
+-- elle a été écrite, et c'est sa première mise à l'épreuve utile.
+--
+-- ET LA QUESTION LAISSÉE OUVERTE LE 03/09 EST TRANCHÉE, PAR LA MESURE :
+-- /start sur un scénario PLANIFIÉ et désactivé ne déclenche AUCUNE exécution immédiate.
+-- Il active, et Make reprend son planning : next_exec est passé directement à 15h45, et
+-- oracle_college_runs n'a pas bougé (dernier run toujours 09:38). Le commentaire de
+-- scenario-switch v3 qui disait « /start = active + déclenche 1 exécution » était faux ;
+-- il valait peut-être pour un scénario en type « immediately », pas pour celui-ci.
+
+-- ---------------------------------------------------------------------------
 -- CE QUI RESTE VRAI APRÈS
 -- ---------------------------------------------------------------------------
 -- Aucune sécurité n'est desserrée. Le PIN / Face ID garde toujours les trois boutons, le
