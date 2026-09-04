@@ -1,0 +1,73 @@
+-- Make planifie, Supabase surveille. 04/09/2026, sur decision de Chachou.
+--
+-- LA DECISION
+-- « c'est mieux dans supabase ou dans make ? j'avoue que je prefererai make »
+-- Make planifie. Le seul defaut de ce choix est reel et mesure : ce matin, apres l'erreur
+-- JSON du module 305, MAKE A DESACTIVE LE SCENARIO TOUT SEUL. Ses quatre creneaux ne
+-- declenchent plus rien quand il est eteint — scheduling.restrict FILTRE les executions
+-- d'un scenario actif, il ne le rallume jamais. Le robot serait reste mort toute la
+-- journee sans que personne ne le sache.
+--
+-- LA REPONSE : Make garde la planification, Supabase ne planifie plus rien mais SURVEILLE.
+
+-- ---------------------------------------------------------------------------
+-- 1. DESARMER LE PLANIFICATEUR SUPABASE
+-- ---------------------------------------------------------------------------
+--   update scenario_control set actif = false, pending_stop_at = null where id = 1;
+-- actif = false ne peut QUE retenir un declenchement, jamais en provoquer un. Le cron
+-- scenario_fire_5min tourne toujours mais sort en 'maitre off'. pending_stop_at est efface
+-- parce que l'etape 1 de scenario_fire coupe le scenario meme quand le maitre est off.
+-- Plus aucune collision possible entre les deux planificateurs.
+--
+-- arch_levee_config porte desormais la cle 'planificateur' = 'make'. La sentinelle la lit :
+-- si un jour on repasse a 'supabase', elle se tait d'elle-meme.
+
+-- ---------------------------------------------------------------------------
+-- 2. LA SENTINELLE
+-- ---------------------------------------------------------------------------
+-- scenario_sentinelle() — cron toutes les 5 minutes, decalee de scenario_make_sync pour
+-- juger sur une mesure fraiche.
+--   . ne fait rien si le planificateur n'est pas 'make'
+--   . ne fait rien si la mesure de scenario_make_etat a plus de 20 minutes
+--     (on ne rallume pas sur une information perimee)
+--   . ne fait rien si le scenario est deja actif
+--   . au plus UNE relance par tranche de 30 minutes, pour ne pas boucler
+--   . sinon : POST /api/1.0/scenarios/<id>/start, et une ligne dans scenario_sentinelle_log
+--
+-- Premier appel reel : Make a repondu 422 « Scenario is already running (IM306) ». Le
+-- scenario etait deja revenu — Chachou l'avait reactive a la main entre deux mesures.
+-- Aucun run n'a ete declenche par cet appel : 0 run, 0 ordre dans la demi-heure.
+--
+-- CE QUI N'EST PAS ENCORE TESTE, ET JE LE DIS : le cas ou la sentinelle trouve VRAIMENT le
+-- scenario eteint. On sait qu'un /start sur un scenario deja actif ne declenche rien (422).
+-- On ne sait pas encore si un /start sur un scenario eteint declenche une execution
+-- immediate en plus de l'activer. Si c'est le cas, une panne coutera un run supplementaire
+-- hors creneau — sans danger (plafonds, kill-switch et coupe-circuits inchanges), mais il
+-- faudra le savoir. On le verra a la premiere vraie panne.
+
+-- ---------------------------------------------------------------------------
+-- 3. ETAT APRES BASCULE
+-- ---------------------------------------------------------------------------
+--   Make    : is_active true, is_paused false, prochain run 04/09 15:45
+--   Supabase: scenario_control.actif false, pending_stop_at null
+--   crons   : scenario_make_sync_5min (mesure) · scenario_sentinelle_5min (rallume)
+--             scenario_fire_5min tourne toujours mais ne fait plus rien
+--
+-- Les deux plannings etaient de toute facon IDENTIQUES, verifie avant de choisir :
+--   Make     restrict  09:00 · 15:45 · 18:30 · 21:15, jours 1-5
+--   Supabase runs_planifies  09:00 · 15:45 · 18:30 · 21:15, jours [1,2,3,4,5]
+-- Le choix ne changeait donc rien aux horaires, seulement au comportement en cas de panne.
+
+-- ---------------------------------------------------------------------------
+-- 4. CE QUI RESTE A REPARER
+-- ---------------------------------------------------------------------------
+-- Les trois boutons de la console ne correspondent plus a ce montage :
+--   « Activer » n'ecrit qu'un drapeau Supabase et n'appelle jamais Make. C'est ce qui a
+--     fait croire a Chachou que sa reactivation n'avait pas marche — elle avait marche,
+--     mais pas la ou il fallait.
+--   « Lancer » passe par scenario_fire, qui programme une coupure 3 minutes apres. Avec
+--     Make planificateur, ce bouton ETEINDRAIT le scenario. A ne pas utiliser tel quel.
+--   « Couper » fonctionne (il appelle /stop) et reste la coupure d'urgence.
+-- A reprendre : « Activer » doit appeler /start, « Lancer » doit declencher sans programmer
+-- de coupure. Pas fait aujourd'hui : ce sont les commandes du robot, elles se corrigent
+-- avec un test, pas a la volee.
