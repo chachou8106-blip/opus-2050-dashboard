@@ -47,17 +47,11 @@ CE QUE LE NOUVEAU GABARIT AJOUTE
 ==========================================================
 
   · le nom : AETHER (« Oracle College » et « Opus » n'existent plus)
-  · une ligne de comptage par archimage, lue sur execute-trades lui-meme :
-        ⚙️ 3 decides · 1 partis · 2 refuses
-    modules 500 = JU, 520 = SYL, 540 = GIL. Verifie sur le blueprint : le routeur
-    999 execute la route 1 (500), la route 2 (520) et la route 3 (540) AVANT la
-    route 5 qui porte le 981. Les trois reponses sont donc disponibles.
-    Les trois champs lus (total_trades, executed, skipped) sont des NOMBRES au
-    premier niveau de la reponse d'execute-trades — pas un parcours de tableau.
+  · (RETIRE — voir plus bas : Make refuse les references entre branches du routeur)
   · la CONVICTION sur chaque ligne de trade. Le schema impose aux trois agents
     l'exige deja (ticker, side, notional, asset_type, time_in_force, conviction,
     rationale, stop_loss_pct, take_profit_pct) et personne ne la lisait.
-  · les visions passent de 150 a 200 caracteres.
+  · les visions passent de 150 a 240 caracteres.
 
 
 ==========================================================
@@ -86,7 +80,7 @@ Module 981, champ « jsonStringBodyContent ». Ctrl+A, Ctrl+V du fichier
 AN-981-message-archimages-corrige.txt. Puis « OK », PUIS la disquette.
 
   Compteur avant : 3 572
-  Compteur apres : 4 466
+  Compteur apres : 4 058
 
 TES CONTROLES
   · recherche « \\n » (deux antislashs) : ZERO resultat
@@ -124,3 +118,37 @@ CE QUI RESTE, ET QUI DEMANDE TA DECISION
    alc-auto ne transmet ni prix_ref, ni tp_pct, ni sl_pct dans ses resultats : le
    message Discord ne PEUT donc pas les afficher. C'est trois champs a ajouter dans
    la reponse d'alc-auto — chemin des ordres reels, donc a tester avant.
+
+
+==========================================================
+UNE ERREUR DE MA MAIN, RATTRAPEE PAR LE VALIDATEUR DE MAKE
+==========================================================
+
+J'avais ajoute une ligne de comptage par archimage, lue sur execute-trades :
+    ⚙️ 3 decides · 1 partis · 2 refuses      (modules 500 JU, 520 SYL, 540 GIL)
+
+Make a refuse l'enregistrement :
+    « module 981 references inaccessible module 500 / 520 / 540 »
+
+Mon raisonnement etait : le routeur 999 execute la route 1 (500), la route 2 (520)
+et la route 3 (540) AVANT la route 5 qui porte le 981, donc leurs reponses sont
+disponibles. C'est FAUX. Dans Make, une branche de routeur ne voit pas les modules
+d'une autre branche, meme executee avant. Le 981 est le PREMIER module de sa route :
+il ne peut lire que ce qui precede le routeur — 101, 102, 302, 304, 306, 402, 9990,
+103, 104, 9971, 9973, 9975. C'est exactement ce que fait le gabarit aujourd'hui.
+
+J'ai deduit au lieu de mesurer. Meme famille de faute que le « & » et que la
+timezone du 03/09. Les trois lignes sont retirees, et la place rendue aux visions
+(200 -> 240 caracteres).
+
+Le comptage « decides / partis / refuses » reste souhaitable — c'est lui qui aurait
+montre que GIL annonce trois decisions pour une seule arrivee au courtier. Pour
+l'obtenir il faut le faire remonter AVANT le routeur, ou le lire depuis Supabase
+(oracle_college_orders et oracle_exec_debug le contiennent deja). A faire dans une
+prochaine session, teste.
+
+Compteurs finaux, tous mesures :
+    champ                4 058 caracteres · 60 expressions · 32 antislashs, tous \n
+    aucune sequence \\n · aucun vrai retour a la ligne · aucun }}_
+    JSON.parse           VALIDE
+    message rendu        1 947 / 2 000 en pire cas (marge 53) · 33 lignes
