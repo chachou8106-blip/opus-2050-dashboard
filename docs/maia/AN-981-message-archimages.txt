@@ -1,0 +1,126 @@
+MODULE 981 — LE MESSAGE DES TROIS ARCHIMAGES, REFAIT
+Scenario 7051944. 04/09/2026, soir.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+Le champ pret a coller : docs/maia/AN-981-message-archimages-corrige.txt
+
+
+==========================================================
+CE QUI ETAIT CASSE, MESURE SUR LE BLUEPRINT EN DIRECT
+==========================================================
+
+  champ actuel : 3 572 caracteres, 51 expressions, 10 antislashs
+
+1. AUCUN SAUT DE LIGNE NE FONCTIONNE. Le champ contient CINQ sequences « \\n »,
+   avec DEUX antislashs. Dans un corps JSON, « \\n » se decode en un antislash
+   suivi d'un n : Discord affiche « \n » en toutes lettres. C'est pour ca que tout
+   est colle sur une seule ligne, et c'est visible dans ton propre collage.
+   Correction : UN seul antislash, et 35 sauts de ligne au lieu de 5.
+
+   (Je t'avais dit « 7 sauts de ligne » cet apres-midi. C'etait faux : mon motif de
+   recherche comptait aussi la seconde moitie des « \\n ». Il y en a 5, et aucun ne
+   marche.)
+
+2. LA DATE. « formatDate(now; DD / MM / YYYY + HH:mm) » sans guillemets ne produit
+   rien d'utilisable. Mesure sur un scenario de test jetable, cree, execute, lu,
+   supprime :
+
+     formatDate(now; "DD/MM/YYYY HH:mm")   ->  04/09/2026 19:19     CORRECT
+     formatDate(now; DD/MM/YYYY HH:mm)     ->  ADpmAD               ce qui tourne
+
+   Les guillemets sont obligatoires. L'heure sort deja en heure de Paris.
+
+3. TROIS UNDERSCORES ORPHELINS, un par archimage, juste apres l'action
+   (« ROTATE_SELECTIVE_ · confiance »). Vestige d'un italique dont le _ ouvrant a
+   saute. Retires.
+
+4. LA CONFIANCE EST SUR 100, PAS SUR 10. Le gabarit ecrivait « 78/10 ».
+
+5. LES MONTANTS AFFICHES NE SONT PAS CEUX ENVOYES AU COURTIER. Discord annoncait
+   « GIL sell SQQQ 100$ » ; Alpaca a recu 30 $. Et « GIL buy BTCUSD 600$ » n'est
+   jamais parti : refuse par le coupe-circuit drawdown_8pct (12,36 %). Sur le run
+   de 15h45, GIL a annonce trois decisions et UNE SEULE a atteint le courtier.
+
+
+==========================================================
+CE QUE LE NOUVEAU GABARIT AJOUTE
+==========================================================
+
+  · le nom : AETHER (« Oracle College » et « Opus » n'existent plus)
+  · une ligne de comptage par archimage, lue sur execute-trades lui-meme :
+        ⚙️ 3 decides · 1 partis · 2 refuses
+    modules 500 = JU, 520 = SYL, 540 = GIL. Verifie sur le blueprint : le routeur
+    999 execute la route 1 (500), la route 2 (520) et la route 3 (540) AVANT la
+    route 5 qui porte le 981. Les trois reponses sont donc disponibles.
+    Les trois champs lus (total_trades, executed, skipped) sont des NOMBRES au
+    premier niveau de la reponse d'execute-trades — pas un parcours de tableau.
+  · la CONVICTION sur chaque ligne de trade. Le schema impose aux trois agents
+    l'exige deja (ticker, side, notional, asset_type, time_in_force, conviction,
+    rationale, stop_loss_pct, take_profit_pct) et personne ne la lisait.
+  · les visions passent de 150 a 200 caracteres.
+
+
+==========================================================
+POURQUOI PAS PLUS DE 200 SUR LES VISIONS
+==========================================================
+
+Discord plafonne un message a 2 000 caracteres. Rendu avec les vraies valeurs du
+run de 15h45, le message pese 1 265 hors visions et hors memoire. Il reste donc
+535 pour trois visions et 200 pour la memoire.
+
+J'ai gagne de la place la ou ca ne coute rien : separateurs de 20 a 12 tirets,
+« partis au courtier » -> « partis », « conviction » -> « conv ». Resultat mesure,
+PIRE CAS (trois visions pleines + memoire pleine) : 1 935 sur 2 000, marge 65.
+
+Les visions ne sont donc pas tronquees par negligence : le message est plein.
+Pour les avoir en entier il faudrait un SECOND message Discord, ou passer le
+module en « embeds » (4 096 caracteres au lieu de 2 000). Les deux sont des
+manipulations Make a decider, et a tester.
+
+
+==========================================================
+LA CORRECTION
+==========================================================
+
+Module 981, champ « jsonStringBodyContent ». Ctrl+A, Ctrl+V du fichier
+AN-981-message-archimages-corrige.txt. Puis « OK », PUIS la disquette.
+
+  Compteur avant : 3 572
+  Compteur apres : 4 466
+
+TES CONTROLES
+  · recherche « \\n » (deux antislashs) : ZERO resultat
+  · nombre d'antislashs : 35, tous suivis d'un n
+  · expressions {{...}} : 69 ouvrantes, 69 fermantes
+  · recherche « }}_ » : ZERO resultat
+  · aucun vrai retour a la ligne : le champ tient sur UNE ligne
+  · l'URL du webhook et les en-tetes ne sont pas touches
+
+CONTROLE QUE J'AI FAIT, ET QUE JE N'AVAIS PAS FAIT LE 27/08 NI CE MATIN :
+chaque {{...}} remplace par une valeur bidon, puis le corps passe a JSON.parse.
+VALIDE. C'est ce controle-la qui manquait quand un retour a la ligne a arrete le
+run du 27/08, puis celui du 04/09 a 09:00.
+
+
+==========================================================
+CE QUI RESTE, ET QUI DEMANDE TA DECISION
+==========================================================
+
+1. TOP 5 REVOLUT AVEC LES ETF. Le champ s'appelle top_3_revolut : trois, pas cinq.
+   Et la consigne du module 401 dit mot pour mot : « les 3 du top_5 disponibles sur
+   Revolut : grandes caps US (AAPL MSFT NVDA TSLA AMZN GOOGL META JPM) et cryptos
+   majeures (BTC ETH SOL) ; exclus ETF complexes et produits a levier ».
+   Les ETF sont donc EXPLICITEMENT exclus, et la liste des huit tickers est ecrite
+   EN DUR dans le prompt — exactement ce qu'on a retire chez GIL et SYL le 03/09.
+   Passer a cinq et inclure les ETF = modifier le PROMPT d'un agent. C'est ta
+   decision, pas la mienne.
+
+2. LE VRAI CLASSEMENT PAR CONVICTION. Aujourd'hui 🥇🥈🥉 suit l'ordre d'ecriture de
+   l'agent, pas la conviction. Trier demande sort() sur un tableau reconstruit ;
+   je ne livre pas une expression Make que je n'ai pas fait tourner. Banc d'essai
+   d'abord.
+
+3. LE PRIX D'ENTREE ET LES SORTIES DE L'ALCHIMISTE (voir la fiche du 10031).
+   alc-auto ne transmet ni prix_ref, ni tp_pct, ni sl_pct dans ses resultats : le
+   message Discord ne PEUT donc pas les afficher. C'est trois champs a ajouter dans
+   la reponse d'alc-auto — chemin des ordres reels, donc a tester avant.
