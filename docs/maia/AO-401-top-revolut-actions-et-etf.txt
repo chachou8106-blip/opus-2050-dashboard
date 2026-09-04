@@ -1,0 +1,115 @@
+MODULE 401 — LE TOP REVOLUT PASSE A CINQ, ET LES ETF REVIENNENT
+Scenario 7051944. 04/09/2026, soir.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+Deux remplacements. Rien d'autre. Les deux chaines sont verifiees UNIQUES dans le
+champ, et aucune des quatre ne contient de guillemet ni d'antislash : le
+remplacement ne peut donc pas abimer l'echappement.
+
+  champ actuel : 4 795 caracteres · 66 antislashs
+  champ apres  : 4 806 caracteres · 66 antislashs (INCHANGE)
+
+
+==========================================================
+CE QUI EST ECRIT AUJOURD'HUI, ET POURQUOI CA NE VA PAS
+==========================================================
+
+Le module 401 impose au Meta-Cerveau un schema de sortie. Deux de ses champs :
+
+  top_5          « 5 meilleures opportunites du run »
+  top_3_revolut  « parmi top_5, les 3 disponibles sur Revolut »
+
+Et plus bas, la consigne detaillee :
+
+  « Dans top_3_revolut mets les 3 du top_5 disponibles sur Revolut : grandes caps
+    US (AAPL MSFT NVDA TSLA AMZN GOOGL META JPM) et cryptos majeures (BTC ETH SOL) ;
+    exclus ETF complexes et produits a levier. »
+
+Trois choses a corriger :
+  1. c'est TROIS, tu en veux CINQ ;
+  2. les ETF sont EXPLICITEMENT exclus, tu les veux ;
+  3. huit tickers sont ecrits EN DUR dans le prompt — c'est moi qui ai choisi
+     AAPL MSFT NVDA TSLA AMZN GOOGL META JPM, pas lui. C'est exactement ce qu'on a
+     retire chez GIL et SYL le 03/09 (regle du 26/08 : la mesure, jamais la
+     conclusion). Le critere doit etre « negociable sur Revolut », pas ma liste.
+
+
+==========================================================
+REMPLACEMENT 1 — LE SCHEMA
+==========================================================
+
+CHERCHE (apparait exactement une fois, 87 caracteres) :
+
+parmi top_5, les 3 disponibles sur Revolut separes par virgules, max 80 chars no quotes
+
+REMPLACE PAR (118 caracteres) :
+
+les 5 valeurs du top_5 negociables sur Revolut, actions et ETF compris, separees par virgules, max 120 chars no quotes
+
+  (+31 caracteres)
+
+
+==========================================================
+REMPLACEMENT 2 — LA CONSIGNE
+==========================================================
+
+CHERCHE (apparait exactement une fois, 201 caracteres) :
+
+Dans top_3_revolut mets les 3 du top_5 disponibles sur Revolut : grandes caps US (AAPL MSFT NVDA TSLA AMZN GOOGL META JPM) et cryptos majeures (BTC ETH SOL) ; exclus ETF complexes et produits a levier.
+
+REMPLACE PAR (181 caracteres) :
+
+Dans top_3_revolut mets les 5 valeurs du top_5 qui sont negociables sur Revolut, actions et ETF compris. Le seul motif pour en retirer une est qu elle ne soit pas negociable la-bas.
+
+  (-20 caracteres)
+
+Les huit tickers en dur disparaissent. Le critere reste, et c'est un critere de
+FAISABILITE (« negociable la-bas »), pas un choix d'investissement de ma main.
+
+
+==========================================================
+POURQUOI JE NE RENOMME PAS LE CHAMP EN top_5_revolut
+==========================================================
+
+Ce serait plus propre : le champ s'appellera top_3_revolut en contenant cinq
+valeurs. Mais le renommer obligerait a toucher la chaine \"top_3_revolut\" DANS LE
+SCHEMA, ou les guillemets sont echappes par des antislashs. Le champ 401 en contient
+66. C'est exactement le genre de manipulation qui a arrete le run du 27/08 (un
+guillemet mal echappe dans le corps) et celui du 04/09 a 09:00.
+
+Verifie : le module 402 qui lit la reponse est un json:ParseJSON avec
+parameters vide — AUCUNE structure de donnees declaree. Le parse est dynamique :
+si un jour tu veux renommer la cle, il n'y aura rien a changer de ce cote-la.
+Ce sera 401 (deux endroits) et 981 (deux endroits). Mais pas ce soir.
+
+
+==========================================================
+UNE CHAINE A CHANGER DANS LE 981, QUAND TU AURAS FAIT LE 401
+==========================================================
+
+Le message affichera cinq valeurs sous un libelle qui dit trois. Une seule chaine,
+sans guillemet, une seule occurrence :
+
+  CHERCHE    : Top 3 Revolut
+  REMPLACE   : Top 5 Revolut
+
+Le champ passe de 4 058 a 4 058 caracteres (meme longueur).
+Ne touche PAS a {{...402.top_3_revolut...}} : c'est le nom de la cle, il ne change pas.
+
+
+==========================================================
+TES CONTROLES SUR LE 401
+==========================================================
+
+  · compteur : 4 795 -> 4 806
+  · nombre d'antislashs : 66 AVANT et 66 APRES. S'il bouge, c'est que le
+    presse-papier a echappe quelque chose — recommence.
+  · recherche « AAPL » : ZERO resultat (il y en avait un)
+  · recherche « exclus ETF » : ZERO resultat
+  · recherche « top_3_revolut » : DEUX resultats, comme avant
+  · aucun vrai retour a la ligne ajoute
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+
+Au premier run apres la retouche, regarde la ligne « Top 5 Revolut » du Discord :
+elle doit contenir cinq valeurs, et il ne doit plus etre impossible d'y voir un ETF.
