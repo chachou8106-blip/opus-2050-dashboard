@@ -1,0 +1,110 @@
+MODULE 10031 — POURQUOI TON DISCORD N'AFFICHE QUE « $ »
+Scenario 7051944. 04/09/2026, apres ton run de 09:39.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+
+==========================================================
+CE QUE TU AS VU
+==========================================================
+
+  Kill switch: ON | Executes: 2/2      <- juste
+  $                                    <- devrait etre : ✅ SELL — ETH-USD — 3.6$
+  $                                    <- devrait etre : ✅ BUY — BTC-USD — 5$
+
+  À DÉ-STAKER
+  le rendement de 6.16pct sur 3 jours...   <- devrait commencer par
+                                              • SOL — 43.5$ — trade attendu 2% vs APY 6.16% — GARDER —
+
+Regarde bien : dans CHAQUE ligne, il ne reste que le DERNIER morceau. Le « $ » est
+le dernier morceau de la ligne de trade ; la « raison » est le dernier morceau de la
+ligne de de-staking. Tout ce qui est avant a disparu, y compris le texte fixe
+(« ✅ », « • », « — », « vs APY staking »).
+
+La ligne « Kill switch: ... | Executes: 2/2 » marche, elle, parce qu'elle est ecrite
+autrement : plusieurs {{...}} separes, avec le texte fixe en dehors.
+
+
+==========================================================
+LA CAUSE — MESUREE, PAS DEDUITE
+==========================================================
+
+Dans le module 10031 j'avais colle les morceaux avec « & ». C'est l'operateur
+d'Excel et de Google Sheets. Dans Make, « & » n'est PAS la concatenation.
+
+Je ne te le dis pas de memoire : j'ai monte un scenario de test jetable dans ton
+compte, je l'ai fait tourner, j'ai lu ce qu'il produit vraiment, puis je l'ai
+supprime. Resultat brut :
+
+    "A" & "B" & "C"                                  ->  "C"
+    "A" + "B" + "C"                                  ->  "ABC"
+    join(add(emptyarray; "A"; "B"; "C"); "")         ->  "ABC"
+
+    "X " & upper("sell") & " - " & toString(3.6) & "$"   ->  "$"
+    "X " + upper("sell") + " - " + toString(3.6) + "$"   ->  "X SELL - 3.6$"
+
+La quatrieme ligne est exactement ton message Discord. Avec « & », Make ne garde
+que le dernier morceau. Avec « + », tout s'affiche.
+
+Le module 10031 est le SEUL des 80 modules du scenario qui utilise « & » comme
+operateur : 158 fois. Les autres n'en ont aucun. C'est pour ca que lui seul est
+casse.
+
+
+==========================================================
+LA CORRECTION — UN REMPLACER-TOUT
+==========================================================
+
+Module 10031 (Discord, « Send a message »), champ « Message ».
+
+  1. Clique dans le champ, Ctrl+A, Ctrl+C.
+  2. Colle dans le Bloc-notes.
+  3. Remplacer tout :   " & "   par   " + "
+     (avec UNE espace avant et UNE espace apres, des deux cotes)
+  4. Ctrl+A, Ctrl+C dans le Bloc-notes, puis retour dans Make : Ctrl+A, Ctrl+V.
+
+  Puis « OK » sur le module, PUIS la disquette sur le scenario.
+
+
+TES CONTROLES — les trois comptent, fais les trois
+--------------------------------------------------
+  · longueur du champ : 10 566 caracteres AVANT et 10 566 APRES.
+    « & » et « + » font un caractere chacun : la longueur ne doit pas bouger d'un
+    seul caractere. Si elle bouge, quelque chose d'autre a ete touche.
+  · recherche « & » : doit donner ZERO resultat.
+  · recherche « + » : doit donner 158 resultats (il y en avait 0 avant).
+
+  Il n'y a AUCUN antislash dans ce champ, ni avant ni apres : s'il en apparait un,
+  c'est que le presse-papier a echappe quelque chose. Recommence.
+
+  Les 26 vrais retours a la ligne du champ sont NORMAUX ici et doivent rester :
+  ce champ est un message Discord, pas un corps JSON. Ce n'est pas le cas du
+  module 305, ou un seul retour a la ligne a fait tomber le run de 09:00.
+
+
+==========================================================
+CE QUE CA NE CHANGE PAS
+==========================================================
+
+Rien du robot. Le module 10031 ne fait qu'AFFICHER : il ne decide rien, ne passe
+aucun ordre, ne lit ni n'ecrit dans Supabase. Ton Alchimiste a bien travaille ce
+matin — c'est le compte rendu qui etait muet, pas lui.
+
+Ce qu'il a fait a 09:39, verifie dans la base :
+  ETH-USD  VENTE  3,60 $  ordre fa35edb5-...  execute  (proposition 80)
+  BTC-USD  ACHAT  5,00 $  ordre 014fa764-...  execute  (proposition 79)
+Les deux ordres sont partis chez Revolut X, les deux sont relies a leur
+proposition, la reponse brute est conservee.
+
+
+==========================================================
+MA FAUTE, ET DEPUIS QUAND
+==========================================================
+
+« & » est de ma main. Ce module n'a donc JAMAIS affiche correctement une ligne de
+trade ni une ligne de de-staking — ca ne s'est vu que maintenant parce que c'est le
+premier jour ou l'Alchimiste reel a execute quelque chose.
+
+Et ma facon de chercher etait mauvaise : le 03/09 j'ai « verifie le modele » en
+relisant le texte du champ et en le declarant intact. Il EST intact — il est faux.
+Relire ne prouve rien ; il fallait faire tourner. C'est ce que j'ai fait ce matin,
+et ca a pris dix minutes.

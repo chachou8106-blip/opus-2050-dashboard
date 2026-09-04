@@ -243,3 +243,35 @@ Deux règles qui en découlent :
 - **Tous les objets d'un insert groupé portent les mêmes clés**, à `null` quand la valeur manque.
   Un `null` explicite empêche aussi le `DEFAULT` de la colonne de mentir (les 5/10 fantômes).
 - **Aucun `.catch` vide sur une écriture.** Vérifier `response.ok` et journaliser le code.
+
+## RÈGLE ABSOLUE — Relire un champ Make ne prouve rien : il faut le FAIRE TOURNER (04/09/2026)
+
+Le module Discord 10031 n'affichait que `$` là où il devait écrire
+`✅ SELL — ETH-USD — 3.6$`, et que la `raison` seule sur les lignes de dé-staking. Le 03/09
+j'avais « vérifié le modèle » en le relisant et je l'avais déclaré intact. **Il est intact, et
+il est faux.**
+
+J'y avais collé les morceaux avec `&`, l'opérateur d'Excel. **Dans Make, `&` n'est pas la
+concaténation.** Mesuré, pas déduit — scénario de test jetable créé, exécuté, lu, supprimé :
+
+| expression | résultat réel |
+|---|---|
+| `"A" & "B" & "C"` | `C` |
+| `"A" + "B" + "C"` | `ABC` |
+| `"X " & upper("sell") & " - " & toString(3.6) & "$"` | `$` |
+| `"X " + upper("sell") + " - " + toString(3.6) + "$"` | `X SELL - 3.6$` |
+
+`&` ne garde que le **dernier** opérande de la chaîne. Le 10031 est le seul des 80 modules du
+scénario à s'en servir (158 fois) ; c'est pour ça que lui seul était muet. La concaténation
+s'écrit `+` ; le motif sûr reste celui du module 981 : plusieurs `{{...}}` séparés, texte fixe
+en dehors.
+
+**La vraie faute est la méthode.** Relire un champ ne dit pas ce qu'il produit. Quand un doute
+porte sur ce que Make ÉVALUE — un opérateur, une fonction, la résolution d'un chemin — la
+réponse s'obtient en dix minutes : un scénario jetable, un module HTTP vers une fonction
+Supabase qui journalise, `scenarios_run`, on lit, on supprime tout. C'est la même famille de
+faute que le 20/08 et le 28/08 : un contrôle étroit ne prouve pas une affirmation large.
+
+Corollaire : `executions_get-detail` ne renvoie que `{"status":"SUCCESS"}` sur ce compte — il ne
+sert à rien pour lire un INPUT. Le canal de mesure, c'est le module qui envoie ce qu'il a
+produit quelque part où je peux le relire.
