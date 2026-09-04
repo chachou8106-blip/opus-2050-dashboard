@@ -1,0 +1,53 @@
+-- Un prix de reference faux empoisonne tout ce qui le relit. 04/09/2026.
+--
+-- CE QUI S'EST PASSE
+-- Run COLLEGE-20260904-0936. L'Alchimiste propose un achat BTC-USD et ecrit
+--   prix_ref = 256,61
+-- alors que BTC vaut 80 875 $. Facteur 315.
+--
+-- LA SOURCE N'EST PAS EN CAUSE. revolut-x-prices interroge en direct et renvoie, au meme
+-- moment : BTC-USD = 80 747,01 · TRX-USD = 0,32782 · ETH-USD = 2 506,66 · LTC-USD = 51,226.
+-- Les prix fournis sont justes. C'est le modele qui recopie mal, sur une liste de 386 paires
+-- encodee en base64.
+--
+-- CE N'EST PAS LA PREMIERE FOIS. Balayage de toutes les propositions :
+--   id 77  TRX-USD  prix_ref 0,033086  marche 0,33      ecart 90 %   (facteur 10)
+--   id 79  BTC-USD  prix_ref 256,61    marche 80 875    ecart 99,7 % (facteur 315)
+-- La 77 est celle qui a donne un VRAI ordre de vente de 4,73 $ hier soir.
+--
+-- CE QUE CA COUTE, ET CE QUE CA NE COUTE PAS
+-- L'ORDRE LUI-MEME EST INTACT : revolut-x-trade envoie un quote_size en dollars. Un prix_ref
+-- faux ne change ni le montant envoye ni ce qui est achete. Aucun argent perdu.
+-- EN REVANCHE il empoisonne tout ce qui relit prix_ref :
+--   . alchimiste_virtual_trades : la position 79 affichait +31 416,62 % de gain latent,
+--     ce qui fausse le win rate, l'esperance et le cumul montres dans la console et Discord ;
+--   . v_alc_positions_reelles : seuil TP calcule a 274,57 au lieu de 86 536 -> etat
+--     « TP FRANCHI ». Si le stop automatique avait ete arme, IL AURAIT VENDU.
+--
+-- LE GARDE-FOU — au point de LECTURE, jamais en detruisant la donnee brute.
+-- Meme methode que le filtre des poussieres Alpaca du 03/09 : on ne supprime rien, on cesse
+-- de lire ce qui n'a pas de sens.
+--
+--   alc_rebuild_virtual : la boucle de lecture joint lateralement la derniere bougie 1h
+--   connue AVANT la proposition, et ecarte toute proposition dont prix_ref s'ecarte de plus
+--   de 25 % de ce prix. Quand aucun prix de marche n'est connu, on ne peut pas juger : on
+--   garde. 25 % est large a dessein — au-dela, ce n'est plus un prix, c'est une erreur.
+--
+--   v_alc_positions_reelles : la ligne n'est PAS masquee (la position reelle existe, 5 $ de
+--   BTC ont bien ete achetes). Elle est marquee : colonne prix_entree_douteux, colonne
+--   prix_marche_a_l_entree pour la comparaison, variation et seuils mis a NULL, et
+--   etat = « PRIX D ENTREE DOUTEUX — ne pas s y fier ». On dit ce qu'on sait et ce qu'on
+--   ne sait pas, on n'invente pas un seuil sur une base fausse.
+--
+-- EFFET MESURE SUR LE CARNET VIRTUEL
+--   avant : 65 trades, esperance faussee par une ligne a +31 416 %
+--   apres : 64 trades, 18 round-trips clos, 12 TP, 1 SL, win rate 80,6 %,
+--           esperance 3,758 %, somme 116,5 %
+--
+-- CE QUI RESTE OUVERT
+--   a) L'Alchimiste continue de recopier des prix faux. Le garde-fou protege les statistiques,
+--      il ne corrige pas la cause. Piste : lui donner moins de paires (386 aujourd'hui), ou
+--      lui faire recopier la paire ET le prix ensemble pour qu'on puisse verifier l'accord.
+--      A discuter avec Chachou — ca touche son prompt.
+--   b) Le stop automatique reel reste NON arme. Cet episode montre pourquoi : il aurait vendu
+--      sur un faux signal. Le garde-fou est un prealable, pas un detail.
