@@ -1,0 +1,76 @@
+-- Le prix de marche est une MESURE, plus une recopie du modele. 04/09/2026, le soir.
+-- Demande de Chachou : « la recopie des prix ».
+--
+-- LE SYMPTOME
+--   Trois fois en deux jours, l'Alchimiste a ecrit un prix de reference absurde :
+--     prop 77  TRX-USD  0,033086   alors que TRX vaut 0,3313
+--     prop 79  BTC-USD  256,61     alors que BTC vaut 80 662
+--     prop 82  BTC-USD  0,001258   alors que BTC vaut 79 742
+--   Le garde-fou pose le matin meme (ecart > 25 % -> la ligne ne compte pas) protegeait les
+--   statistiques, mais Chachou n'avait plus aucun repere d'entree ni de sortie sur ces trades.
+--
+-- LA CAUSE, ETABLIE — ET CE N'EST PAS « IL SE TROMPE »
+--   Pour chacune des trois valeurs, j'ai cherche dans price_history quelle paire cotait ce
+--   prix-la a cet instant, a 2 % pres. Reponse a chaque fois, et une seule :
+--     0,033086  ->  SQD-USD  = 0,033704
+--     256,61    ->  BCH-USD  = 256,60      (BCH pour BTC : trois lettres voisines)
+--     0,001258  ->  QI-USD   = 0,001266    (QI est la PREMIERE paire de la liste)
+--   Il ne se trompe pas de calcul : IL ATTRAPE LA LIGNE VOISINE. On lui envoie 302 paires
+--   sur UNE SEULE LIGNE de 8 122 caracteres (champ prix_texte de revolut-x-prices).
+--   Taux mesure : 3 erreurs sur 14 propositions chiffrables, toutes depuis le 03/09.
+--
+-- LA CORRECTION, ET POURQUOI ELLE EST STRUCTURELLE
+--   Un prix de marche n'est pas une decision : c'est une mesure, et la base la connait.
+--   Lui demander de la recopier, c'est lui demander un travail de scribe ou il n'apporte rien
+--   et ou il peut se tromper. alc_record_propositions lit desormais price_history et ignore
+--   sa valeur pour tout calcul.
+--   C'est la regle du 26/08 prise par l'autre bout : je ne lui transmets que la mesure, et
+--   je ne lui demande que la decision.
+
+-- ---------------------------------------------------------------------------
+-- 1. UNE COLONNE DE MESURE, PAS UNE POUBELLE
+-- ---------------------------------------------------------------------------
+-- alchimiste_crypte_propositions.prix_ref_modele : ce que le modele a ecrit. Conserve pour
+-- MESURER sa fiabilite dans le temps, jamais utilise pour calculer un seuil ni une
+-- performance. Rien n'est perdu, rien ne ment.
+
+-- ---------------------------------------------------------------------------
+-- 2. alc_record_propositions — signature INCHANGEE, pas de surcharge
+-- ---------------------------------------------------------------------------
+-- Avant : prix du modele d'abord, price_history seulement s'il n'avait rien dit.
+-- Apres : price_history d'abord ; sa valeur en repli UNIQUEMENT si la paire n'est pas
+--         ingeree (et le garde-fou des 25 % la neutralise alors si elle est absurde).
+--
+-- TESTE EN REEL, avec un prix volontairement faux :
+--   entree  {"paire":"BTC-USD","prix_actuel":0.001258, ...}
+--   sortie  prix_ref = 79 701,04   ·   prix_ref_modele = 0,001258
+--   entree  {"paire":"ETH-USD","prix_actuel":2500, ...}
+--   sortie  prix_ref = 2 457       ·   prix_ref_modele = 2 500
+-- Les deux lignes d'essai (run_id TEST-PRIX-04092026) ont ete supprimees apres controle.
+
+-- ---------------------------------------------------------------------------
+-- 3. LES TROIS LIGNES DE L'HISTORIQUE, REPAREES SANS RIEN EFFACER
+-- ---------------------------------------------------------------------------
+-- prix_ref recoit le prix de marche au moment de la decision ; l'ancienne valeur part dans
+-- prix_ref_modele. On corrige une mesure fausse par la mesure vraie, on ne reecrit aucune
+-- decision de l'agent (paire, sens, montant, tp_pct, sl_pct : intacts).
+--
+--   77  TRX-USD  0,033086 -> 0,3313      sortie gain 0,35   sortie perte 0,32
+--   79  BTC-USD  256,61   -> 80 661,90   sortie gain 86 308 sortie perte 78 242
+--   82  BTC-USD  0,001258 -> 79 742,00   sortie gain 84 527 sortie perte 77 748
+--
+-- Carnet virtuel reconstruit : 64 -> 68 lignes, 18 clotures, 12 TP, 1 SL,
+-- taux de reussite 80,6 %, esperance 3,758 %.
+-- v_alc_positions_reelles : 4 positions ouvertes, ZERO « prix d'entree douteux »,
+-- chacune avec son seuil de gain et son seuil de perte lisibles.
+
+-- ---------------------------------------------------------------------------
+-- 4. CE QUI RESTE A FAIRE, ET QUI N'EST PAS FAIT ICI
+-- ---------------------------------------------------------------------------
+-- a) La CAUSE AMONT n'est pas retiree : on continue d'envoyer 302 paires sur une ligne de
+--    8 122 caracteres. Le prix n'est plus lu, mais le modele choisit toujours sa paire dans
+--    cette bouillie. Reduire la liste (les paires detenues + les majeures) rendrait ses
+--    decisions plus sures, pas seulement ses prix. C'est revolut-x-prices, cote code.
+-- b) Discord n'affiche toujours ni le prix d'entree ni les seuils : alc-auto ne transmet ni
+--    prix_ref, ni tp_pct, ni sl_pct dans ses `resultats`. Trois champs a ajouter dans sa
+--    reponse — chemin des ordres reels, donc a tester avant de deployer.
