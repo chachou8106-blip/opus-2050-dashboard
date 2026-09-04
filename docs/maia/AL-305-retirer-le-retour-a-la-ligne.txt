@@ -1,0 +1,78 @@
+URGENT — MODULE 305 : DEUX CARACTERES A SUPPRIMER
+Scenario 7051944. 04/09/2026, matin.
+
+Le run de 09:00 s'est arrete a 31 operations. Rien n'a tourne apres GIL :
+ni l'Alchimiste, ni les Marees, ni Discord, ni l'enregistrement du run.
+
+
+==========================================================
+CE QUI S'EST PASSE
+==========================================================
+
+Make a refuse d'envoyer la requete :
+
+  InvalidConfigurationError
+  « The provided JSON body content is not valid JSON. »
+  module : http / MakeRequest
+
+Diagnostic fait sur le blueprint, en remplacant chaque {{...}} par une valeur
+bidon puis en passant le corps a JSON.parse :
+
+  301 JU    7114 caracteres · 0 retour a la ligne · JSON VALIDE
+  303 SYL   7171 caracteres · 0 retour a la ligne · JSON VALIDE
+  305 GIL   6896 caracteres · 2 retours a la ligne · INVALIDE
+            « Bad control character in string literal, position 1643 »
+
+  305 sans les deux retours a la ligne : 6894 caracteres · JSON VALIDE
+
+Un vrai retour a la ligne a l'interieur d'une chaine JSON est interdit par la
+norme. C'est le meme defaut qui avait arrete le run du 27/08.
+
+Verifie aussi : sur les 80 modules, un seul autre contient des retours a la
+ligne, le 209. Chez lui ils sont HORS des chaines (mise en forme du JSON) et
+son corps est valide. Il n'y a rien a y faire.
+
+
+==========================================================
+LA CORRECTION — DEUX CARACTERES
+==========================================================
+
+Dans le champ « Body content » du module 305, cherche cette fin de phrase :
+
+  Tu decides seul ce que tu vends, quand, et quelle fraction.
+
+Juste apres le point, le texte passe A LA LIGNE. Supprime ce saut de ligne :
+mets le curseur devant le premier antislash de la suite et appuie sur Retour
+arriere jusqu'a ce que « CIRCUIT_BREAKERS » remonte sur la meme ligne.
+
+Le texte doit se lire d'un seul tenant :
+
+  ...quelle fraction.\n\nCIRCUIT_BREAKERS: CTX te donne tes coupe-circuits...
+
+Les « \n » ECRITS EN TOUTES LETTRES restent, ce sont eux qui font les
+paragraphes. C'est le vrai saut de ligne, invisible, qu'il faut enlever.
+
+  Compteur avant : 6896
+  Compteur apres : 6894      <- la seule chose a verifier
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Ensuite relance le scenario a la main pour ne pas attendre 15h45.
+
+
+==========================================================
+CE QUE J'AI DIT HIER SOIR ET QUI ETAIT FAUX
+==========================================================
+
+J'avais vu ces deux caracteres et je t'ai ecrit : « le run de 21h15 est passe
+avec, donc ca fonctionne, a retirer a l'occasion, sans urgence ».
+
+C'etait faux, et l'erreur est bete : le run « de 21h15 » a tourne a 19:15 UTC,
+et ta modification date de 19:47 UTC. Le run etait PASSE 32 minutes AVANT que
+tu n'ajoutes ce retour a la ligne. Il ne l'avait donc jamais rencontre.
+
+J'ai compare une heure de Paris a une heure UTC et j'en ai tire une preuve qui
+n'existait pas. C'est exactement la faute du 20/08 : un controle etroit ne
+prouve pas une affirmation large. Le controle qui aurait tranche — passer le
+corps a JSON.parse — je ne l'ai fait que ce matin, apres la panne.
+
+Il fallait le dire en urgence hier soir, pas « a l'occasion ».
