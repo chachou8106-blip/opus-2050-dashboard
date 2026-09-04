@@ -1905,14 +1905,14 @@ function openCalDay(k){const ev=calEvents()[k];
 /* --- Curseur d'autonomie : reflète l'état RÉEL (planning + kill-switch + gates), et chaque cran est cliquable --- */
 const AUTO=[
  {k:'observer',ic:'👁',t:'Observer',s:'analyse seulement, zéro ordre',
-  d:'Le Collège continue de réfléchir — Sages, Archimages, Méta-Cerveau — mais aucun ordre n\'est transmis à un courtier. C\'est l\'état obtenu en coupant le planning : les runs ne se déclenchent plus.',
-  act:'Couper le planning',scen:'off'},
+  d:'Le Collège continue de réfléchir — Sages, Archimages, Méta-Cerveau — mais aucun ordre n\'est transmis à un courtier. C\'est l\'état obtenu en coupant le scénario Make : les 4 runs de la journée ne se déclenchent plus, et la sentinelle ne le rallume pas (une coupure depuis la console est un ordre, pas une panne).',
+  act:'Couper le scénario Make',scen:'off'},
  {k:'proposer',ic:'💡',t:'Proposer',s:'propose, tu valides chaque ordre',
   d:'Le Collège prépare ses ordres et attend ta validation une par une. Ce cran n\'est pas encore implémenté côté serveur : aujourd\'hui le système passe directement d\'« Observer » à « Exécuter plafonné ».',
   indispo:true},
  {k:'plafonne',ic:'⚡',t:'Exécuter plafonné',s:'auto en simulation + plafonds par ordre',
-  d:'Les trois Archimages passent leurs ordres tout seuls sur les comptes Alpaca en simulation (paper trading), avec un plafond par ordre et un plafond journalier. Aucun euro réel n\'est engagé. C\'est le mode de fonctionnement normal.',
-  act:'Activer le planning',scen:'on'},
+  d:'Les trois Archimages passent leurs ordres tout seuls sur les comptes Alpaca en simulation (paper trading), avec un plafond par ordre et un plafond journalier. Aucun euro réel n\'est engagé. C\'est le mode de fonctionnement normal. Le scénario Make est allumé ; ce sont ses 4 créneaux qui déclenchent les runs.',
+  act:'Activer le scénario Make',scen:'on'},
  {k:'reel',ic:'🔥',t:'Autonomie réelle',s:'argent réel — verrouillé par les 4 gates',
   d:'L\'Alchimiste passe des ordres avec ton argent réel sur Revolut X. L\'armement exige Face ID et reste subordonné aux 4 critères de passage au réel.',
   act:'Armer le trading réel (Face ID)',ks:'arm'}];
@@ -2061,7 +2061,7 @@ document.addEventListener('click',async e=>{
   try{const o=await PK('scen-options');
    if(o&&o.ok){const lib=await pkLib();const asr=await lib.startAuthentication({optionsJSON:o.options});
     const v=await PK('scen-verify',{response:asr,scenAction:act});
-    if(v&&v.ok){D.scen=v.etat||D.scen;rOps();toast('✅ '+(act==='on'?'Planning activé':act==='off'?'Planning coupé + scénario Make désactivé':'Run lancé — coupure auto dans 3 min'));return;}}
+    if(v&&v.ok){D.scen=v.etat||D.scen;rOps();toast('✅ '+(act==='on'?'Scénario Make activé':act==='off'?'Scénario Make désactivé':'Run lancé maintenant'));return;}}
   }catch(err){}
   const pin=prompt('Face ID indisponible — PIN :');if(pin===null)return;
   const j=await SCEN({action:act,pin});

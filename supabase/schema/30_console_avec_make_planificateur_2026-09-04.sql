@@ -1,0 +1,94 @@
+-- La console repilote le robot, avec MAKE comme planificateur. 04/09/2026.
+-- Demande de Chachou : « répare ma console pour que cela fonctionne de la même manière
+-- qu'avant mais avec Make programmé ».
+--
+-- CE QUI NE MARCHAIT PLUS, ET POURQUOI
+--   Le 03/09 le planificateur est passé de Supabase à Make. Les trois boutons, eux, étaient
+--   restés sur l'ancien modèle (Supabase déclenche, puis coupe 3 min après) :
+--
+--   « ▶ Activer »  ne faisait que poser scenario_control.actif = true. RIEN ne partait chez
+--                  Make. C'est exactement ce que Chachou a constaté : « je viens de réactiver
+--                  le scénario depuis ma console mais cela n'a pas l'air d'avoir fonctionné ».
+--   « ⚡ Lancer »   appelait /start puis programmait un /stop 3 minutes plus tard : la console
+--                  éteignait le scénario que Make venait d'allumer.
+--   cron 30        scenario_fire toutes les 5 min : dès que actif=true, il aurait refait les
+--                  4 créneaux EN PLUS de Make, avec le même /stop derrière.
+--   « ⏸ Couper »   marchait (corrigé le 03/09), mais la sentinelle rallumait le scénario dans
+--                  les minutes qui suivaient : une coupure volontaire était traitée en panne.
+
+-- ---------------------------------------------------------------------------
+-- 1. scenario_start_now() — NOUVEAU, le pendant exact de scenario_stop_now()
+-- ---------------------------------------------------------------------------
+-- POST /api/v2/scenarios/<id>/start, jeton lu dans le Vault, qui ne sort pas de la base.
+-- Journalise dans scenario_toggle_log avec action='start' — pas 'run', pour ne pas polluer
+-- v_scenario_etat.dernier_run qui compte les runs réels.
+--
+-- TESTÉ EN RÉEL : appel passé, Make a répondu 422 IM306 « Scenario is already running »,
+-- ce qui est la bonne réponse sur un scénario déjà actif et ne change rien. URL, jeton et
+-- journalisation validés sans effet de bord.
+
+-- ---------------------------------------------------------------------------
+-- 2. scenario_fire(p_force) — signature INCHANGÉE, pas de surcharge
+-- ---------------------------------------------------------------------------
+-- Une branche est ajoutée EN TÊTE, quand arch_levee_config.planificateur = 'make' :
+--   · le cron (p_force=false) ne déclenche plus rien           -> « make planifie les runs »
+--   · une coupe en attente héritée est ANNULÉE, pas exécutée   -> plus de /stop 3 min après
+--   · le bouton (p_force=true) appelle /run : UNE exécution tout de suite, sans toucher à
+--     l'activation. Si Make est mesuré inactif, on refuse avec un motif lisible plutôt que
+--     d'envoyer un /run qui échouerait.
+-- Toute la branche « Supabase planifie » est conservée mot pour mot : si Chachou repasse
+-- arch_levee_config.planificateur à 'supabase', l'ancien comportement revient intact.
+--
+-- TESTÉ : scenario_fire(false) -> {"fired": false, "raison": "make planifie les runs"}.
+-- PAS TESTÉ, ET C'EST DIT : le chemin /run. L'exercer, c'est lancer un vrai run du collège
+-- avec le kill-switch armé, donc de vrais ordres. Je ne le déclenche pas de ma propre
+-- initiative (règle du 20/08). C'est le bouton « ⚡ Lancer » qui l'exercera.
+
+-- ---------------------------------------------------------------------------
+-- 3. scenario_sentinelle() — une coupure de la console est un ORDRE, pas une panne
+-- ---------------------------------------------------------------------------
+-- Ajout d'un seul test, avant tous les autres :
+--   if not scenario_control.actif then -> « coupe volontairement depuis la console »
+-- Les trois garde-fous existants sont intacts : planificateur=make, mesure de moins de
+-- 20 minutes, au plus une relance par 30 minutes.
+
+-- ---------------------------------------------------------------------------
+-- 4. scenario_control.actif = true
+-- ---------------------------------------------------------------------------
+-- Ce booléen redevient ce qu'il doit être : l'INTENTION de l'owner. Il valait false depuis
+-- le 22/08 alors que le scénario Make tourne 4 fois par jour — la sentinelle serait donc
+-- devenue muette dès qu'elle apprend à le respecter (§3). Remis à true, updated_by
+-- 'console-make'.
+
+-- ---------------------------------------------------------------------------
+-- 5. scenario-switch v5 (edge function)
+-- ---------------------------------------------------------------------------
+-- « on » appelle scenario_start_now, « off » appelle scenario_stop_now : les deux boutons
+-- sont enfin symétriques et agissent tous les deux sur Make.
+--
+-- Et surtout : après start/stop, la fonction force DEUX scenario_make_sync() espacés de 2 s.
+-- scenario_make_sync est en deux temps (elle récolte la réponse de l'appel précédent puis
+-- lance le suivant) : deux appels donnent une mesure FRAÎCHE. Sans ça la console renvoyait
+-- la mesure d'il y a jusqu'à 5 minutes et le bouton avait l'air de n'avoir rien fait —
+-- c'est la moitié de ce que Chachou a vécu hier soir. On mesure, on ne suppose pas.
+--
+-- TESTÉ : POST action=status sur la fonction déployée -> 200, état complet.
+
+-- ---------------------------------------------------------------------------
+-- 6. Côté console (aether.html)
+-- ---------------------------------------------------------------------------
+-- · les libellés des messages : « Planning activé » -> « Scénario Make activé » ;
+--   « Run lancé — coupure auto dans 3 min » -> « Run lancé maintenant » (il n'y a plus
+--   de coupure automatique).
+-- · le curseur d'autonomie : « Couper le planning » -> « Couper le scénario Make », et les
+--   deux descriptions disent maintenant ce qui se passe vraiment, y compris que la
+--   sentinelle ne rallume pas après une coupure volontaire.
+-- · les 154 359 caractères de JavaScript passent node --check.
+
+-- ---------------------------------------------------------------------------
+-- CE QUI RESTE VRAI APRÈS
+-- ---------------------------------------------------------------------------
+-- Aucune sécurité n'est desserrée. Le PIN / Face ID garde toujours les trois boutons, le
+-- kill-switch n'est pas touché, les plafonds non plus. « ⏸ Couper » coupe bien le scénario
+-- 7051944 — celui qui passe les ordres réels — et plus rien ne le rallume derrière le dos
+-- de Chachou.
