@@ -456,3 +456,39 @@ where d.symbol like '%-USD';
 -- Ces quatre-la ne sont pas des lignes manquantes du releve : ce sont des entrees SANS
 -- contrepartie en dollars (recompense, largage, bonus). Un prix de revient n'existe pas pour
 -- elles, et il n'y a donc rien a aller chercher. La collecte est terminee.
+
+-- ===========================================================================
+-- 13. LES RECOMPENSES DE STAKING ENTRENT DANS LE CALCUL — AVANT QU'ELLES NE POURRISSENT TOUT
+-- ===========================================================================
+-- Chachou a confirme : les quantites sans ordre sont des recompenses.
+-- L'API les journalise deja avec type = 'reward' ; la vue les ignorait. Presentes au journal
+-- sur la seule fenetre de 7 jours :
+--     ATOM 7 versements · SOL 6 · TRX 5 · TON 5 · ETH 4
+--
+-- POURQUOI C'ETAIT UNE BOMBE A RETARDEMENT. TON a recu 0,01744 TON en sept jours sur une
+-- ligne de 6 TON, soit ~0,3 % par semaine — les 17,67 % d'APY annonces. En comptant les
+-- achats seuls, sa couverture baissait de 0,3 point par semaine : sous les 90 % en huit mois,
+-- la ligne sortait du contexte de l'Alchimiste TOUTE SEULE, sans erreur nulle part et sans
+-- que personne ne puisse relier la disparition a sa cause. Toutes les lignes stakees
+-- suivaient (ATOM 21 %, SOL, ETH, TRX, OSMO).
+--
+-- TRAITEMENT : une recompense ajoute de la QUANTITE pour un COUT NUL. Elle entre donc au
+-- numerateur de la couverture et au denominateur du prix de revient, jamais au cout.
+-- Son effet est de faire BAISSER le prix de revient moyen — ce qui est exactement son effet
+-- reel : on detient plus pour le meme argent.
+--
+-- EFFET MESURE, immediat :
+--     SOL   99,2 -> 99,4 %   revient 77,7280 -> 77,6401   +32,4 -> +32,6 %
+--     ETH   99,7 %           revient 2021,3183 -> 2021,3129
+--     TON   96,5 -> 96,7 %   revient 1,98246 -> 1,97655    -28,0 -> -27,8 %
+--     ATOM  100,0 -> 100,3 % revient 1,64345 -> 1,63787     -6,0 -> -5,7 %
+--     TRX   100,0 %          revient 0,3309301 -> 0,3309274
+-- Faible aujourd'hui, decisif dans six mois. C'est la meme famille de defaut que la chaine
+-- de de-staking du 26/08 : ca tient un moment, puis ca lache sans bruit.
+--
+-- Bilan d'ensemble apres correction : 1 289,94 $ investis, 1 053,20 $ aujourd'hui, -236,74 $.
+-- Couverture inchangee a 99,7 % ; 43 lignes transmises.
+--
+-- VET, MON, FLR et ZKJ restent dehors, et c'est definitif : leurs recompenses sont
+-- ANTERIEURES a la fenetre de 7 jours de l'API, elles ne seront donc jamais journalisees.
+-- 3,30 $ au total. Rien a aller chercher.
