@@ -172,3 +172,49 @@ where d.symbol like '%-USD';
 -- soldes_texte : 2 557 -> 2 969 caracteres. Tableau `soldes` : 48 entrees, inchange.
 -- ETH restera incomplete tant qu'on n'aura pas le cours EUR/USD du 07/06 : je ne convertis
 -- pas une devise a un taux que je n'ai pas mesure.
+
+-- ===========================================================================
+-- 5. LE FICHIER ordre_manquant.txt : JUILLET, LE GROS TRU, ET LE PREMIER RUN REEL
+-- ===========================================================================
+-- 22 lignes nouvelles journalisees. Journal : 50 (api) + 47 (releve_ecran), du 07/06 au 05/09.
+
+-- a) LE PREMIER RUN REEL DE L'ALCHIMISTE EST DATE, A LA SECONDE PRES.
+-- Cinq ventes proposees le 13/08 a 21:12:05, et l'ecran montre ce qui s'est passe :
+--     propose            demande     execute
+--     LRC-USD  sell       50,00 $     0,60 $
+--     RLC-USD  sell       40,00 $     JAMAIS PLACE
+--     IDEX-USD sell       35,00 $     0,37 $
+--     ANKR-USD sell       30,00 $     1,58 $
+--     TRU-USD  sell       25,00 $     23,76 $ demandes, ordre ANNULE par Revolut
+-- 180 $ demandes, 2,55 $ passes. Le modele dimensionnait a l'aveugle : il ne voyait que des
+-- QUANTITES, jamais la valeur en dollars de ses lignes. C'est precisement ce que la v12 a
+-- corrige le 05/09 en lui donnant valeur et poids par ligne.
+-- Et l'unique ordre ANNULE porte sur TRU, dont le volume 24 h mesure vaut ZERO. La donnee
+-- ajoutee aujourd'hui dans prix_texte (liq=) aurait signale cette paire avant l'ordre.
+
+-- b) LA VENTE ANNULEE EST ENREGISTREE TELLE QUELLE, avec statut = 'cancelled'.
+-- Les vues ne comptent que statut = 'completed' : une tentative echouee ne doit jamais
+-- diminuer une quantite detenue. C'etait le piege evident de ce fichier.
+
+-- c) TRU ENTRE DANS LE PRIX DE REVIENT, ET LE SEUIL A CHANGE POUR UNE RAISON DE PRINCIPE.
+-- Achat du 11/08 02:30 : 92,06 $ pour 71 642,024 TRU. Couverture 96,9 % (73 899 detenus).
+-- La v15 posait le seuil de transmission a 97 % : TRU tombait a 0,1 point en dessous et
+-- l'agent n'apprenait rien d'une ligne a -32,5 %. Ce seuil, c'etait MOI qui decidais ce que
+-- l'agent avait le droit de savoir — l'inverse exact de la regle du 26/08.
+-- v16 : le seuil descend a 90 %, et le chiffre part TOUJOURS accompagne de sa couverture
+-- (« historique connu sur 96.9% de la ligne »). L'agent recoit la mesure ET sa fiabilite,
+-- il juge lui-meme. En dessous de 90 % la ligne reste hors du texte : le prix moyen ne
+-- decrit alors plus la ligne, ce n'est plus une mesure imprecise mais une autre grandeur.
+-- Je n'ai PAS deplace le seuil pour faire passer TRU : je l'ai deplace parce que masquer
+-- une mesure fiable a 96,9 % etait une conclusion de ma main. Le principe d'abord.
+
+-- SORTIE REELLE APRES DEPLOIEMENT (v16), mesuree :
+--   FAI : paye 93.95$ depuis le 2026-06-12, revient 0.002176779$, +10.2%  (100.1% de la ligne)
+--   TRU : paye 92.06$ depuis le 2026-08-11, revient 0.001285$,    -32.5%  ( 96.9% de la ligne)
+--   OSMO: paye 15.00$ depuis le 2026-06-08, revient 0.0448999898$, -21.2% ( 99.6% de la ligne)
+-- soldes_texte : 2 969 -> 3 270 caracteres. Tableau `soldes` : 48 entrees, inchange.
+-- journal : 50 recues / 50 ecrites.
+--
+-- Restent sous le seuil : TRX 55,7 % · XLM 50,5 % · BTC 50,0 % · BCH 49,3 % · XRP 25,5 %
+--                         SOL 14,3 % · VET 59,6 % · ETH 99,8 % mais un achat en EUR.
+-- Chaque ligne d'ecran supplementaire en fait basculer une de plus, definitivement.

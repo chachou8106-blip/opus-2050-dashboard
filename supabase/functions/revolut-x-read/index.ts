@@ -1,4 +1,13 @@
-// revolut-x-read v15 : LECTURE SEULE cote Revolut. Aucun ordre, jamais.
+// revolut-x-read v16 : LECTURE SEULE cote Revolut. Aucun ordre, jamais.
+//
+// v16 (05/09/2026) — LE PRIX DE REVIENT PART AVEC SA COUVERTURE, ET LE SEUIL DESCEND A 90 %.
+//   La v15 cachait toute ligne sous 97 % de couverture. C'etait MOI qui decidais ce que
+//   l'agent avait le droit de savoir — l'inverse de la regle du 26/08. Desormais le chiffre
+//   part accompagne de sa fiabilite (« historique connu sur 96.9% de la ligne ») et l'agent
+//   juge. Le plancher reste a 90 % parce qu'en dessous le prix moyen ne decrit plus la ligne :
+//   ce n'est plus une mesure imprecise, c'est une autre grandeur.
+//   Ce que ce seuil fait entrer, et que la v15 taisait : TRU, 92,06 $ payes, prix de revient
+//   0,001285, cours 0,000868, -32,5 %. C'est la deuxieme ligne du portefeuille.
 //
 // v15 (05/09/2026) — LE PRIX DE REVIENT DES LIGNES DONT LE JOURNAL COUVRE TOUT.
 //   Chachou : « j ai achete que 68,95$ soit 33095 fai le 12 juin et 25$ le 22 juillet
@@ -158,7 +167,7 @@ async function achatsRecurrentsTexte(): Promise<string> {
 async function prixRevientTexte(): Promise<string> {
   try {
     if (!SUPABASE_URL || !SERVICE_KEY) return ''
-    const r = await sb('v_alc_prix_revient?complet=is.true&select=devise,cout_usd,qte_nette_journal,prix_revient_moyen_usd,plus_value_pct,premier_achat&order=cout_usd.desc')
+    const r = await sb('v_alc_prix_revient?transmissible=is.true&select=devise,cout_usd,prix_revient_moyen_usd,plus_value_pct,premier_achat,couverture_pct&order=cout_usd.desc')
     if (!r.ok) return ''
     const rows = await r.json()
     if (!Array.isArray(rows) || rows.length === 0) return ''
@@ -169,8 +178,9 @@ async function prixRevientTexte(): Promise<string> {
       return `${String(x.devise).toUpperCase()}: paye ${num(x.cout_usd).toFixed(2)}$ au total`
         + (jour ? ` depuis le ${jour}` : '')
         + `, prix de revient moyen ${x.prix_revient_moyen_usd}$${signe}`
+        + ` (historique connu sur ${x.couverture_pct}% de la ligne)`
     })
-    return ` || PRIX DE REVIENT MESURE (uniquement les lignes dont l historique d achat est complet ; les autres lignes n ont PAS de prix de revient connu, n en invente aucun): ${parts.join(' | ')}`
+    return ` || PRIX DE REVIENT MESURE, avec la part de la ligne que l historique couvre (les devises absentes de cette liste n ont PAS de prix de revient connu, n en invente aucun et ne raisonne pas en gain ou en perte sur elles): ${parts.join(' | ')}`
   } catch { return '' }
 }
 
