@@ -1,5 +1,33 @@
-// revolut-x-read v9 : LECTURE SEULE + texte lisible cash/liquide/stake pour l'IA. Aucun ordre.
-// v9: separe l'USD (seul pouvoir d'achat pour les paires -USD) des autres devises (USDT/EUR...).
+// revolut-x-read v13 : LECTURE SEULE. Aucun ordre, jamais.
+//
+// v13 (05/09/2026) — LES ACHATS RECURRENTS, LUS DANS UNE TABLE, JAMAIS ECRITS EN DUR.
+//   Le releve Revolut de Chachou montre un plan d'achats recurrents que le robot ignorait
+//   totalement : quatre lignes rachetees chaque semaine par Revolut lui-meme, hors robot.
+//   L'Alchimiste pouvait donc vendre le vendredi ce que Revolut rachetait le lundi.
+//   La premiere version de ce correctif ecrivait « BCH TRX XLM XRP, 5 GBP par semaine »
+//   dans le PROMPT du module Make 10012. Chachou l'a refuse, et il a raison : le jour ou il
+//   change son plan, la phrase ment et personne ne s'en apercoit.
+//   Le plan vit donc dans la table alc_achats_recurrents, qu'il peut modifier seul ; cette
+//   fonction la lit a chaque appel et fabrique la phrase. Aucun prompt, aucun module Make
+//   n'est touche, et rien n'est fige dans du code.
+//   Regle du 26/08 : on transmet le FAIT (« ces lignes sont reapprovisionnees »), jamais le
+//   verbe d'action (« ne les vends pas »). C'est Chachou qui l'a tranche ainsi.
+//   Si la table est vide, absente ou injoignable, la phrase n'apparait pas : sortie v12 exacte.
+//
+// v12 : valeur en dollars et poids en % par ligne, total, cash, % de cash. L'agent recoit la
+//       MESURE au lieu d'aller chercher un prix dans une ligne de 8 122 caracteres — exercice
+//       ou il s'est trompe trois fois les 03 et 04/09 (il attrapait la paire VOISINE).
+//       Le champ garde son NOM (soldes_texte) et le tableau `soldes` est INCHANGE : alc-auto,
+//       qui lit `soldes`, n'est pas affecte.
+// v11 : mode {"raw":"/api/1.0/xxx"} pour explorer l'API en GET signe.
+// v10 : mode {"probe":true}. Mesure du 05/09 sur les huit chemins :
+//         /api/1.0/balances      200
+//         /api/1.0/transactions  200   <- le seul historique accessible (50 lignes, 7 jours,
+//                                         next_cursor vide : il n'y a pas de page suivante)
+//         /api/1.0/trades        401   /api/1.0/orders     401   /api/1.0/fills   401
+//         /api/1.0/positions     401   /api/1.0/portfolio  401   /api/1.0/statements 401
+//       L'ecran « Ordres » de l'application n'a donc PAS d'equivalent API sur cette cle.
+// v9  : separe l'USD (seul pouvoir d'achat pour les paires -USD) des autres devises.
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +36,8 @@ const cors = {
 const REVX_BASE = 'https://revx.revolut.com'
 const API_KEY = (Deno.env.get('REVX_API_KEY') || '').trim()
 const PRIVATE_PEM = Deno.env.get('REVX_PRIVATE_KEY') || ''
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || ''
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 
 function pemToPkcs8Bytes(pem: string): Uint8Array {
   const b64s = pem.replace(/-----BEGIN [A-Z ]+-----/g, '').replace(/-----END [A-Z ]+-----/g, '').replace(/\s+/g, '')
@@ -22,13 +52,66 @@ async function signedGet(path: string, query: string, key: CryptoKey) {
   const message = `${timestamp}GET${path}${query}`
   const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, key, new TextEncoder().encode(message)))
   const url = REVX_BASE + path + (query ? ('?' + query) : '')
-  const r = await fetch(url, { method: 'GET', headers: { 'X-Revx-API-Key': API_KEY, 'X-Revx-Timestamp': timestamp, 'X-Revx-Signature': b64(sig), 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(12000) })
+  const r = await fetch(url, { method: 'GET', headers: { 'X-Revx-API-Key': API_KEY, 'X-Revx-Timestamp': timestamp, 'X-Revx-Signature': b64(sig), 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000) })
   let body: any; try { body = await r.json() } catch { body = await r.text() }
   return { status: r.status, body }
 }
 
 const CASH = ['USD', 'USDT', 'USDC', 'EUR', 'GBP']
 const num = (x: any) => Number(x) || 0
+const CHEMINS = ['/api/1.0/balances','/api/1.0/trades','/api/1.0/orders','/api/1.0/transactions','/api/1.0/fills','/api/1.0/positions','/api/1.0/portfolio','/api/1.0/statements']
+
+// Prix mid par paire -USD. NE LEVE JAMAIS : si ca echoue, on repart sur le format v9.
+async function prixParDevise(): Promise<Record<string, number>> {
+  const out: Record<string, number> = {}
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/revolut-x-prices`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      signal: AbortSignal.timeout(12000),
+    })
+    if (!r.ok) return out
+    const j = await r.json()
+    for (const p of (Array.isArray(j?.prix) ? j.prix : [])) {
+      const paire = String(p?.paire || '')
+      if (!paire.endsWith('-USD')) continue
+      const mid = num(p.mid) || num(p.last) || ((num(p.bid) + num(p.ask)) / 2)
+      if (mid > 0) out[paire.slice(0, -4).toUpperCase()] = mid
+    }
+  } catch { /* silencieux : l'absence de prix ne doit jamais empecher la lecture des soldes */ }
+  return out
+}
+const d2 = (x: number) => (Math.round(x * 100) / 100).toFixed(2)
+
+// v13 — le plan d'achats recurrents, LU dans la table, jamais ecrit ici.
+// NE LEVE JAMAIS : si la table est injoignable ou vide, on renvoie '' et le texte reste v12.
+async function achatsRecurrentsTexte(): Promise<string> {
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY) return ''
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/alc_achats_recurrents?actif=eq.true&select=devises,montant,devise_montant,frequence,note&order=id`,
+      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }, signal: AbortSignal.timeout(8000) },
+    )
+    if (!r.ok) return ''
+    const rows = await r.json()
+    if (!Array.isArray(rows) || rows.length === 0) return ''
+    const phrases: string[] = []
+    for (const p of rows) {
+      const devises = Array.isArray(p?.devises) ? p.devises.map((d: any) => String(d).toUpperCase()) : []
+      if (devises.length === 0) continue
+      const montant = num(p?.montant)
+      const dev = String(p?.devise_montant || '').toUpperCase()
+      const freq = String(p?.frequence || '')
+      const note = String(p?.note || '').trim()
+      let t = `${devises.join(', ')} rachetes automatiquement par Revolut`
+      if (montant > 0 && dev) t += ` (${montant} ${dev} au total, ${freq || 'periodique'}, repartis entre ces ${devises.length} lignes)`
+      else if (freq) t += ` (${freq})`
+      if (note) t += ` [${note}]`
+      phrases.push(t)
+    }
+    if (phrases.length === 0) return ''
+    return ` || ACHATS RECURRENTS PROGRAMMES PAR LE PROPRIETAIRE, HORS ROBOT (Revolut les execute seul, tu n'en es ni l'auteur ni le destinataire ; c'est une information de contexte, pas une consigne): ${phrases.join(' ; ')}`
+  } catch { return '' }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -36,6 +119,24 @@ Deno.serve(async (req) => {
     if (!API_KEY || !PRIVATE_PEM) return new Response(JSON.stringify({ ok: false, error: 'Secrets manquants' }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
     let key: CryptoKey
     try { key = await importKey() } catch (e) { return new Response(JSON.stringify({ ok: false, error: 'importKey a echoue', detail: String(e) }), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } }) }
+
+    const body = await req.json().catch(() => ({}))
+    if (body && typeof body.raw === 'string' && body.raw.startsWith('/api/')) {
+      const r = await signedGet(body.raw, typeof body.query === 'string' ? body.query : '', key)
+      return new Response(JSON.stringify({ ok: true, mode: 'brut', chemin: body.raw, status: r.status, corps: r.body }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    }
+    if (body && body.probe === true) {
+      const out: any[] = []
+      for (const p of CHEMINS) {
+        try {
+          const r = await signedGet(p, '', key)
+          const t = typeof r.body === 'string' ? r.body : JSON.stringify(r.body)
+          out.push({ chemin: p, status: r.status, taille: t ? t.length : 0, apercu: t ? t.slice(0, 220) : null })
+        } catch (e) { out.push({ chemin: p, status: null, erreur: String(e).slice(0, 120) }) }
+      }
+      return new Response(JSON.stringify({ ok: true, mode: 'sonde', resultats: out }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    }
+
     const res = await signedGet('/api/1.0/balances', '', key)
     if (res.status !== 200) return new Response(JSON.stringify({ ok: false, step: 'balances', status: res.status, response: res.body }), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } })
     let balances = Array.isArray(res.body) ? res.body : (res.body?.balances || res.body)
@@ -49,11 +150,55 @@ Deno.serve(async (req) => {
     const autresCash = cash.filter((b: any) => String(b.devise).toUpperCase() !== 'USD')
     const liquide = clean.filter((b: any) => !isCash(b) && num(b.disponible) > 0)
     const stake = clean.filter((b: any) => num(b.stake) > 0)
-    const fmtD = (b: any) => `${b.devise}=${b.disponible}`
-    const fmtS = (b: any) => `${b.devise}=${b.stake}`
-    const usdTxt = usd.length ? usd.map(fmtD).join(' , ') : 'USD=0'
-    const soldes_texte = `POUVOIR D'ACHAT USD (SEUL cash utilisable pour ACHETER une paire -USD): ${usdTxt} || AUTRES DEVISES CASH (NON utilisables comme pouvoir d'achat pour les paires -USD -- ne PAS les compter pour un achat -USD): ${autresCash.length ? autresCash.map(fmtD).join(' , ') : 'aucune'} || POSITIONS LIQUIDES (vendables): ${liquide.length ? liquide.map(fmtD).join(' | ') : 'aucune'} || EN STAKE (VERROUILLE - NON vendable tant que non destake): ${stake.length ? stake.map(fmtS).join(' | ') : 'aucun'}`
-    return new Response(JSON.stringify({ ok: true, count: clean.length, soldes: clean, soldes_texte }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+
+    // --- v12 : la valeur en dollars, mesuree, jamais calculee par l'agent ---
+    const px = await prixParDevise()
+    const val = (dev: string, q: number) => {
+      const D = String(dev).toUpperCase()
+      if (D === 'USD') return q
+      const p = px[D]
+      return p && p > 0 ? q * p : NaN
+    }
+    let total = 0, valeurCash = 0, valeurStake = 0
+    for (const b of clean) {
+      const v = val(b.devise, num(b.disponible) + num(b.stake))
+      if (Number.isFinite(v)) total += v
+      if (isCash(b)) { const c = val(b.devise, num(b.disponible)); if (Number.isFinite(c)) valeurCash += c }
+      const s = val(b.devise, num(b.stake)); if (Number.isFinite(s)) valeurStake += s
+    }
+    const cashUSD = num((usd[0] || {}).disponible)
+    const pctCash = total > 0 ? (cashUSD / total) * 100 : 0
+    const prixDispo = Object.keys(px).length > 0 && total > 0
+
+    // Une ligne = QUANTITE (valeur$, poids%). Triees par valeur decroissante : les lignes qui
+    // pesent vraiment arrivent en premier, au lieu de l'ordre arbitraire de l'API.
+    const ligne = (b: any, q: number) => {
+      const v = val(b.devise, q)
+      if (!prixDispo || !Number.isFinite(v)) return `${b.devise}=${q}`
+      return `${b.devise}=${q} (${d2(v)}$, ${d2((v / total) * 100)}%)`
+    }
+    const parValeur = (q: (b: any) => number) => (a: any, b: any) => {
+      const va = val(a.devise, q(a)), vb = val(b.devise, q(b))
+      return (Number.isFinite(vb) ? vb : -1) - (Number.isFinite(va) ? va : -1)
+    }
+    const qDispo = (b: any) => num(b.disponible)
+    const qStake = (b: any) => num(b.stake)
+    const fmtD = (b: any) => ligne(b, qDispo(b))
+    const fmtS = (b: any) => ligne(b, qStake(b))
+    const usdTxt = usd.length ? usd.map((b: any) => `${b.devise}=${b.disponible}`).join(' , ') : 'USD=0'
+
+    const entete = prixDispo
+      ? `PORTEFEUILLE (valorise au prix du marche, tu n'as AUCUN calcul a refaire): total=${d2(total)}$ | cash USD=${d2(cashUSD)}$ soit ${d2(pctCash)}% du portefeuille | investi=${d2(total - cashUSD)}$ | en stake=${d2(valeurStake)}$ | ${clean.length} lignes || `
+      : ''
+    const recurrents = await achatsRecurrentsTexte()
+    const soldes_texte = `${entete}POUVOIR D'ACHAT USD (SEUL cash utilisable pour ACHETER une paire -USD): ${usdTxt} || AUTRES DEVISES CASH (NON utilisables comme pouvoir d'achat pour les paires -USD -- ne PAS les compter pour un achat -USD): ${autresCash.length ? autresCash.map(fmtD).join(' , ') : 'aucune'} || POSITIONS LIQUIDES (vendables, de la plus grosse a la plus petite): ${liquide.length ? liquide.slice().sort(parValeur(qDispo)).map(fmtD).join(' | ') : 'aucune'} || EN STAKE (VERROUILLE - NON vendable tant que non destake): ${stake.length ? stake.slice().sort(parValeur(qStake)).map(fmtS).join(' | ') : 'aucun'}${recurrents}`
+
+    const portefeuille = prixDispo
+      ? { total_usd: Number(d2(total)), cash_usd: Number(d2(cashUSD)), pct_cash: Number(d2(pctCash)),
+          investi_usd: Number(d2(total - cashUSD)), stake_usd: Number(d2(valeurStake)), nb_lignes: clean.length }
+      : null
+
+    return new Response(JSON.stringify({ ok: true, count: clean.length, soldes: clean, soldes_texte, portefeuille }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }

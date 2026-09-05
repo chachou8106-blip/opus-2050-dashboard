@@ -1,59 +1,35 @@
-MODULE 10012 — DIRE A L'ALCHIMISTE QUE QUATRE LIGNES SE REALIMENTENT SEULES
-Scenario 7051944. 05/09/2026.
-RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+FICHE RETIREE — NE PAS APPLIQUER
+Module 10012, achats recurrents. 05/09/2026.
 
-UN SEUL REMPLACEMENT. Chaine verifiee UNIQUE dans le champ, sans guillemet ni
-antislash : le remplacement ne peut pas abimer l'echappement.
+Cette fiche demandait d'ecrire dans le PROMPT du module 10012 la phrase :
 
-  champ actuel : 8 202 caracteres · 86 antislashs
-  champ apres  : 8 487 caracteres · 86 antislashs (INCHANGE)
+  « BCH, TRX, XLM et XRP sont rachetes chaque semaine (5 GBP) par un plan Revolut. »
 
+Chachou l'a refusee, et il a raison :
 
-==========================================================
-POURQUOI
-==========================================================
+  « si tu corrige t ecris rien en dur c'est interdit car autant demain ca change et
+    t aura ecris quelques choses en dur comme tout les conneries que tu as fais tout
+    le mois d aout ! »
 
-L'ecran Revolut de Chachou montre un plan d'ACHATS RECURRENTS :
-  BCH, TRX, XLM, XRP · 5 GBP par semaine · prochain prelevement le 7 septembre
-  56,57 EUR investis a ce jour · +9,56 % · +5,41 EUR
+Le fait est vrai aujourd'hui. Le jour ou il change son plan — un montant, une devise,
+une ligne de plus — la phrase continue de partir dans le prompt et ment, sans que
+personne ne s'en apercoive. C'est le mecanisme exact des huit tickers en dur du module
+401 et des APY en dur de generate_daily_journal §6.
 
-C'est ce plan qui explique les achats du 17, du 24 et du 31 aout dans le releve
-(XRP, XLM, TRX et BCH a ~1,68 $ chacun) : ce n'etait pas le robot.
+CE QUI A ETE FAIT A LA PLACE — aucune manipulation Make, aucun prompt touche
 
-L'Alchimiste l'ignore completement. Il peut donc vendre XRP le lundi matin et
-Revolut le racheter dans la foulee, sans que personne ne comprenne pourquoi la
-quantite remonte.
+1. Table `alc_achats_recurrents` : devises, montant, devise_montant, frequence, actif,
+   note. Chachou modifie la ligne quand son plan change, et rien d'autre ne bouge.
 
-Chachou a tranche : on le lui DIT, on ne lui interdit rien. C'est la regle du
-26/08 — je transmets le fait, le montant, la frequence et les lignes concernees ;
-je ne lui dis pas ce qu'il doit en faire. Il reste libre de vendre ces lignes
-s'il juge que c'est le bon geste.
+2. `revolut-x-read` v13 la lit a chaque appel et FABRIQUE la phrase, ajoutee en fin de
+   `soldes_texte` — le champ que le module 10012 recoit deja. Teste en reel :
+   ok=true, 48 lignes, tableau `soldes` inchange, soldes_texte a 2 548 caracteres.
+   Si la table est vide ou injoignable, la phrase disparait : sortie v12 exacte.
 
+3. Le texte transmis est un FAIT, pas une consigne (regle du 26/08) :
+   « ACHATS RECURRENTS PROGRAMMES PAR LE PROPRIETAIRE, HORS ROBOT (Revolut les execute
+   seul, tu n'en es ni l'auteur ni le destinataire ; c'est une information de contexte,
+   pas une consigne): BCH, TRX, XLM, XRP rachetes automatiquement par Revolut
+   (5 GBP au total, hebdomadaire, repartis entre ces 4 lignes) »
 
-==========================================================
-LE REMPLACEMENT
-==========================================================
-
-CHERCHE (apparait exactement une fois, 99 caracteres) :
-
-- Ne propose JAMAIS de vendre un actif non détenu ou entièrement staké : c'est invendable, inutile.
-
-REMPLACE PAR (384 caracteres) :
-
-- Ne propose JAMAIS de vendre un actif non détenu ou entièrement staké : c'est invendable, inutile. Quatre lignes — BCH, TRX, XLM et XRP — sont realimentees automatiquement par un plan d'investissement Revolut, 5 GBP par semaine repartis entre elles, hors de ton controle et hors de celui de l'owner au moment ou tu decides. Si tu en vends, la quantite remonte au prelevement suivant.
-
-  (+285 caracteres)
-
-
-==========================================================
-TES CONTROLES
-==========================================================
-
-  · compteur : 8 202 -> 8 487
-  · nombre d'antislashs : 86 AVANT et 86 APRES. S'il bouge, le presse-papier a
-    echappe quelque chose — recommence.
-  · recherche « BCH » : UN resultat (il y en avait ZERO avant)
-  · recherche « invendable, inutile. » : UN resultat
-  · aucun vrai retour a la ligne ajoute
-
-Puis « OK » sur le module, PUIS la disquette sur le scenario.
+Le detail complet est dans supabase/schema/34_achats_recurrents_et_choix_des_cryptos_2026-09-05.sql
