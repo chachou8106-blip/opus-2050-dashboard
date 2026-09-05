@@ -335,3 +335,56 @@ where d.symbol like '%-USD';
 --   ordres partiels ......... 551,89 $
 --   aucun ordre connu ....... 100,44 $   sur 33 lignes, la plus grosse KSM a 18,80 $
 -- soldes_texte : 3 766 -> 3 931 caracteres. Sept lignes avec prix de revient.
+
+-- ===========================================================================
+-- 10. L'ECRAN TRANSACTION DEBLOQUE SOL, XRP ET BTC — ET REVELE DEUX CHOSES
+-- ===========================================================================
+-- 7 lignes ajoutees, toutes ABSENTES de l'ecran Ordres : des achats regles en GBP, EUR ou
+-- USDT, qui ne passent visiblement pas par le carnet.
+--   18/06 20:27  GBP -> SOL   55,00 £ -> 1,007166 SOL
+--   02/07 23:09  GBP -> SOL   10,00 £ -> 0,160025 SOL
+--   02/07 23:09  GBP -> XRP   10,00 £ -> 12,000936 XRP
+--   02/07 23:08  EUR -> XRP    5,55 € -> 5,711042 XRP
+--   02/07 23:08  EUR -> BTC    5,55 € -> 0,00010029 BTC
+--   08/06 18:27  EUR -> HFT    0,83 € -> 88,7411709 HFT
+--   05/06 19:25  USDT -> BTC  100 USDT -> 0,0015708 BTC
+-- GBP-USD est dans price_history (2 433 points) : les achats en livres sont convertis au
+-- cours mesure, comme les euros.
+
+-- a) DECOUVERTE : L'ECRAN ORDRES DONNE LE BRUT, L'ECRAN TRANSACTION LE NET.
+-- Les neuf achats XRP recurrents figurent dans les deux ecrans avec des quantites
+-- differentes, et l'ecart est CONSTANT :
+--     03/08  Ordres 1,57      Transaction 1,56858     -0,090 %
+--     27/07  Ordres 1,49187   Transaction 1,49052     -0,090 %
+--     20/07  Ordres 1,51433   Transaction 1,51296     -0,090 %
+--     13/07  Ordres 1,54204   Transaction 1,54065     -0,090 %
+-- 0,09 %, c'est EXACTEMENT le frais taker Revolut X annonce dans le prompt du 10012.
+-- L'ecran Ordres montre la quantite remplie AVANT frais, l'ecran Transaction ce qui arrive
+-- reellement sur le compte. Les neuf lignes ont ete corrigees au NET.
+
+-- b) LES 100 USDT DU 05/06 NE SONT PAS VALORISABLES, ET J'AI VERIFIE POURQUOI.
+-- USDT-USD n'est pas dans price_history (EUR-USD, GBP-USD, EUR-GBP, USDC-USD y sont).
+-- J'ai voulu deduire le taux depuis le BTC recu : 0,0015708 BTC au cours de l'instant
+-- (60 814 $) = 95,53 $, soit un USDT implicite a 0,9553. Aberrant pour un stablecoin.
+-- Controle du rapprochement price_history / prix Revolut sur quatre achats BTC recents :
+--     04/09 21:17  79 778,75 vs 79 797,70   -0,02 %
+--     04/09 18:33  79 727,01 vs 79 466,10   +0,33 %
+--     04/09 09:39  80 749,35 vs 81 147,40   -0,49 %
+--     03/09 15:49  78 789,79 vs 80 553,00   -2,19 %
+-- Les closes horaires collent a 0,5 % pres en general, mais derapent a 2 % sur un mouvement
+-- intra-horaire. Impossible d'en tirer un taux de change a 0,1 % pres. On n'invente donc pas :
+-- taux NULL, nb_achats_sans_taux = 1, BTC reste NON transmissible malgre 100,0 % de
+-- couverture. Il suffirait de la contre-valeur en dollars de ces 100 USDT pour debloquer.
+
+-- ETAT APRES CE RELEVE : 1 058,83 $ hors cash
+--   avec prix de revient .... 592,39 $   55,9 %   (22,8 -> 33,0 -> 38,2 -> 55,9 ce soir)
+--   ordres partiels ......... 366,05 $   BTC (bloque par l'USDT) · HFT 16,1 % · BCH 72,5 %
+--                                        XLM 74,4 % · VET 59,6 %
+--   aucun ordre connu ....... 100,39 $   sur 33 lignes, la plus grosse KSM a 18,65 $
+--
+-- Neuf lignes transmises, dont trois nouvelles :
+--   SOL  99.2%  105.98$  77.728012$   +32.4%      XRP 100.0%  36.05$  1.12304625$  +26.0%
+--   UNI  97.6%  100.26$  4.0104$      +58.3%      MEW  99.5%  50.00$  0.00038501$   +8.6%
+--   FAI 100.1%   93.95$  0.00217678$  +10.2%      TRX 100.1%  16.35$  0.33065907$   +0.8%
+--   TRU  96.9%   92.06$  0.001285$    -30.1%      OSMO 99.6%  15.00$  0.04489999$  -21.2%
+--   ETH  99.8%   53.08$  2020.344170$ +21.6%
