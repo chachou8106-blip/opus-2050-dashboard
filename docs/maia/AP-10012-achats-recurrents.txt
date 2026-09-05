@@ -1,0 +1,59 @@
+MODULE 10012 — DIRE A L'ALCHIMISTE QUE QUATRE LIGNES SE REALIMENTENT SEULES
+Scenario 7051944. 05/09/2026.
+RETOUCHE A LA MAIN. NE PAS FAIRE PASSER MAIA SUR CE MODULE.
+
+UN SEUL REMPLACEMENT. Chaine verifiee UNIQUE dans le champ, sans guillemet ni
+antislash : le remplacement ne peut pas abimer l'echappement.
+
+  champ actuel : 8 202 caracteres · 86 antislashs
+  champ apres  : 8 487 caracteres · 86 antislashs (INCHANGE)
+
+
+==========================================================
+POURQUOI
+==========================================================
+
+L'ecran Revolut de Chachou montre un plan d'ACHATS RECURRENTS :
+  BCH, TRX, XLM, XRP · 5 GBP par semaine · prochain prelevement le 7 septembre
+  56,57 EUR investis a ce jour · +9,56 % · +5,41 EUR
+
+C'est ce plan qui explique les achats du 17, du 24 et du 31 aout dans le releve
+(XRP, XLM, TRX et BCH a ~1,68 $ chacun) : ce n'etait pas le robot.
+
+L'Alchimiste l'ignore completement. Il peut donc vendre XRP le lundi matin et
+Revolut le racheter dans la foulee, sans que personne ne comprenne pourquoi la
+quantite remonte.
+
+Chachou a tranche : on le lui DIT, on ne lui interdit rien. C'est la regle du
+26/08 — je transmets le fait, le montant, la frequence et les lignes concernees ;
+je ne lui dis pas ce qu'il doit en faire. Il reste libre de vendre ces lignes
+s'il juge que c'est le bon geste.
+
+
+==========================================================
+LE REMPLACEMENT
+==========================================================
+
+CHERCHE (apparait exactement une fois, 99 caracteres) :
+
+- Ne propose JAMAIS de vendre un actif non détenu ou entièrement staké : c'est invendable, inutile.
+
+REMPLACE PAR (384 caracteres) :
+
+- Ne propose JAMAIS de vendre un actif non détenu ou entièrement staké : c'est invendable, inutile. Quatre lignes — BCH, TRX, XLM et XRP — sont realimentees automatiquement par un plan d'investissement Revolut, 5 GBP par semaine repartis entre elles, hors de ton controle et hors de celui de l'owner au moment ou tu decides. Si tu en vends, la quantite remonte au prelevement suivant.
+
+  (+285 caracteres)
+
+
+==========================================================
+TES CONTROLES
+==========================================================
+
+  · compteur : 8 202 -> 8 487
+  · nombre d'antislashs : 86 AVANT et 86 APRES. S'il bouge, le presse-papier a
+    echappe quelque chose — recommence.
+  · recherche « BCH » : UN resultat (il y en avait ZERO avant)
+  · recherche « invendable, inutile. » : UN resultat
+  · aucun vrai retour a la ligne ajoute
+
+Puis « OK » sur le module, PUIS la disquette sur le scenario.
