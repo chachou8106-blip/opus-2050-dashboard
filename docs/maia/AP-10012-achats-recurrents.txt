@@ -1,35 +1,44 @@
-FICHE RETIREE — NE PAS APPLIQUER
+FICHE RETIREE — NE PAS APPLIQUER, ET IL N'Y A PLUS RIEN A APPLIQUER
 Module 10012, achats recurrents. 05/09/2026.
 
-Cette fiche demandait d'ecrire dans le PROMPT du module 10012 la phrase :
+Cette fiche demandait d'ecrire dans le PROMPT du module 10012 :
 
   « BCH, TRX, XLM et XRP sont rachetes chaque semaine (5 GBP) par un plan Revolut. »
 
-Chachou l'a refusee, et il a raison :
+Chachou l'a refusee deux fois, pour deux raisons differentes, et il avait raison les
+deux fois.
 
-  « si tu corrige t ecris rien en dur c'est interdit car autant demain ca change et
-    t aura ecris quelques choses en dur comme tout les conneries que tu as fais tout
-    le mois d aout ! »
+  1. « si tu corrige t ecris rien en dur c'est interdit car autant demain ca change »
+     -> j'ai sorti la valeur du prompt et je l'ai mise dans une table.
 
-Le fait est vrai aujourd'hui. Le jour ou il change son plan — un montant, une devise,
-une ligne de plus — la phrase continue de partir dans le prompt et ment, sans que
-personne ne s'en apercoive. C'est le mecanisme exact des huit tickers en dur du module
-401 et des APY en dur de generate_daily_journal §6.
+  2. « je ne modifie rien seul tout doit etre automatique !!! et si ca gene je
+      supprime l achat recurrent !! »
+     -> une table qu'il doit tenir a jour, c'est encore de la saisie, donc c'est
+        encore quelque chose qui peut mentir. La table est SUPPRIMEE.
 
-CE QUI A ETE FAIT A LA PLACE — aucune manipulation Make, aucun prompt touche
+CE QUI EXISTE MAINTENANT — zero saisie, zero prompt, zero module Make
 
-1. Table `alc_achats_recurrents` : devises, montant, devise_montant, frequence, actif,
-   note. Chachou modifie la ligne quand son plan change, et rien d'autre ne bouge.
+  · alc_revolut_transactions : journal des transactions Revolut X, alimente par
+    revolut-x-read v14 a chaque run. L'API n'expose que 50 lignes sur 7 jours et n'a
+    pas de page suivante, mais elle est interrogee ~6 fois par jour : rien n'est
+    manque, et le journal garde tout.
 
-2. `revolut-x-read` v13 la lit a chaque appel et FABRIQUE la phrase, ajoutee en fin de
-   `soldes_texte` — le champ que le module 10012 recoit deja. Teste en reel :
-   ok=true, 48 lignes, tableau `soldes` inchange, soldes_texte a 2 548 caracteres.
-   Si la table est vide ou injoignable, la phrase disparait : sortie v12 exacte.
+  · v_alc_achats_recurrents_detectes : DEDUIT les plans. Trois achats de la meme
+    devise, au meme jour de semaine, a la meme heure. Ecart = mediane des ecarts
+    consecutifs (la moyenne est faussee par un releve incomplet).
 
-3. Le texte transmis est un FAIT, pas une consigne (regle du 26/08) :
-   « ACHATS RECURRENTS PROGRAMMES PAR LE PROPRIETAIRE, HORS ROBOT (Revolut les execute
-   seul, tu n'en es ni l'auteur ni le destinataire ; c'est une information de contexte,
-   pas une consigne): BCH, TRX, XLM, XRP rachetes automatiquement par Revolut
-   (5 GBP au total, hebdomadaire, repartis entre ces 4 lignes) »
+  · revolut-x-read v14 lit la vue et fabrique la phrase.
 
-Le detail complet est dans supabase/schema/34_achats_recurrents_et_choix_des_cryptos_2026-09-05.sql
+RESULTAT MESURE, sans qu'aucune valeur ait ete saisie :
+
+  {BCH,TRX,XLM,XRP} · 6,74 USD par prelevement · hebdomadaire · ecart 7,0 jours
+  6 prelevements observes, du 08/06 au 31/08 · prochain attendu le 07/09 · actif
+
+Les 6,74 $ sont ses 5 GBP. Et le 07/09 est exactement la date qu'affiche son ecran
+Revolut — une date qu'aucune de nos donnees ne contenait. La deduction est donc
+confirmee par une source independante.
+
+S'il supprime son plan : rien a faire. Deux periodes sans prelevement, actif passe a
+false, la phrase disparait toute seule.
+
+Le detail est dans supabase/schema/35_achats_recurrents_deduits_et_univers_mesure_2026-09-05.sql

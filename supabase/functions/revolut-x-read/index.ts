@@ -1,18 +1,24 @@
-// revolut-x-read v13 : LECTURE SEULE. Aucun ordre, jamais.
+// revolut-x-read v14 : LECTURE SEULE cote Revolut. Aucun ordre, jamais.
 //
-// v13 (05/09/2026) — LES ACHATS RECURRENTS, LUS DANS UNE TABLE, JAMAIS ECRITS EN DUR.
-//   Le releve Revolut de Chachou montre un plan d'achats recurrents que le robot ignorait
-//   totalement : quatre lignes rachetees chaque semaine par Revolut lui-meme, hors robot.
-//   L'Alchimiste pouvait donc vendre le vendredi ce que Revolut rachetait le lundi.
-//   La premiere version de ce correctif ecrivait « BCH TRX XLM XRP, 5 GBP par semaine »
-//   dans le PROMPT du module Make 10012. Chachou l'a refuse, et il a raison : le jour ou il
-//   change son plan, la phrase ment et personne ne s'en apercoit.
-//   Le plan vit donc dans la table alc_achats_recurrents, qu'il peut modifier seul ; cette
-//   fonction la lit a chaque appel et fabrique la phrase. Aucun prompt, aucun module Make
-//   n'est touche, et rien n'est fige dans du code.
-//   Regle du 26/08 : on transmet le FAIT (« ces lignes sont reapprovisionnees »), jamais le
-//   verbe d'action (« ne les vends pas »). C'est Chachou qui l'a tranche ainsi.
-//   Si la table est vide, absente ou injoignable, la phrase n'apparait pas : sortie v12 exacte.
+// v14 (05/09/2026) — PLUS RIEN A SAISIR : LE PLAN D'ACHATS RECURRENTS EST DEDUIT.
+//   « je ne modifie rien seul tout doit etre automatique !!! et si ca gene je supprime
+//     l achat recurrent !! » — Chachou. La v13 lui demandait de tenir une ligne de table a
+//     jour : c'est encore de la saisie, donc c'est encore quelque chose qui peut mentir.
+//
+//   A chaque appel, cette fonction journalise /api/1.0/transactions dans
+//   alc_revolut_transactions (cle = l'id Revolut, aucun doublon possible). L'API n'expose
+//   que 7 jours et 50 lignes, sans page suivante — mesure du 05/09, metadata.next_cursor
+//   est la chaine vide — mais elle est appelee ~6 fois par jour : rien ne peut etre manque,
+//   et le journal, lui, garde tout pour toujours.
+//   La vue v_alc_achats_recurrents_detectes en DEDUIT les plans : trois achats de la meme
+//   devise au meme jour de semaine et a la meme heure. Aucune coincidence ne tient trois fois.
+//   Verifie sur les donnees reelles : {BCH,TRX,XLM,XRP}, 6,74 $, hebdomadaire, ecart median
+//   7,0 jours, prochain attendu le 07/09 — exactement la date qu'affiche son ecran Revolut,
+//   qu'aucune de nos donnees ne contenait.
+//   S'il supprime son plan, il n'a rien a faire : apres deux periodes sans prelevement la
+//   vue passe actif=false et la phrase disparait toute seule du contexte de l'Alchimiste.
+//
+// v13 : la phrase venait d'une table que Chachou devait tenir a jour. Remplacee par la vue.
 //
 // v12 : valeur en dollars et poids en % par ligne, total, cash, % de cash. L'agent recoit la
 //       MESURE au lieu d'aller chercher un prix dans une ligne de 8 122 caracteres — exercice
@@ -82,15 +88,37 @@ async function prixParDevise(): Promise<Record<string, number>> {
 }
 const d2 = (x: number) => (Math.round(x * 100) / 100).toFixed(2)
 
-// v13 — le plan d'achats recurrents, LU dans la table, jamais ecrit ici.
-// NE LEVE JAMAIS : si la table est injoignable ou vide, on renvoie '' et le texte reste v12.
+const sb = (chemin: string, init: RequestInit = {}) =>
+  fetch(`${SUPABASE_URL}/rest/v1/${chemin}`, {
+    ...init,
+    headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json', ...(init.headers || {}) },
+    signal: AbortSignal.timeout(10000),
+  })
+
+// v14 — journalise /api/1.0/transactions. L'API n'en garde que 7 jours ; le journal garde tout.
+// C'est ce journal qui permet de DEDUIRE les plans d'achat recurrents sans que Chachou saisisse
+// quoi que ce soit. Ne bloque jamais la lecture des soldes, mais ne se tait pas non plus :
+// aucun .catch vide sur une ecriture (regle du 31/08) — le resultat est renvoye a l'appelant.
+async function journaliserTransactions(key: CryptoKey): Promise<any> {
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY) return { fait: false, motif: 'secrets absents' }
+    const r = await signedGet('/api/1.0/transactions', '', key)
+    if (r.status !== 200) return { fait: false, motif: `transactions HTTP ${r.status}` }
+    const data = (r.body as any)?.data
+    if (!Array.isArray(data)) return { fait: false, motif: 'corps inattendu' }
+    const w = await sb('rpc/alc_ingest_transactions', { method: 'POST', body: JSON.stringify({ p_data: data }) })
+    if (!w.ok) return { fait: false, motif: `ingest HTTP ${w.status}`, detail: (await w.text()).slice(0, 200) }
+    return { fait: true, recues: data.length, ecrites: await w.json() }
+  } catch (e) { return { fait: false, motif: String(e).slice(0, 160) } }
+}
+
+// v14 — le plan d'achats recurrents, DEDUIT par la vue. Rien n'est saisi, rien n'est ecrit ici.
+// NE LEVE JAMAIS : si la vue est injoignable ou ne detecte rien, on renvoie '' et le texte
+// redevient exactement celui de la v12.
 async function achatsRecurrentsTexte(): Promise<string> {
   try {
     if (!SUPABASE_URL || !SERVICE_KEY) return ''
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/alc_achats_recurrents?actif=eq.true&select=devises,montant,devise_montant,frequence,note&order=id`,
-      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }, signal: AbortSignal.timeout(8000) },
-    )
+    const r = await sb('v_alc_achats_recurrents_detectes?actif=is.true&select=devises,montant,devise_montant,frequence,occurrences,derniere,prochain_attendu')
     if (!r.ok) return ''
     const rows = await r.json()
     if (!Array.isArray(rows) || rows.length === 0) return ''
@@ -100,16 +128,16 @@ async function achatsRecurrentsTexte(): Promise<string> {
       if (devises.length === 0) continue
       const montant = num(p?.montant)
       const dev = String(p?.devise_montant || '').toUpperCase()
-      const freq = String(p?.frequence || '')
-      const note = String(p?.note || '').trim()
+      const freq = String(p?.frequence || 'periodique')
       let t = `${devises.join(', ')} rachetes automatiquement par Revolut`
-      if (montant > 0 && dev) t += ` (${montant} ${dev} au total, ${freq || 'periodique'}, repartis entre ces ${devises.length} lignes)`
-      else if (freq) t += ` (${freq})`
-      if (note) t += ` [${note}]`
+      if (montant > 0 && dev) t += ` (${montant} ${dev} au total par prelevement, ${freq}, repartis entre ces ${devises.length} lignes)`
+      else t += ` (${freq})`
+      if (p?.occurrences) t += `, ${p.occurrences} prelevements observes`
+      if (p?.prochain_attendu) t += `, prochain attendu le ${p.prochain_attendu}`
       phrases.push(t)
     }
     if (phrases.length === 0) return ''
-    return ` || ACHATS RECURRENTS PROGRAMMES PAR LE PROPRIETAIRE, HORS ROBOT (Revolut les execute seul, tu n'en es ni l'auteur ni le destinataire ; c'est une information de contexte, pas une consigne): ${phrases.join(' ; ')}`
+    return ` || ACHATS RECURRENTS PROGRAMMES PAR LE PROPRIETAIRE, HORS ROBOT, DEDUITS DE L'HISTORIQUE (Revolut les execute seul, tu n'en es ni l'auteur ni le destinataire ; c'est une information de contexte, pas une consigne): ${phrases.join(' ; ')}`
   } catch { return '' }
 }
 
@@ -190,6 +218,8 @@ Deno.serve(async (req) => {
     const entete = prixDispo
       ? `PORTEFEUILLE (valorise au prix du marche, tu n'as AUCUN calcul a refaire): total=${d2(total)}$ | cash USD=${d2(cashUSD)}$ soit ${d2(pctCash)}% du portefeuille | investi=${d2(total - cashUSD)}$ | en stake=${d2(valeurStake)}$ | ${clean.length} lignes || `
       : ''
+    // Le journal d'abord (il alimente la detection), la phrase ensuite.
+    const journal = await journaliserTransactions(key)
     const recurrents = await achatsRecurrentsTexte()
     const soldes_texte = `${entete}POUVOIR D'ACHAT USD (SEUL cash utilisable pour ACHETER une paire -USD): ${usdTxt} || AUTRES DEVISES CASH (NON utilisables comme pouvoir d'achat pour les paires -USD -- ne PAS les compter pour un achat -USD): ${autresCash.length ? autresCash.map(fmtD).join(' , ') : 'aucune'} || POSITIONS LIQUIDES (vendables, de la plus grosse a la plus petite): ${liquide.length ? liquide.slice().sort(parValeur(qDispo)).map(fmtD).join(' | ') : 'aucune'} || EN STAKE (VERROUILLE - NON vendable tant que non destake): ${stake.length ? stake.slice().sort(parValeur(qStake)).map(fmtS).join(' | ') : 'aucun'}${recurrents}`
 
@@ -198,7 +228,7 @@ Deno.serve(async (req) => {
           investi_usd: Number(d2(total - cashUSD)), stake_usd: Number(d2(valeurStake)), nb_lignes: clean.length }
       : null
 
-    return new Response(JSON.stringify({ ok: true, count: clean.length, soldes: clean, soldes_texte, portefeuille }), { headers: { ...cors, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ ok: true, count: clean.length, soldes: clean, soldes_texte, portefeuille, journal }), { headers: { ...cors, 'Content-Type': 'application/json' } })
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500, headers: { ...cors, 'Content-Type': 'application/json' } })
   }
