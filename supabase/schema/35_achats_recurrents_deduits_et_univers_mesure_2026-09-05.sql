@@ -71,10 +71,10 @@ create table if not exists public.alc_revolut_transactions (
 -- incomplete (TRX a -0,33 de quantite nette, FAI a 33 125 pour 43 131 detenus). Un prix de
 -- revient partiel presente comme complet ferait croire a l'agent qu'il gagne ou qu'il perd
 -- sur une ligne ou il n'en sait rien.
--- LA SUITE EST AU PARAGRAPHE 4 : Chachou a fourni l'achat manquant du 22/07, FAI est passee
--- a 100,1 % de couverture, et la vue a ete refaite avec un drapeau `complet` qui decide
--- ligne par ligne. Elle EST transmise depuis revolut-x-read v15, pour les lignes completes
--- uniquement.
+-- LA SUITE EST AUX PARAGRAPHES 4 ET 5 : Chachou a fourni l'achat manquant du 22/07 puis le
+-- fichier ordre_manquant.txt, la vue a ete refaite deux fois, et son drapeau s'appelle
+-- aujourd'hui `transmissible` (couverture >= 90 % et aucun achat hors USD). Le drapeau
+-- `complet` du paragraphe 4 n'existe plus : c'est son etat intermediaire de la soiree.
 
 -- ===========================================================================
 -- 3. « ON A BEAUCOUP PLUS DE DONNEES » — VERIFIE. ELLES ETAIENT FABRIQUEES ET JETEES
