@@ -67,11 +67,14 @@ create table if not exists public.alc_revolut_transactions (
 -- soit 0,00208150), d'OSMO (15 $ le 08/06) et de VET (1 $ le 07/06).
 
 -- v_alc_prix_revient : prix de revient moyen par devise, calcule sur le journal.
--- CREEE MAIS PAS ENCORE TRANSMISE A L'AGENT, et c'est volontaire : la couverture est
--- incomplete. TRX ressort a -0,33 de quantite nette, FAI a 33 125 alors que Chachou en detient
--- 43 131 : le journal ne couvre pas encore les lignes entieres. Un prix de revient partiel
--- presente comme complet ferait croire a l'agent qu'il gagne ou qu'il perd sur une ligne ou il
--- n'en sait rien. Elle se completera d'elle-meme au fil des runs.
+-- A ce stade de la soiree elle n'etait transmise a personne : la couverture etait trop
+-- incomplete (TRX a -0,33 de quantite nette, FAI a 33 125 pour 43 131 detenus). Un prix de
+-- revient partiel presente comme complet ferait croire a l'agent qu'il gagne ou qu'il perd
+-- sur une ligne ou il n'en sait rien.
+-- LA SUITE EST AU PARAGRAPHE 4 : Chachou a fourni l'achat manquant du 22/07, FAI est passee
+-- a 100,1 % de couverture, et la vue a ete refaite avec un drapeau `complet` qui decide
+-- ligne par ligne. Elle EST transmise depuis revolut-x-read v15, pour les lignes completes
+-- uniquement.
 
 -- ===========================================================================
 -- 3. « ON A BEAUCOUP PLUS DE DONNEES » — VERIFIE. ELLES ETAIENT FABRIQUEES ET JETEES
