@@ -438,3 +438,21 @@ where d.symbol like '%-USD';
 -- chere d'abord, au format « HFT 0.0269251765$ -75.6% (354.93$ investis) ».
 -- Ecrit comme en v16, le bloc pesait 9 200 caracteres ; il en fait 4 620 avec 30 lignes.
 -- Tableau `soldes` : 48 entrees, inchange. Aucun module Make, aucun prompt touche.
+
+-- ===========================================================================
+-- 12. LES QUATRE DERNIERES : 99,7 %, ET LA FIN DE LA COLLECTE
+-- ===========================================================================
+-- POLS, MLN (1,42 EUR chacune, 08/06 18:29) et FET, NKN (1,66 EUR chacune, 08/06 18:28)
+-- ajoutees : elles appartenaient au meme panier du 08/06 que les 17 autres micro-lignes.
+--
+-- COUVERTURE : 1 055,53 $ sur 1 058,83 $ = 99,7 %. 43 lignes ont un prix de revient.
+-- Bilan d'ensemble : 1 289,94 $ investis, 1 053,00 $ aujourd'hui, -236,94 $ soit -18,4 %.
+-- soldes_texte : 4 792 caracteres. Tableau `soldes` : 48 entrees, inchange.
+--
+-- CE QUI RESTE, ET POURQUOI ON S'ARRETE LA — 3,30 $ sur quatre lignes :
+--   VET  2,39 $  206 VET au journal pour 346,17 detenus. Aucun autre achat de VET n'existe
+--                dans les releves : les 140 VET d'ecart ne viennent pas d'un ordre.
+--   MON  0,42 $  ·  FLR 0,32 $  ·  ZKJ 0,17 $   aucun ordre, aucun montant, jamais achetees.
+-- Ces quatre-la ne sont pas des lignes manquantes du releve : ce sont des entrees SANS
+-- contrepartie en dollars (recompense, largage, bonus). Un prix de revient n'existe pas pour
+-- elles, et il n'y a donc rien a aller chercher. La collecte est terminee.
