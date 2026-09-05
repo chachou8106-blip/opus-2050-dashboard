@@ -311,3 +311,27 @@ where d.symbol like '%-USD';
 --   MEW  54,82 $  aucun ordre           SOL   1,1775 manquants sur 1,3738
 --   HFT  ~6 410 unites avant le 06/08   BTC   0,00167 manquant sur 0,00334
 --   XRP  17,7 manquants sur 32,09       KSM  18,80 $ aucun ordre
+
+-- ===========================================================================
+-- 9. MEW ENTRE — ET L'ECRAN « TRANSACTION » REMONTE PLUS LOIN QUE L'ECRAN « ORDRES »
+-- ===========================================================================
+-- Chachou a colle une ligne dans un TROISIEME format, celui de l'ecran Transaction :
+--     USD -> MEW · 21 juil., 21:19 · Achat · Termine(e) · 129 865,77224251 MEW · 50,00 $
+--
+-- MEW : 50,00 $ pour 129 865,77 MEW, prix de revient 0,000385013, cours 0,000419 : +8,8 %.
+-- Couverture 99,5 % (130 514,13 detenus) -> TRANSMISSIBLE.
+--
+-- CE QUI EST INTERESSANT N'EST PAS LA LIGNE, C'EST L'ECRAN.
+-- Cet achat du 21/07 n'apparait dans AUCUN des deux extraits de l'ecran « Ordres » fournis
+-- ce soir, qui couvrent pourtant juillet. L'ecran « Transaction » de l'application montre
+-- donc des mouvements que l'ecran « Ordres » ne montre pas — probablement parce que MEW a
+-- ete achete autrement qu'au carnet d'ordres. Meme constat pour le FAI du 22/07, absent du
+-- second releve alors que Chachou l'a donne de memoire.
+-- CONSEQUENCE PRATIQUE : pour les lignes qui restent a zero (KSM, DASH, TON, FORTH, SHIB,
+-- DOGE, ATOM...), c'est l'ecran TRANSACTION qu'il faut regarder, pas l'ecran ORDRES.
+--
+-- COUVERTURE : 1 055,42 $ hors cash
+--   avec prix de revient .... 403,09 $   38,2 %   (22,8 % -> 33,0 % -> 38,2 % ce soir)
+--   ordres partiels ......... 551,89 $
+--   aucun ordre connu ....... 100,44 $   sur 33 lignes, la plus grosse KSM a 18,80 $
+-- soldes_texte : 3 766 -> 3 931 caracteres. Sept lignes avec prix de revient.
