@@ -1,4 +1,13 @@
-// revolut-x-read v16 : LECTURE SEULE cote Revolut. Aucun ordre, jamais.
+// revolut-x-read v17 : LECTURE SEULE cote Revolut. Aucun ordre, jamais.
+//
+// v17 (05/09/2026) — LE PORTEFEUILLE EST COUVERT A 99,1 %, ET LE BLOC EST COMPACTE.
+//   Le releve « Transaction » complet de Chachou a fait passer la couverture de 55,9 % a
+//   99,1 % de la valeur du portefeuille : 30 lignes ont desormais un prix de revient mesure.
+//   Ecrites comme en v16, elles pesaient 9 200 caracteres. Une ligne est maintenant
+//   « FAI 0.00217826$ +10.1% (93.95$ investis) », et le bloc s'ouvre sur le bilan d'ensemble
+//   — investi, valeur du jour, ecart en dollars et en pourcentage.
+//   Mesure d'ensemble au 05/09 : 1 282,82 $ investis, 1 046,66 $ aujourd'hui, -236,16 $
+//   soit -18,4 %. L'agent gerait ce portefeuille sans jamais avoir vu ce chiffre.
 //
 // v16 (05/09/2026) — LE PRIX DE REVIENT PART AVEC SA COUVERTURE, ET LE SEUIL DESCEND A 90 %.
 //   La v15 cachait toute ligne sous 97 % de couverture. C'etait MOI qui decidais ce que
@@ -167,20 +176,26 @@ async function achatsRecurrentsTexte(): Promise<string> {
 async function prixRevientTexte(): Promise<string> {
   try {
     if (!SUPABASE_URL || !SERVICE_KEY) return ''
-    const r = await sb('v_alc_prix_revient?transmissible=is.true&select=devise,cout_usd,prix_revient_moyen_usd,plus_value_pct,premier_achat,couverture_pct&order=cout_usd.desc')
+    const r = await sb('v_alc_prix_revient?transmissible=is.true&select=devise,cout_usd,qte_nette_journal,prix_revient_moyen_usd,prix_live,plus_value_pct&order=cout_usd.desc')
     if (!r.ok) return ''
     const rows = await r.json()
     if (!Array.isArray(rows) || rows.length === 0) return ''
+    let paye = 0, vaut = 0
+    for (const x of rows) {
+      paye += num(x.cout_usd)
+      vaut += num(x.qte_nette_journal) * num(x.prix_live)
+    }
+    const ecart = vaut - paye
+    const ecartPct = paye > 0 ? (ecart / paye) * 100 : 0
+    // Une ligne par devise, la plus chere d'abord. Le prix de revient est un nombre, pas une
+    // phrase : l'agent le lit mieux court, et le message reste sous les 10 000 caracteres.
     const parts = rows.map((x: any) => {
       const pv = x?.plus_value_pct
-      const signe = pv == null ? '' : `, ${Number(pv) > 0 ? '+' : ''}${pv}% par rapport a ton prix d achat`
-      const jour = x?.premier_achat ? String(x.premier_achat).slice(0, 10) : null
-      return `${String(x.devise).toUpperCase()}: paye ${num(x.cout_usd).toFixed(2)}$ au total`
-        + (jour ? ` depuis le ${jour}` : '')
-        + `, prix de revient moyen ${x.prix_revient_moyen_usd}$${signe}`
-        + ` (historique connu sur ${x.couverture_pct}% de la ligne)`
+      return `${String(x.devise).toUpperCase()} ${x.prix_revient_moyen_usd}$`
+        + (pv == null ? '' : ` ${Number(pv) > 0 ? '+' : ''}${pv}%`)
+        + ` (${num(x.cout_usd).toFixed(2)}$ investis)`
     })
-    return ` || PRIX DE REVIENT MESURE, avec la part de la ligne que l historique couvre (les devises absentes de cette liste n ont PAS de prix de revient connu, n en invente aucun et ne raisonne pas en gain ou en perte sur elles): ${parts.join(' | ')}`
+    return ` || PRIX DE REVIENT MESURE. ENSEMBLE DES LIGNES CI-DESSOUS: ${d2(paye)}$ investis, ${d2(vaut)}$ aujourd hui, soit ${ecart >= 0 ? '+' : ''}${d2(ecart)}$ (${ecartPct >= 0 ? '+' : ''}${d2(ecartPct)}%). PAR LIGNE, prix de revient moyen puis ecart au cours actuel (une devise absente de cette liste n a PAS de prix de revient connu : n en invente aucun et ne raisonne pas en gain ou en perte sur elle): ${parts.join(' | ')}`
   } catch { return '' }
 }
 

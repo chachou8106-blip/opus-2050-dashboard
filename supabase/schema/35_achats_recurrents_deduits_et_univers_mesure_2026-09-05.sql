@@ -388,3 +388,53 @@ where d.symbol like '%-USD';
 --   FAI 100.1%   93.95$  0.00217678$  +10.2%      TRX 100.1%  16.35$  0.33065907$   +0.8%
 --   TRU  96.9%   92.06$  0.001285$    -30.1%      OSMO 99.6%  15.00$  0.04489999$  -21.2%
 --   ETH  99.8%   53.08$  2020.344170$ +21.6%
+
+-- ===========================================================================
+-- 11. LE RELEVE TRANSACTION COMPLET : 99,1 % DU PORTEFEUILLE A UN PRIX DE REVIENT
+-- ===========================================================================
+-- Journal reconstruit sur le releve « Transaction » integral (quantites NETTES, apres frais),
+-- qui remplace toutes les recopies partielles de l'ecran « Ordres ». 154 lignes, du 05/06 au
+-- 05/09 : 50 de l'API, 104 du releve.
+
+-- a) LE TAUX USDT EST ENFIN MESURABLE — PAR SES PROPRES CONVERSIONS.
+-- Six conversions EUR -> USDT figurent au releve. Divisees par EUR-USD mesure dans
+-- price_history au meme instant :
+--   28/04 1,012637 · 03/05 1,014370 · 12/05 1,011723
+--   15/05 1,012081 · 26/05 1,011329 · 07/06 1,013848
+-- Six mesures independantes dans une fourchette de 0,3 %. Ce n'est pas le peg de l'USDT qui
+-- vaut 1,0127 : c'est le SPREAD Revolut sur EUR->USDT. Table alc_taux_reference : une ligne
+-- par devise absente de price_history, avec la METHODE ecrite et la dispersion. Le prix de
+-- revient d'un achat regle en USDT peut donc etre surestime d'environ 1,3 % ; c'est ecrit.
+-- Cela debloque BTC (100 USDT du 05/06), KSM et ATOM.
+
+-- b) KSM ET ATOM SONT ENTRES PAR UNE MISE EN STAKING LIBELLEE EN USDT.
+--   « Staking de KSM · 07/06 13:28 · 18,887911 USDT »   -> 5,09289588 KSM
+--   « Staking de ATOM · 05/06 19:28 · 6,817325 USDT »   -> 4,200854 ATOM
+-- Les autres mises en staking sont libellees dans l'actif lui-meme (SOL, TON, TRX, OSMO, ETH).
+-- Ces deux-la sont donc des ACQUISITIONS, pas des mouvements internes : c'est la seule
+-- explication de la presence de KSM et d'ATOM, qu'aucun achat ne couvrait.
+
+-- c) DEUX PIEGES DE RAPPROCHEMENT, ATTRAPES PAR L'ECART DE QUANTITE.
+--   - La vente UNI du 02/09 est DANS la fenetre de l'API : recopiee, elle faisait double.
+--     UNI tombait a 33,6 % de couverture. Ligne supprimee -> 100,0 %.
+--   - La vente de 1 TRX du 05/07 figure sur l'ecran Ordres et PAS sur l'ecran Transaction.
+--     Le journal affichait 35,1183 TRX pour 34,1259 detenus : l'ecart de 0,9924 la reclamait.
+--     Reintegree -> 100,0 %.
+-- Dans les deux cas, c'est la confrontation a la quantite REELLEMENT detenue qui a signale
+-- l'erreur. Un journal qu'on ne confronte a rien ne se corrige jamais.
+
+-- COUVERTURE FINALE : 1 058,83 $ hors cash
+--   avec prix de revient .... 1 049,19 $   99,1 %
+--   sans .................... 9,64 $ sur 8 lignes (VET 59,5 %, NKN, FET, MLN, POLS, MON,
+--                             FLR, ZKJ — aucune au-dessus de 2,40 $)
+-- Trajet de la soiree : 22,8 % -> 33,0 % -> 38,2 % -> 55,9 % -> 99,1 %.
+
+-- LE CHIFFRE QUE PERSONNE N'AVAIT JAMAIS VU :
+--   1 282,82 $ investis · 1 046,66 $ aujourd'hui · -236,16 $ soit -18,4 %
+-- Les trois quarts de la perte tiennent en une ligne : HFT, -269 $ sur 354,93 $ investis.
+-- En face : UNI +59,1 %, SOL +32,4 %, XRP +26,0 %, ETH +21,6 %, BTC +19,0 %.
+
+-- revolut-x-read v17 : le bloc s'ouvre sur ce bilan, puis une ligne par devise, la plus
+-- chere d'abord, au format « HFT 0.0269251765$ -75.6% (354.93$ investis) ».
+-- Ecrit comme en v16, le bloc pesait 9 200 caracteres ; il en fait 4 620 avec 30 lignes.
+-- Tableau `soldes` : 48 entrees, inchange. Aucun module Make, aucun prompt touche.
