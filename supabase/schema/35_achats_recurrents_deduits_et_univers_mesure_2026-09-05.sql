@@ -218,3 +218,48 @@ where d.symbol like '%-USD';
 -- Restent sous le seuil : TRX 55,7 % · XLM 50,5 % · BTC 50,0 % · BCH 49,3 % · XRP 25,5 %
 --                         SOL 14,3 % · VET 59,6 % · ETH 99,8 % mais un achat en EUR.
 -- Chaque ligne d'ecran supplementaire en fait basculer une de plus, definitivement.
+
+-- ===========================================================================
+-- 6. LES ACHATS EN EUROS SONT CONVERTIS AU COURS MESURE, ET ETH ENTRE
+-- ===========================================================================
+-- J'avais ecarte ETH en disant « je ne convertis pas une devise a un taux que je n'ai pas
+-- mesure ». C'etait la bonne regle, mais la mauvaise conclusion : EUR-USD EST dans
+-- price_history (2 432 points horaires), je ne l'avais pas cherche. Regle du 17/08 :
+-- verifier avant d'affirmer qu'une chose n'existe pas.
+--
+-- v_alc_prix_revient convertit desormais chaque achat non-USD au cours de sa devise lu dans
+-- price_history AU PLUS PRES de l'heure de l'ordre (jointure laterale sur
+-- symbol = source_devise || '-USD', tri par ecart de temps). Si la paire n'y est pas, le
+-- taux reste NULL, la ligne devient non transmissible et rien n'est invente.
+--   achat du 07/06 11:07 : 20,02 EUR -> taux mesure 1,152605 -> 23,08 $
+--   (le point le plus proche est le 07/06 23:00 : le 7 juin 2026 est un dimanche, le forex
+--    est ferme. Ecart de 12 h, assume et note.)
+-- ETH : 53,08 $ payes, prix de revient 2 020,34 $, cours 2 455,59 $, +21,5 %, couverture
+-- 99,8 % -> TRANSMISSIBLE. BTC beneficie de la meme conversion (116,11 $, revient 69 566 $,
+-- +14,5 %) mais reste a 50 % de couverture : il lui manque des ordres, pas un taux.
+--
+-- SORTIE REELLE (v16 + vue convertie), mesuree :
+--   FAI  100.1%  93.95$  0.002176779$   +10.2%
+--   TRU   96.9%  92.06$  0.001285$      -32.5%
+--   ETH   99.8%  53.08$  2020.3441699$  +21.5%
+--   OSMO  99.6%  15.00$  0.0448999898$  -21.2%
+-- soldes_texte : 3 270 -> 3 439 caracteres. Tableau `soldes` : 48 entrees, inchange.
+-- Aucun redeploiement necessaire : la fonction lit transmissible, la vue a change seule.
+
+-- ===========================================================================
+-- 7. ETAT DE LA COUVERTURE, ET CE QU'IL RESTE A CHERCHER
+-- ===========================================================================
+-- Portefeuille hors cash : 1 055,27 $ sur 40 lignes.
+--   avec prix de revient ............  240,62 $   22,8 %
+--   ordres partiels .................  514,02 $   (BTC 50 %, SOL 14 %, XRP 26 %, BCH 49 %,
+--                                                  XLM 51 %, TRX 56 %, VET 60 %)
+--   aucun ordre connu ...............  300,63 $   sur 36 lignes
+--
+-- Les trois lignes qui pesent et dont on ne sait RIEN : UNI 96,36 $ · MEW 54,82 $ ·
+-- HFT 49,04 $ = 200 $ a elles seules, soit les deux tiers de la zone inconnue.
+-- Puis KSM 18,80 $ · DASH 12,33 $ · TON 8,64 $ · FORTH 8,02 $ · SHIB 7,86 $ · DOGE 7,26 $ ·
+-- ATOM 6,50 $, et 26 lignes a moins de 3 $ qui ne changeront jamais une decision.
+--
+-- BTC : il manque 0,00167 BTC (la moitie de la ligne), donc des achats entre le 08/06 et le
+-- 29/08 que les extraits d'ecran ne couvrent pas.
+-- SOL : il manque 1,1775 SOL sur 1,3738 — l'essentiel de la ligne.
