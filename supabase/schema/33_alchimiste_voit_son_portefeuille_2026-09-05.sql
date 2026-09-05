@@ -1,0 +1,78 @@
+-- L'Alchimiste recoit la VALEUR de ses lignes, plus seulement les quantites. 05/09/2026.
+-- Demande de Chachou : « pourquoi il ne voit pas reellement le portefeuille, pourquoi il ne
+-- voit pas ce que j'ai deja investi et ou les prix en sont pour vendre ? »
+--
+-- ---------------------------------------------------------------------------
+-- 0. D'ABORD : LA BASE DIT-ELLE VRAI ? OUI.
+-- ---------------------------------------------------------------------------
+--   API Revolut X, en direct ....... 1 083,34 $   (48 lignes, cash 28,58 $)
+--   ce que dit la base ............. 1 081,80 $
+--   ecart .......................... 1,54 $ = 0,14 %  (decalage de cotation)
+--   ecran de Chachou ............... 933,55 EUR   vs 931,71 EUR calcules = 0,2 %
+-- Aucune ligne sans prix. Il n'y a pas de divergence a expliquer.
+--
+-- ---------------------------------------------------------------------------
+-- 1. CE QU'IL RECEVAIT, ET POURQUOI C'ETAIT INSUFFISANT
+-- ---------------------------------------------------------------------------
+-- Le prompt lit SOLDES_REVOLUTX = {{10010.soldes_texte}}, donc la sortie de revolut-x-read.
+-- En v9 ce texte ne contenait que des QUANTITES :
+--     POSITIONS LIQUIDES (vendables): FAI=41562.3 | UNI=12.4 | HFT=7533.46 | ...
+-- Pour savoir si FAI pese 5 % ou 50 % de son portefeuille, l'agent devait retrouver FAI-USD
+-- dans 302 prix colles sur une ligne de 8 122 caracteres, puis multiplier, sur 48 lignes.
+-- C'est exactement l'exercice ou il s'est trompe trois fois les 03 et 04/09, en attrapant le
+-- prix de la paire VOISINE (BCH pour BTC, QI pour BTC, SQD pour TRX).
+--
+-- v12 : on lui donne la mesure toute faite. Il garde la decision, il n'a plus le calcul.
+--     PORTEFEUILLE (valorise au prix du marche, tu n'as AUCUN calcul a refaire):
+--     total=1083.90$ | cash USD=28.58$ soit 2.64% du portefeuille | investi=1055.32$
+--     | en stake=76.35$ | 48 lignes
+--     POSITIONS LIQUIDES (vendables, de la plus grosse a la plus petite):
+--     BTC=0.00333927 (266.23$, 24.56%) | FAI=43130.76 (103.33$, 9.53%) | UNI=15.24 (95.25$, 8.79%) | ...
+--
+-- Le champ garde son NOM et le tableau `soldes` est INCHANGE : aucun module Make a retoucher,
+-- et alc-auto, qui lit `soldes`, n'est pas affecte. Si les prix sont indisponibles, le texte
+-- retombe exactement sur le format v9.
+-- Teste en reel : 48 lignes, total 1 083,90 $, texte 2 151 caracteres, `soldes` intact.
+--
+-- ---------------------------------------------------------------------------
+-- 2. LE PRIX DE REVIENT : L'ENDPOINT EXISTE, MAIS IL NE REMONTE PAS ASSEZ LOIN
+-- ---------------------------------------------------------------------------
+-- Sonde en LECTURE SEULE (GET signes uniquement) sur 12 chemins de l'API Revolut X :
+--   /api/1.0/balances ......... 200
+--   /api/1.0/transactions ..... 200   <-- l'historique existe
+--   /api/1.0/orders/history ... 400 « Invalid order ID: history » (donc /orders/{id} existe)
+--   les 9 autres .............. 401 Unauthenticated access
+--
+-- Et /transactions donne EXACTEMENT le prix de revient :
+--   {"type":"buy","source":{"amount":"15.00","currency":"USD"},
+--    "destination":{"amount":"0.00018785","currency":"BTC"}}   -> 79 851 $/BTC
+--
+-- LIMITE MESUREE, et elle est nette : 50 transactions maximum, next_cursor VIDE, et
+-- limit=500 ne change rien. L'historique s'arrete au 30/08 — sept jours.
+-- Contenu : 11 buy, 5 sell, 27 reward (staking), 3 receive, 3 un_stake, 1 send.
+--
+-- Conclusion : l'API couvre l'entretien courant (y compris les achats faits a la main), pas
+-- les 34 lignes heritees d'avant le robot. Le releve exporte depuis l'app Revolut reste
+-- necessaire pour l'historique ancien. Les deux sont complementaires.
+--
+-- ---------------------------------------------------------------------------
+-- 3. UN DEFAUT TROUVE EN CHEMIN : LA CONSOLE SURESTIME LE STAKE
+-- ---------------------------------------------------------------------------
+-- v_alc_reel_live_positions marque une ligne « en stake » des qu'il y a du stake, et compte
+-- alors la ligne ENTIERE comme bloquee. Or SOL a 0,784649 disponible ET 0,589155 en stake :
+--   valeur totale SOL .... 141,85 $
+--   dont vraiment bloque .. 60,83 $
+--   donc VENDABLE ......... 81,02 $   presentes comme bloques
+-- Effet global : la console annonce 167,07 $ en stake, la mesure juste est 76,35 $.
+-- Environ 91 $ de positions vendables sont comptees comme verrouillees. A corriger.
+--
+-- ---------------------------------------------------------------------------
+-- 4. CE QUI RESTE
+-- ---------------------------------------------------------------------------
+--   a) Charger le releve Revolut de Chachou pour reconstituer le prix de revient des
+--      34 lignes heritees, puis brancher /api/1.0/transactions pour l'entretien courant.
+--   b) Corriger v_alc_reel_live_positions (paragraphe 3).
+--   c) Les plafonds : max_order_usd 50 et max_daily_usd 200 ont ete poses quand le compte
+--      valait quelques dollars. Avec 1 084 $, vendre la seule ligne BTC (266 $) demande
+--      six ordres. Chiffres a trancher par Chachou.
+--   d) Le surveillant de sorties 24/7 : toujours rien qui lise un TP ou un SL.
