@@ -263,3 +263,51 @@ where d.symbol like '%-USD';
 -- BTC : il manque 0,00167 BTC (la moitie de la ligne), donc des achats entre le 08/06 et le
 -- 29/08 que les extraits d'ecran ne couvrent pas.
 -- SOL : il manque 1,1775 SOL sur 1,3738 — l'essentiel de la ligne.
+
+-- ===========================================================================
+-- 8. DEUXIEME RELEVE COMPLET : 18 LIGNES DE PLUS, ET DEUX CHOSES A VOIR
+-- ===========================================================================
+-- Journal : 115 lignes (50 api + 65 releve_ecran), du 07/06 au 05/09.
+-- Ajoutees : le prelevement recurrent du 10/08, les quatre allers-retours HFT du 06/08,
+-- l'achat UNI du 06/08, les prelevements du 03/08, 27/07 et le XRP du 20/07.
+
+-- a) UNI ENTRE, ET C'EST LA MEILLEURE LIGNE DU PORTEFEUILLE.
+--    06/08 11:34 : 25 UNI pour 100,26 $, soit 4,0104 $ l'unite. Cours 6,3225 $ : +57,7 %.
+--    Couverture 97,6 % (14,88 au journal apres une vente, 15,24 detenus).
+
+-- b) HFT : LA LIGNE N'EST PAS TRANSMISSIBLE, MAIS LE CHIFFRE EST TROP GROS POUR ETRE TU.
+--    Quatre ordres le 06/08 au soir :
+--      21:09  vente  1 609,4791 HFT @ 0,03318   ->  53,40 $
+--      23:12  achat  2 766,866  HFT @ 0,03513   ->  97,20 $
+--      23:20  vente  4 039,2108 HFT @ 0,03497   -> 141,25 $
+--      23:21  achat  4 005,1499 HFT @ 0,03523   -> 141,12 $
+--    Prix de revient des achats connus : 0,03519. Cours du jour : 0,00651. -81,5 %.
+--    VERIFIE dans price_history, ce n'est pas un artefact : moyenne journaliere HFT-USD
+--      05/08 0,016504 · 06/08 0,026440 · 07/08 0,018946 · 08/08 0,012350 · 05/09 0,00651
+--    Il a achete 141 $ a 23:21 le 06/08, au sommet exact d'un pic qui a fait x1,6 dans la
+--    journee et qui s'est effondre le lendemain.
+--    La ligne reste NON transmissible : couverture 14,9 %, il manque ~6 410 HFT achetes
+--    avant le 06/08. Le prix de revient global sera different — mais la chute du cours,
+--    elle, est mesuree et ne depend d'aucune ligne manquante.
+
+-- c) TRX passe a 100,1 % de couverture et devient transmissible (16,35 $, +0,8 %).
+
+-- SORTIE REELLE, six lignes desormais :
+--   UNI  97.6%  100.26$  4.0104$          +57.7%
+--   FAI 100.1%   93.95$  0.002176779$     +10.2%
+--   TRU  96.9%   92.06$  0.001285$        -32.5%
+--   ETH  99.8%   53.08$  2020.3441699$    +21.5%
+--   TRX 100.1%   16.35$  0.3306590733$     +0.8%
+--   OSMO 99.6%   15.00$  0.0448999898$    -21.2%
+-- soldes_texte : 3 439 -> 3 766 caracteres. Tableau `soldes` : 48 entrees, inchange.
+
+-- COUVERTURE DU PORTEFEUILLE : 1 055,27 $ hors cash
+--   avec prix de revient .... 348,36 $   33,0 %   (etait 22,8 % il y a une heure)
+--   ordres partiels ......... 551,68 $   HFT 14,9 % · SOL 14,3 % · XRP 44,8 % · BTC 50,0 %
+--                                        VET 59,6 % · BCH 72,5 % · XLM 74,4 %
+--   aucun ordre connu ....... 155,23 $   sur 34 lignes, dont MEW 54,82 $ et KSM 18,80 $
+--
+-- Ce qui manque encore, par ordre d'utilite :
+--   MEW  54,82 $  aucun ordre           SOL   1,1775 manquants sur 1,3738
+--   HFT  ~6 410 unites avant le 06/08   BTC   0,00167 manquant sur 0,00334
+--   XRP  17,7 manquants sur 32,09       KSM  18,80 $ aucun ordre
