@@ -1,4 +1,16 @@
-// revolut-x-read v14 : LECTURE SEULE cote Revolut. Aucun ordre, jamais.
+// revolut-x-read v15 : LECTURE SEULE cote Revolut. Aucun ordre, jamais.
+//
+// v15 (05/09/2026) — LE PRIX DE REVIENT DES LIGNES DONT LE JOURNAL COUVRE TOUT.
+//   Chachou : « j ai achete que 68,95$ soit 33095 fai le 12 juin et 25$ le 22 juillet
+//   10035 fai je t ai donne plusieurs fois les ordres pourquoi tu les voit pas ! ».
+//   L'achat du 22/07 manquait au journal : les deux extraits d'ecran de la journee sautent
+//   juillet, et je n'avais recopie que ce que j'avais sous les yeux. Ajoute.
+//   FAI passe alors de 77 % a 100,1 % de couverture : 93,95 $ pour 43 160 FAI, prix de
+//   revient 0,00217678, cours 0,002399, soit +10,2 %. La ligne devient exploitable.
+//   Ne sont transmises QUE les lignes ou complet = true (le journal couvre la quantite
+//   detenue a 3 % pres ET tous les achats sont en USD). Une ligne partielle ferait croire
+//   a l'agent qu'il gagne ou perd la ou il n'en sait rien : elle reste hors du texte.
+//   Aujourd'hui : FAI et OSMO. Les autres s'ajouteront d'elles-memes.
 //
 // v14 (05/09/2026) — PLUS RIEN A SAISIR : LE PLAN D'ACHATS RECURRENTS EST DEDUIT.
 //   « je ne modifie rien seul tout doit etre automatique !!! et si ca gene je supprime
@@ -141,6 +153,27 @@ async function achatsRecurrentsTexte(): Promise<string> {
   } catch { return '' }
 }
 
+// v15 — le prix de revient, UNIQUEMENT pour les lignes dont le journal couvre tout.
+// NE LEVE JAMAIS. Une ligne partielle n'apparait pas : mieux vaut rien qu'un chiffre faux.
+async function prixRevientTexte(): Promise<string> {
+  try {
+    if (!SUPABASE_URL || !SERVICE_KEY) return ''
+    const r = await sb('v_alc_prix_revient?complet=is.true&select=devise,cout_usd,qte_nette_journal,prix_revient_moyen_usd,plus_value_pct,premier_achat&order=cout_usd.desc')
+    if (!r.ok) return ''
+    const rows = await r.json()
+    if (!Array.isArray(rows) || rows.length === 0) return ''
+    const parts = rows.map((x: any) => {
+      const pv = x?.plus_value_pct
+      const signe = pv == null ? '' : `, ${Number(pv) > 0 ? '+' : ''}${pv}% par rapport a ton prix d achat`
+      const jour = x?.premier_achat ? String(x.premier_achat).slice(0, 10) : null
+      return `${String(x.devise).toUpperCase()}: paye ${num(x.cout_usd).toFixed(2)}$ au total`
+        + (jour ? ` depuis le ${jour}` : '')
+        + `, prix de revient moyen ${x.prix_revient_moyen_usd}$${signe}`
+    })
+    return ` || PRIX DE REVIENT MESURE (uniquement les lignes dont l historique d achat est complet ; les autres lignes n ont PAS de prix de revient connu, n en invente aucun): ${parts.join(' | ')}`
+  } catch { return '' }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   try {
@@ -221,7 +254,8 @@ Deno.serve(async (req) => {
     // Le journal d'abord (il alimente la detection), la phrase ensuite.
     const journal = await journaliserTransactions(key)
     const recurrents = await achatsRecurrentsTexte()
-    const soldes_texte = `${entete}POUVOIR D'ACHAT USD (SEUL cash utilisable pour ACHETER une paire -USD): ${usdTxt} || AUTRES DEVISES CASH (NON utilisables comme pouvoir d'achat pour les paires -USD -- ne PAS les compter pour un achat -USD): ${autresCash.length ? autresCash.map(fmtD).join(' , ') : 'aucune'} || POSITIONS LIQUIDES (vendables, de la plus grosse a la plus petite): ${liquide.length ? liquide.slice().sort(parValeur(qDispo)).map(fmtD).join(' | ') : 'aucune'} || EN STAKE (VERROUILLE - NON vendable tant que non destake): ${stake.length ? stake.slice().sort(parValeur(qStake)).map(fmtS).join(' | ') : 'aucun'}${recurrents}`
+    const revient = await prixRevientTexte()
+    const soldes_texte = `${entete}POUVOIR D'ACHAT USD (SEUL cash utilisable pour ACHETER une paire -USD): ${usdTxt} || AUTRES DEVISES CASH (NON utilisables comme pouvoir d'achat pour les paires -USD -- ne PAS les compter pour un achat -USD): ${autresCash.length ? autresCash.map(fmtD).join(' , ') : 'aucune'} || POSITIONS LIQUIDES (vendables, de la plus grosse a la plus petite): ${liquide.length ? liquide.slice().sort(parValeur(qDispo)).map(fmtD).join(' | ') : 'aucune'} || EN STAKE (VERROUILLE - NON vendable tant que non destake): ${stake.length ? stake.slice().sort(parValeur(qStake)).map(fmtS).join(' | ') : 'aucun'}${revient}${recurrents}`
 
     const portefeuille = prixDispo
       ? { total_usd: Number(d2(total)), cash_usd: Number(d2(cashUSD)), pct_cash: Number(d2(pctCash)),

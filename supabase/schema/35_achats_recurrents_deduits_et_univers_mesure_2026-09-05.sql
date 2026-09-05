@@ -129,3 +129,43 @@ where d.symbol like '%-USD';
 -- Le module Make 10011 lit data.prix_texte et le 10012 le passe en base64 : NI L'UN NI L'AUTRE
 -- N'EST MODIFIE. Aucune manipulation Make. Si une vue devient injoignable, les deux fonctions
 -- retombent sur leur sortie precedente, au caractere pres.
+
+-- ===========================================================================
+-- 4. SUITE DU MEME SOIR : L'ACHAT FAI DU 22 JUILLET, ET LE PRIX DE REVIENT LIVRE
+-- ===========================================================================
+-- Chachou : « j ai achete que 68,95$ soit 33095 fai le 12 juin et 25$ le 22 juillet
+--             10035 fai je t ai donne plusieurs fois les ordres pourquoi tu les voit pas ! »
+--
+-- POURQUOI JE NE LE VOYAIS PAS. Le journal ne contenait que ce que j'avais pu LIRE :
+--   - les 50 lignes de l'API, qui ne remontent qu'au 30/08 ;
+--   - les 25 lignes recopiees de ses deux extraits d'ecran du jour, qui vont du 07/06 au
+--     29/06 puis sautent directement au 17/08.
+-- JUILLET N'ETAIT DANS AUCUN DES DEUX. Ce n'est pas l'API qui a perdu la ligne, c'est moi
+-- qui n'avais aucune trace durable de ce qu'il m'avait montre avant : je relisais un ecran
+-- a chaque fois au lieu de conserver. C'est exactement le trou que alc_revolut_transactions
+-- ferme : desormais tout ce qui passe une fois par le journal y reste.
+--
+-- LIGNE AJOUTEE : ecran-20260722-FAI, 25,00 $ -> 10 035 FAI, provenance releve_ecran.
+--
+-- FAI DEVIENT COMPLETE :
+--   journal 43 160,1 FAI   detenu 43 130,76   couverture 100,1 %   complet = true
+--   93,95 $ payes  ·  prix de revient 0,00217678  ·  cours 0,002399  ·  +10,2 %
+-- (l'ecart de 29 FAI, 0,07 %, vient de la quantite arrondie qu'il m'a donnee ; sans effet.)
+--
+-- v_alc_prix_revient est refaite : elle confronte le journal a la quantite REELLEMENT detenue
+-- (v_alc_reel_live_positions) et porte un drapeau `complet` = couverture entre 97 et 103 %
+-- ET aucun achat en devise autre que l'USD.
+--   complet = true  : FAI (100,1 %), OSMO (99,6 %)
+--   complet = false : BTC 50,0 % · SOL 14,3 % · XRP 15,2 % · BCH 19,4 % · XLM 20,3 %
+--                     TRX -1,0 % · VET 59,6 % · ETH 99,8 % mais un achat en EUR
+--
+-- revolut-x-read v15 transmet UNIQUEMENT les lignes completes, sous l'intitule
+-- « PRIX DE REVIENT MESURE ... les autres lignes n ont PAS de prix de revient connu, n en
+-- invente aucun ». Mesure de la sortie reelle apres deploiement :
+--   FAI: paye 93.95$ au total depuis le 2026-06-12, prix de revient moyen 0.002176779$,
+--        +10.2% par rapport a ton prix d achat
+--   OSMO: paye 15.00$ au total depuis le 2026-06-08, prix de revient moyen 0.0448999898$,
+--        -21.2% par rapport a ton prix d achat
+-- soldes_texte : 2 557 -> 2 969 caracteres. Tableau `soldes` : 48 entrees, inchange.
+-- ETH restera incomplete tant qu'on n'aura pas le cours EUR/USD du 07/06 : je ne convertis
+-- pas une devise a un taux que je n'ai pas mesure.
